@@ -189,10 +189,17 @@ function extractJSON(raw: string): unknown {
   // strip ```json ... ``` fences
   const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i)
   if (fence) s = fence[1].trim()
-  // find first { and last }
-  const first = s.indexOf("{")
-  const last = s.lastIndexOf("}")
-  if (first !== -1 && last !== -1) s = s.slice(first, last + 1)
+  // Handle arrays: if it starts with [, find matching ]
+  const firstBracket = s.indexOf("[")
+  const firstBrace = s.indexOf("{")
+  // Prefer array if it comes before object (or no object)
+  if (firstBracket !== -1 && (firstBrace === -1 || firstBracket < firstBrace)) {
+    const lastBracket = s.lastIndexOf("]")
+    if (lastBracket !== -1) s = s.slice(firstBracket, lastBracket + 1)
+  } else if (firstBrace !== -1) {
+    const lastBrace = s.lastIndexOf("}")
+    if (lastBrace !== -1) s = s.slice(firstBrace, lastBrace + 1)
+  }
   return JSON.parse(s)
 }
 
@@ -456,4 +463,272 @@ export function textConcretenessCheck(text: string, locale: "id" | "en"): { hasE
   const t = text.toLowerCase()
   const buzzwords = list.filter((b) => t.includes(b))
   return { hasEvidence, buzzwords }
+}
+
+/* ===========================================================================
+   Opportunity Essays (Brief Section 2.5, 5.4, 6.6)
+   STRICTEST verification: probing Q&A BEFORE any draft is written.
+   =========================================================================== */
+export type EssayProbingQuestion = { id: string; question: string; hint: string }
+
+export async function generateEssayProbing(opts: {
+  locale: "id" | "en"
+  essayType: string // scholarship | org | volunteer | personal-statement | motivation-letter
+  prompt: string
+  targetOrg: string
+}): Promise<EssayProbingQuestion[]> {
+  const isIDLocale = opts.locale === "id"
+  const sys = isIDLocale
+    ? `Kamu konsultan esai seleksi. Tugasmu: susun 3-5 pertanyaan probing yang SPESIFIK ke jenis esai & tujuan user, untuk menggali detail autentik SEBELUM esai ditulis. Aturan:
+1. Pertanyaan harus memancing jawaban konkret (motivasi spesifik, tantangan nyata, kontribusi konkret) — bukan ya/tidak.
+2. Jangan minta data yang sudah ada di profil standar (nama, pendidikan). Gali yang HANYA user tahu.
+3. Sesuaikan ke jenis esai: beasiswa=kebutuhan finansian+rencana studi; organisasi=kontribusi+nilai selaras; volunteer=motivasi pelayanan; personal statement=narasi tumbuh; motivation letter=kenapa program ini.
+Output JSON array saja: [{"id":"q1","question":"...","hint":"petunjuk singkat jawaban seperti apa"}]`
+    : `You are a selection essay consultant. Your task: compose 3-5 probing questions SPECIFIC to the essay type & user's goal, to dig authentic details BEFORE the essay is written. Rules:
+1. Questions must prompt concrete answers (specific motivation, real challenges, concrete contribution) — not yes/no.
+2. Don't ask for data already in a standard profile (name, education). Dig what ONLY the user knows.
+3. Tailor to essay type: scholarship=financial need+study plan; org=contribution+aligned values; volunteer=service motivation; personal statement=growth narrative; motivation letter=why this program.
+Output JSON array only: [{"id":"q1","question":"...","hint":"short hint what kind of answer"}]`
+
+  const user = `Essay type: ${opts.essayType}\nPrompt/requirements: ${opts.prompt || "(none)"}\nTarget organization: ${opts.targetOrg || "(not specified)"}`
+
+  const zai = await getZai()
+  const completion = await zai.chat.completions.create({
+    messages: [
+      { role: "assistant", content: sys },
+      { role: "user", content: user },
+    ],
+    thinking: { type: "disabled" },
+  })
+  const raw = completion.choices[0]?.message?.content ?? ""
+  try {
+    const parsed = extractJSON(raw)
+    const arr = Array.isArray(parsed) ? parsed : (parsed as any).questions ?? []
+    return arr.slice(0, 5).map((q: any, i: number) => ({
+      id: q.id || `q${i + 1}`,
+      question: q.question || q.q || "",
+      hint: q.hint || "",
+    })).filter((q: EssayProbingQuestion) => q.question)
+  } catch {
+    // fallback generic probing questions
+    const fb = isIDLocale
+      ? [
+        { id: "q1", question: "Apa momen spesifik yang membuatmu tertarik dengan kesempatan ini?", hint: "Sebut kejadian/peristiwa konkret, bukan alasan umum." },
+        { id: "q2", question: "Tantangan nyata apa yang pernah kamu hadapi dan bagaimana kamu menyelesaikannya?", hint: "Nama proyek/situasi + langkah + hasil." },
+        { id: "q3", question: "Kontribusi konkret apa yang bisa kamu berikan?", hint: "Skill/pengalaman spesifik yang relevan." },
+      ]
+      : [
+        { id: "q1", question: "What specific moment made you interested in this opportunity?", hint: "Name a concrete event, not a general reason." },
+        { id: "q2", question: "What real challenge have you faced and how did you resolve it?", hint: "Project/situation name + steps + result." },
+        { id: "q3", question: "What concrete contribution can you make?", hint: "Specific relevant skill/experience." },
+      ]
+    return fb
+  }
+}
+
+export type GeneratedEssay = {
+  title: string
+  paragraphs: string[]
+  wordCount: number
+  warnings: string[]
+  probingQA: { id: string; question: string; answer: string }[]
+}
+
+export async function generateEssay(
+  profile: SerializedProfile,
+  opts: {
+    locale: "id" | "en"
+    tone: string
+    essayType: string
+    prompt: string
+    targetOrg: string
+    wordLimit: number | null
+    probingQA: { id: string; question: string; answer: string }[]
+  }
+): Promise<GeneratedEssay> {
+  const isIDLocale = opts.locale === "id"
+  const wordLimitText = opts.wordLimit ? `PANJANG WAJIB: ${opts.wordLimit} kata (hormati dengan presisi, bukan mendekati).` : "Panjang: 400-600 kata."
+  const sys = isIDLocale
+    ? `Kamu penulis esai seleksi. Aturan MUTLAK (TARUHAN TINGGI — esai beasiswa/organisasi):
+1. Tulis HANYA dari data profil + jawaban probing user. JANGAN PERNAH mengarang detail personal (kondisi ekonomi, nama kejadian, angka) yang tidak ada di jawaban user.
+2. Pembuka HARUS personal (kejadian/momen spesifik dari jawaban probing), BUKAN "Saya menulis untuk menyatakan minat saya...".
+3. 1-2 bukti konkret dari pengalaman ASLI user (dari profil atau jawaban probing) — sebut nama proyek/angka.
+4. Penutup hubungkan ke tujuan/organisasi spesifik.
+5. ${wordLimitText}
+6. DILARANG buzzword tanpa bukti. Variasikan struktur kalimat.`
+    : `You are a selection essay writer. STRICT rules (HIGH STAKES — scholarship/org essays):
+1. Write ONLY from profile data + user's probing answers. NEVER invent personal details (financial situation, event names, numbers) not in the user's answers.
+2. Opening MUST be personal (specific event/moment from probing answers), NOT "I am writing to express my interest...".
+3. 1-2 concrete evidence from the user's REAL experience (profile or probing answers) — name projects/numbers.
+4. Closing connects to the specific goal/organization.
+5. ${wordLimitText}
+6. FORBIDDEN buzzwords without evidence. Vary sentence structure.`
+
+  const qaBlock = opts.probingQA.filter((q) => q.answer.trim()).map((q) => `Q: ${q.question}\nA: ${q.answer}`).join("\n\n") || "(no probing answers)"
+  const expBlock = profile.experiences.length
+    ? profile.experiences.map((e) => `- ${e.title} @ ${e.organization}: ${e.contextNotes || e.description || ""}`).join("\n")
+    : "(no experiences)"
+
+  const user = `Generate a selection essay. Output STRICT JSON only.
+
+Profile:
+- Name: ${profile.fullName || "(name)"}
+- Headline: ${profile.headline || ""}
+- Summary: ${profile.summary || ""}
+
+Essay:
+- Type: ${opts.essayType}
+- Prompt/requirements: ${opts.prompt || "(none)"}
+- Target organization: ${opts.targetOrg || "(not specified)"}
+
+Probing Q&A (use these authentic details — they are the user's real voice):
+${qaBlock}
+
+User's experiences:
+${expBlock}
+
+Return JSON:
+{
+  "title": "<essay title, max 8 words>",
+  "paragraphs": ["<p1 opening personal>", "<p2 evidence>", "<p3 evidence/closing>", "<p4 closing>"],
+  "wordCount": <actual total word count>,
+  "warnings": ["<any anti-generic warning>"]
+}`
+
+  const zai = await getZai()
+  const completion = await zai.chat.completions.create({
+    messages: [
+      { role: "assistant", content: sys },
+      { role: "user", content: user },
+    ],
+    thinking: { type: "disabled" },
+  })
+  const raw = completion.choices[0]?.message?.content ?? ""
+  let parsed: GeneratedEssay
+  try {
+    parsed = extractJSON(raw) as GeneratedEssay
+  } catch {
+    parsed = {
+      title: opts.essayType,
+      paragraphs: [profile.summary || ""],
+      wordCount: 0,
+      warnings: ["LLM returned non-JSON; showing fallback. Try regenerating."],
+      probingQA: opts.probingQA,
+    }
+  }
+  if (!Array.isArray(parsed.paragraphs)) parsed.paragraphs = []
+  if (!Array.isArray(parsed.warnings)) parsed.warnings = []
+  parsed.wordCount = parsed.paragraphs.join(" ").split(/\s+/).filter(Boolean).length
+  parsed.probingQA = opts.probingQA
+  return parsed
+}
+
+/* ===========================================================================
+   Interview Prep (Brief Section 2.3, 11)
+   Question generation from role + answer feedback.
+   =========================================================================== */
+export type GeneratedInterviewQuestion = {
+  id: string
+  question: string
+  category: string // behavioral | technical | motivational | situational
+}
+
+export async function generateInterviewQuestions(opts: {
+  locale: "id" | "en"
+  role: string
+  context: string // pasted job desc or org info
+  count?: number
+}): Promise<GeneratedInterviewQuestion[]> {
+  const count = opts.count ?? 6
+  const isIDLocale = opts.locale === "id"
+  const sys = isIDLocale
+    ? `Kamu pewawancara berpengalaman. Susun ${count} pertanyaan wawancara yang realistis berdasarkan role & konteks. Variasikan kategori: behavioral (pengalaman masa lalu), technical (skill spesifik), motivational (kenapa role/org ini), situational (skenario hipotetis). Output JSON array: [{"id":"q1","question":"...","category":"behavioral"}]`
+    : `You are an experienced interviewer. Compose ${count} realistic interview questions based on the role & context. Vary categories: behavioral (past experience), technical (specific skill), motivational (why this role/org), situational (hypothetical scenario). Output JSON array: [{"id":"q1","question":"...","category":"behavioral"}]`
+
+  const zai = await getZai()
+  const completion = await zai.chat.completions.create({
+    messages: [
+      { role: "assistant", content: sys },
+      { role: "user", content: `Role: ${opts.role || "(general)"}\nContext: ${opts.context || "(none)"}` },
+    ],
+    thinking: { type: "disabled" },
+  })
+  const raw = completion.choices[0]?.message?.content ?? ""
+  try {
+    const parsed = extractJSON(raw)
+    const arr = Array.isArray(parsed) ? parsed : (parsed as any).questions ?? (parsed as any).data ?? []
+    return arr.slice(0, count).map((q: any, i: number) => ({
+      id: q.id || `q${i + 1}`,
+      question: q.question || q.q || "",
+      category: q.category || "behavioral",
+    })).filter((q: GeneratedInterviewQuestion) => q.question)
+  } catch {
+    return []
+  }
+}
+
+export type AnswerFeedback = {
+  structureScore: number // 0-100 (STAR pattern: situation-action-result)
+  specificityScore: number // 0-100 (concrete evidence vs vague)
+  lengthScore: number // 0-100 (not too short, not rambling)
+  overall: number
+  feedback: string[]
+  suggestedAnswer: string
+}
+
+export async function generateAnswerFeedback(opts: {
+  locale: "id" | "en"
+  question: string
+  userAnswer: string
+  profile: SerializedProfile
+}): Promise<AnswerFeedback> {
+  const isIDLocale = opts.locale === "id"
+  const sys = isIDLocale
+    ? `Kamu coach wawancara. Nilai jawaban user untuk pertanyaan wawancara. Penilaian:
+1. structureScore: seberapa baik mengikuti pola Situasi-Aksi-Hasil (0-100).
+2. specificityScore: seberapa konkret (ada nama proyek/angka) vs generik (0-100).
+3. lengthScore: panjang tepat (100-300 kata) vs terlalu pendek/panjang (0-100).
+4. overall: rata-rata tertimbang.
+5. feedback: 2-3 saran perbaikan spesifik (array).
+6. suggestedAnswer: contoh jawaban yang lebih baik, dibangun dari pengalaman ASLI user di profil — JANGAN mengarang.
+Output JSON: {"structureScore":N,"specificityScore":N,"lengthScore":N,"overall":N,"feedback":["..."],"suggestedAnswer":"..."}`
+    : `You are an interview coach. Score the user's answer to an interview question. Scoring:
+1. structureScore: how well it follows Situation-Action-Result pattern (0-100).
+2. specificityScore: how concrete (project names/numbers) vs vague (0-100).
+3. lengthScore: appropriate length (100-300 words) vs too short/long (0-100).
+4. overall: weighted average.
+5. feedback: 2-3 specific improvement suggestions (array).
+6. suggestedAnswer: a better example answer, built from the user's REAL experience in profile — DON'T invent.
+Output JSON: {"structureScore":N,"specificityScore":N,"lengthScore":N,"overall":N,"feedback":["..."],"suggestedAnswer":"..."}`
+
+  const expBlock = opts.profile.experiences.length
+    ? opts.profile.experiences.map((e) => `- ${e.title} @ ${e.organization}: ${e.contextNotes || e.description || ""}`).join("\n")
+    : "(no experiences)"
+
+  const zai = await getZai()
+  const completion = await zai.chat.completions.create({
+    messages: [
+      { role: "assistant", content: sys },
+      { role: "user", content: `Question: ${opts.question}\n\nUser's answer: ${opts.userAnswer}\n\nUser's real experiences (use for suggestedAnswer):\n${expBlock}` },
+    ],
+    thinking: { type: "disabled" },
+  })
+  const raw = completion.choices[0]?.message?.content ?? ""
+  try {
+    const parsed = extractJSON(raw) as AnswerFeedback
+    return {
+      structureScore: Math.round(parsed.structureScore || 0),
+      specificityScore: Math.round(parsed.specificityScore || 0),
+      lengthScore: Math.round(parsed.lengthScore || 0),
+      overall: Math.round(parsed.overall || 0),
+      feedback: Array.isArray(parsed.feedback) ? parsed.feedback : [],
+      suggestedAnswer: parsed.suggestedAnswer || "",
+    }
+  } catch {
+    return {
+      structureScore: 0, specificityScore: 0, lengthScore: 0, overall: 0,
+      feedback: ["Could not analyze answer. Try again."],
+      suggestedAnswer: "",
+    }
+  }
 }

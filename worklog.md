@@ -194,3 +194,53 @@ Unresolved / next-phase priorities:
 6. Link documents to applications (ApplicationDocument model exists in schema but not yet wired in UI).
 7. PDF export for all document types (currently DOCX only).
 8. Styling: add skeleton loaders, more micro-interactions.
+
+---
+Task ID: CRON-2 (webDevReview round 2 — Opportunity Essays + Interview Prep)
+Agent: main (cron webDevReview)
+Task: QA existing app, fix extractJSON array bug, build Opportunity Essays (Phase 5) + Interview Prep (Phase 6), improve styling
+
+Work Log:
+- QA pass: confirmed Phase 0/1/CRON-1 stable (dashboard, documents, applications all working).
+- **CRITICAL BUG FIXED**: `extractJSON()` in content-engine.ts only handled JSON objects (`{}`), not arrays (`[]`). When the LLM returned a JSON array (interview questions, essay probing), it would slice from the first `{` cutting off the `[`, causing parse failure. Fixed to detect arrays (prefer `[` if it comes before `{`) and slice to matching `]`. This bug was silently breaking all array-returning LLM calls — interview questions came back empty, essay probing fell back to generic questions.
+- Extended `src/lib/content-engine.ts` with:
+  - `generateEssayProbing()`: 3-5 probing questions specific to essay type (scholarship/org/volunteer/personal-statement/motivation-letter). Tailored to dig authentic details only the user knows.
+  - `generateEssay()`: draft from profile + probing answers. STRICTEST anti-generic (Section 5.4): never invent personal details, personal opening (not "Saya menulis..."), 1-2 real evidence, word limit enforced with precision.
+  - `generateInterviewQuestions()`: 6 role-targeted questions across 4 categories (behavioral/technical/motivational/situational).
+  - `generateAnswerFeedback()`: scores user's answer on structure (STAR), specificity, length; gives 2-3 improvement suggestions; suggested answer built from user's REAL profile experience.
+- Built Opportunity Essays (Phase 5, Brief Section 2.5/5.4/6.6):
+  - 3-tab flow: Setup → Probing Q&A → Preview. Probing questions MUST be answered before draft generation.
+  - APIs: `POST /api/documents/essay/probe`, `POST /api/documents/essay/generate`, `GET /api/documents/essay/[id]/export` (DOCX).
+  - Pages: `/documents/essay/new` (builder), `/documents/essay/[id]` (viewer with probing Q&A history + warnings).
+  - Added to document-type picker + documents list routing.
+  - Accent-colored warning banner emphasizing verify-before-generate.
+- Built Interview Prep (Phase 6, Brief Section 2.3/11):
+  - `/interview` list page: session cards with role, question count, date, delete.
+  - Create dialog: role + context (paste job desc) → auto-generates 6 questions.
+  - `/interview/[id]` practice page: questions with category badges (color-coded), expandable answer boxes, "Minta feedback" button → 4 score pills (Structure/Specificity/Length/Overall) + feedback suggestions + suggested answer from real experience.
+  - APIs: `GET/POST /api/interview-sets`, `GET/DELETE /api/interview-sets/[id]`, `POST /api/interview-sets/[id]/feedback`.
+- Added `documents.essay*` and `interview.*` i18n keys to both ID and EN.
+- Wired dashboard: Interview Prep card → `/interview` (active), Opportunity Essays card → `/documents/essay/new` (active). Added "Interview/Wawancara" nav link (nav now has 5 links, changed breakpoint to lg).
+- Styling: 3-tab essay flow with probing accent banner, color-coded question category badges, 4-up score pills with color thresholds, expandable answer cards, suggested answer in muted box.
+
+Verification results (agent-browser):
+- Essay flow: documents → type picker (4 types now) → essay → filled prompt (LPDP) + target org → generated probing questions → answered 3 probing questions (dosen inspirasi, #SuaraMahasiswa challenge, kontribusi) → generated essay with PERSONAL opening ("Saat dosen pembimbing saya kembali ke ruang..."), real evidence (5 orang, Rp2jt, 3 universitas, #SuaraMahasiswa), word count shown, DOCX download available. ✓
+- Interview flow: /interview → created "UI Designer" session with context → 6 questions generated (fintech-specific, behavioral/technical/motivational/situational categories) → opened question, wrote answer → got feedback with 4 scores (Struktur 40, Kekonkretan, Panjang, Overall) + specific suggestions + suggested answer built from real Himpunan experience. ✓
+- extractJSON fix confirmed: interview questions now parse correctly (were empty before fix).
+- Lint: 0 errors. Server healthy.
+
+Stage Summary:
+- **2 new verticals added**: Opportunity Essays (Phase 5, strictest verification with probing Q&A) + Interview Prep (Phase 6, question generation + answer coaching).
+- **1 critical bug fixed**: extractJSON array handling (was silently breaking interview questions + essay probing).
+- Dashboard now has 4 active vertical cards (Document Suite, Application Ops, Interview Prep, Opportunity Essays) + 1 coming soon (English Readiness). Nav has 5 links.
+- The anti-generic engine now powers 5 document types (CV ATS, Cover Letter, Bio, Essay) + Interview Prep, all reusing the same Content Engine.
+- 4 of 5 product verticals are now functional (only English Readiness remains).
+
+Unresolved / next-phase priorities:
+1. **English Readiness** (Phase 7, Section 10.1/10.2) — Reading + Structure on-the-go generation (text only, no audio). Last vertical.
+2. **Listening audio** (Phase 8, Section 10.3) — needs Koyeb/Kokoro TTS mini-service + Supabase Storage.
+3. **CV Visual** (Section 6.2) — multi-template PDF.
+4. **Personal Deck PPT** (Section 6.4/8) — PptxGenJS.
+5. Link documents to applications (ApplicationDocument model exists but not wired in UI).
+6. PDF export for all document types (currently DOCX only).
+7. Styling: skeleton loaders, more micro-interactions.

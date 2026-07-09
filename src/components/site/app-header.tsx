@@ -18,8 +18,8 @@ export function AppHeader({
       : { profile: "Profile", logout: "Log out" }
   const navLabels =
     locale === "id"
-      ? { dashboard: "Dasbor", documents: "Dokumen", applications: "Lamaran", profile: "Profil" }
-      : { dashboard: "Dashboard", documents: "Documents", applications: "Applications", profile: "Profile" }
+      ? { dashboard: "Dasbor", documents: "Dokumen", applications: "Lamaran", interview: "Wawancara", profile: "Profil" }
+      : { dashboard: "Dashboard", documents: "Documents", applications: "Applications", interview: "Interview", profile: "Profile" }
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
@@ -28,28 +28,34 @@ export function AppHeader({
           <Link href="/dashboard" className="transition-opacity hover:opacity-80">
             <Logo />
           </Link>
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav className="hidden items-center gap-1 lg:flex">
             <Link
               href="/dashboard"
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               {navLabels.dashboard}
             </Link>
             <Link
               href="/documents"
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               {navLabels.documents}
             </Link>
             <Link
               href="/applications"
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               {navLabels.applications}
             </Link>
             <Link
+              href="/interview"
+              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              {navLabels.interview}
+            </Link>
+            <Link
               href="/profile"
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               {navLabels.profile}
             </Link>

@@ -63,8 +63,8 @@ export default async function DashboardPage() {
       desc: t.landing.v3Desc,
       Icon: MessageSquareText,
       cta: t.dashboard.v3Cta,
-      href: "/profile",
-      active: false,
+      href: "/interview",
+      active: true,
     },
     {
       title: t.landing.v4Title,
@@ -79,8 +79,8 @@ export default async function DashboardPage() {
       desc: t.landing.v5Desc,
       Icon: PenLine,
       cta: t.dashboard.v5Cta,
-      href: "/profile",
-      active: false,
+      href: "/documents/essay/new",
+      active: true,
     },
   ]
 

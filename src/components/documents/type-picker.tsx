@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Plus, FileText, Mail, Quote } from "lucide-react"
+import { Plus, FileText, Mail, Quote, PenLine } from "lucide-react"
 import { useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import {
@@ -20,6 +20,7 @@ const TYPES = [
   { value: "cv-ats", href: "/documents/cv-ats/new", Icon: FileText },
   { value: "cover-letter", href: "/documents/cover-letter/new", Icon: Mail },
   { value: "bio", href: "/documents/bio/new", Icon: Quote },
+  { value: "essay", href: "/documents/essay/new", Icon: PenLine },
 ] as const
 
 export function DocumentsTypePicker() {
@@ -59,6 +60,7 @@ export function DocumentsTypePicker() {
                     {value === "cv-ats" && t.documents.cvAtsNewSubtitle}
                     {value === "cover-letter" && t.documents.clNewSubtitle}
                     {value === "bio" && t.documents.bioNewSubtitle}
+                    {value === "essay" && t.documents.essayNewSubtitle}
                   </p>
                 </div>
               </Link>
