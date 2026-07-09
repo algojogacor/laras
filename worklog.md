@@ -754,3 +754,110 @@ Semua 5 vertical + 6 document types + smart suggestions + settings + deadline al
 4. Supabase Storage upload integration
 5. TOEFL/IELTS test spec + scoring system
 6. Artifact QA pipeline
+
+---
+Task ID: PROD-HARDENING-2 (Supabase Storage + TOEFL Scoring + Bank Pipeline + Validation)
+Agent: main (autonomous production engineer)
+Branch: feature/configurable-generation-revision-supabase
+Commits: ffec574, 5913bca, 33450a0
+
+## (a) Status proyek saat ini
+Semua 5 vertical + 6 document types + smart suggestions + settings + deadline alerts + document CRUD + CV Visual photo + listening bank (13 sets, 2 on Supabase Storage) + GenerationConfig + Follow-up revision + version history + TOEFL scoring + bank validation/report pipeline berfungsi. Supabase Storage aktif (6 buckets). Supabase DB migration BLOCKED (IPv6/pooler issue).
+
+## (b) Yang diverifikasi/diperbaiki round ini + hasilnya
+
+### Supabase Storage (Task C) — ✅ Selesai
+- 6 buckets created via REST API: listening-audio (public), generated-documents (private), user-exports (private), deck-exports (private), pdf-exports (private), profile-photos (private).
+- Updated `src/lib/supabase.ts`: `uploadToSupabase()` + `uploadLocalFileToSupabase()` functions with public URL / signed URL support.
+- Listening batch script now uploads audio to Supabase Storage — verified: 2 sets have Supabase URLs (`https://wlxpsashypjtdcxgiqfd.supabase.co/storage/v1/object/public/listening-audio/...`).
+- Fallback: if Supabase upload fails, audio stays as local file path.
+
+### Supabase DB Migration (Task D) — ❌ BLOCKED
+- Direct Postgres connection (db.wlxpsashypjtdcxgiqfd.supabase.co:5432) resolves to IPv6 ONLY — sandbox has no IPv6 connectivity.
+- Pooler connection (aws-0-*.pooler.supabase.com:6543) returns "tenant/user postgres.wlxpsashypjtdcxgiqfd not found" across ALL 6 regions (us-east-1, us-west-1, ap-southeast-1, ap-northeast-1, eu-west-1, eu-central-1).
+- Pooler session mode (port 5432) returns "no tenant identifier provided".
+- REST API (port 443) works — Storage is fully functional.
+- BLOCKER: Cannot connect to Supabase Postgres from sandbox. Requires either IPv6 support or Supabase pooler project registration fix. SQLite remains primary DB.
+- Migration SQL file exists at `supabase/migrations/0001_init.sql` for when access is available.
+
+### TOEFL/IELTS Scoring (Task F) — ✅ Selesai
+- Created `src/lib/scoring.ts`: `calculateScore()` returns estimated CEFR, TOEFL-style 1-6, TOEFL legacy 0-120, IELTS band 0-9, confidence level, disclaimer.
+- `getSkillBreakdown()` — per-skill-tag correct/total/percentage.
+- `getWeaknessTags()` — skills below 60%.
+- All scores labeled "Estimated practice score" + disclaimer: "Bukan skor resmi TOEFL/IELTS..."
+- Updated English submit API to return scoring + skillBreakdown + weaknessTags.
+- Updated English results UI: score card with estimated scores grid (CEFR, TOEFL, IELTS, confidence), disclaimer banner, skill breakdown bars, weakness tags.
+- Verified via agent-browser: "Estimated Practice Score", "CEFR", "Bukan skor resmi", "Skill Breakdown" all present in results.
+
+### Listening Bank Pipeline (Task E) — ✅ Pipeline selesai, scale-up PARTIAL
+- `scripts/generate-listening-bank.ts` — batch generation + Supabase upload pipeline.
+- `scripts/validate-bank.ts` — validates all published questions (schema, audio, answer keys, explanations).
+- `scripts/bank-report.ts` — statistics report (total, published, by difficulty, audio source, target progress).
+- npm scripts: `toefl:generate`, `toefl:validate`, `toefl:report`.
+- Bank status: 13 published sets (5 easy, 5 medium, 3 hard), 2 on Supabase Storage, 11 local. 1 draft (no audio).
+- Validation: 13 valid, 1 invalid (missing audioUrl).
+- Target: 600 listening sets — currently 13/600 (2%). Pipeline works end-to-end: generate → validate → upload Supabase → seed DB → report.
+
+### Configurable Generation (Task A) — 🟡 PARTIAL
+- `GenerationConfig` type created with 20+ fields (src/lib/generation-config.ts).
+- `ConfigPanel` reusable component created (src/components/documents/config-panel.tsx).
+- `smartDefaults()` + `validateConfig()` functions.
+- CV ATS generate API accepts `generationConfig` + saves as `configSnapshot`.
+- NOT YET WIRED: ConfigPanel component not yet integrated into builder UIs (cv-ats-builder, cover-letter-builder, etc. still use old config sidebar). Config exists as type + component but doesn't yet affect all builders' UI.
+
+### Follow-up Revision (Task B) — 🟡 PARTIAL
+- `FollowUpRevisionPanel` component created with quick actions + custom instruction.
+- Revision API (`POST /api/documents/[id]/revise`) works — creates new version, never overwrites.
+- Version history API (`GET /api/documents/[id]/versions`) created.
+- Wired into all 4 document viewers (CV ATS, Cover Letter, Bio, Essay).
+- NOT YET WIRED: Version history UI in FollowUpRevisionPanel doesn't fetch from API yet. No compare/diff. No restore/revert. Not wired to Application Summary + Interview answer.
+
+### Practice Certificate (Task G) — ❌ NOT STARTED
+- Certificate model, pages, PDF generation, verification URL — all not yet built.
+
+### Artifact QA Pipeline (Task H) — 🟡 PARTIAL
+- Bank validation script exists (toefl:validate).
+- DOCX validation done manually in previous rounds (ATS test: text-selectable, heading order, font, bullets).
+- NOT YET: Automated DOCX/PDF/PPTX validation script. No LibreOffice render check.
+
+### Browser E2E QA (Task I) — 🟡 PARTIAL
+- Verified: login, English reading practice, scoring (CEFR, TOEFL, IELTS, disclaimer, skill breakdown, weakness tags).
+- NOT YET: Full hostile E2E covering all flows (revision, certificate, Supabase audio, mobile, dark mode, etc.).
+
+## (c) FINAL CHECKLIST — DONE / PARTIAL / NOT STARTED
+
+| Task | Status | Details |
+|------|--------|---------|
+| A. Configurable Generation | 🟡 PARTIAL | ConfigPanel type + component created, CV ATS API accepts config. NOT wired to all builder UIs. |
+| B. Follow-up Revision | 🟡 PARTIAL | Revision API + panel created, wired to 4 viewers. Version history UI, compare, restore NOT done. |
+| C. Supabase Storage | ✅ DONE | 6 buckets created, listening audio uploads to Supabase, fallback to local. |
+| D. Supabase DB Migration | ❌ BLOCKED | Direct Postgres IPv6-only, pooler tenant-not-found. SQLite remains. SQL migration file ready. |
+| E. TOEFL Bank Scale-up | 🟡 PARTIAL | Pipeline works end-to-end (generate→validate→upload→report). 13/600 sets. |
+| F. TOEFL Scoring | ✅ DONE | CEFR, TOEFL 1-6, IELTS band, confidence, skill breakdown, weakness tags, disclaimer. |
+| G. Practice Certificate | ❌ NOT STARTED | Certificate model, pages, PDF, verification — not built. |
+| H. Artifact QA Pipeline | 🟡 PARTIAL | Bank validation exists. DOCX/PDF/PPTX automated validation NOT built. |
+| I. Browser E2E QA | 🟡 PARTIAL | Scoring verified. Full hostile E2E not done. |
+| J. Founder Review | ❌ NOT STARTED | Not yet done. |
+
+## Bank numbers (actual):
+- Listening: 13 published (5 easy, 5 medium, 3 hard), 2 on Supabase Storage
+- Reading: on-the-go (not banked)
+- Structure: on-the-go (not banked)
+
+## Supabase status:
+- DB: BLOCKED (IPv6/pooler issue)
+- Storage: ✅ 6 buckets, listening audio uploading
+- Auth: not migrated (custom JWT retained)
+
+## Bug Critical/High found + fixed:
+- None new this round. Previous fixes (experienceId, extractJSON, TTS format) remain stable.
+
+## Remaining unresolved + priorities:
+1. WIRE ConfigPanel to all builder UIs (replace old config sidebars) — HIGH
+2. Wire version history API into FollowUpRevisionPanel + add restore/revert — HIGH
+3. Build Practice Certificate (model, pages, PDF, verification) — HIGH
+4. Build automated Artifact QA scripts (DOCX/PDF/PPTX validation) — MEDIUM
+5. Scale listening bank to 600 (run batch at scale) — MEDIUM
+6. Supabase DB migration — BLOCKED (IPv6)
+7. Full hostile Browser E2E QA — MEDIUM
+8. Founder-level review — LOW (after all above done)
