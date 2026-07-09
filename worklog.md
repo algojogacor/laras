@@ -861,3 +861,110 @@ Semua 5 vertical + 6 document types + smart suggestions + settings + deadline al
 6. Supabase DB migration — BLOCKED (IPv6)
 7. Full hostile Browser E2E QA — MEDIUM
 8. Founder-level review — LOW (after all above done)
+
+---
+Task ID: PROD-HARDENING-3 (Turso DB + Certificate + Version History UI)
+Agent: main (autonomous production engineer)
+Branch: main (direct commits)
+Commits: 74220a9, b0f3c92, f1c5816
+
+## (a) Status proyek saat ini
+Turso/libSQL adalah production database (live, verified). Supabase Storage aktif (6 buckets). Certificate system complete. Version history UI complete with restore/revert. All 5 verticals + 6 document types + scoring + certificates + revision + versioning working.
+
+## (b) Yang diverifikasi/diperbaiki round ini
+
+### Turso/libSQL Production Database — ✅ DONE
+- Installed @libsql/client + @prisma/adapter-libsql
+- Prisma schema uses driverAdapters preview feature
+- db.ts creates PrismaClient with PrismaLibSql adapter when DATABASE_URL starts with libsql://
+- All 17+1 tables pushed to Turso (including EnglishCertificate)
+- Verified: signup (turso@laras.test), login, session, profile, onboarding, English practice, scoring, certificate generation — ALL persist to Turso
+- Fallback: local SQLite for dev without Turso URL
+
+### Practice Certificate — ✅ DONE
+- EnglishCertificate model in Prisma (pushed to Turso)
+- POST /api/english/certificates — generate certificate from scored session
+- GET /api/english/certificates — list user's certificates
+- GET /api/english/certificate/[id] — get single certificate
+- /english/certificates — certificate list page with disclaimer banner
+- /english/certificates/[id] — certificate detail with print-to-PDF
+- /verify/certificate/[code] — public verification page (minimal safe data)
+- "Get Certificate" button on English results page
+- All certificates show mandatory disclaimer: "Bukan sertifikat resmi TOEFL/IELTS..."
+- Certificate includes: name, score, CEFR, TOEFL est, IELTS est, confidence, test mode, test spec, date, certificate ID, verification URL
+- Verified via browser: complete practice → Get Certificate → certificate page → public verification page
+
+### Version History UI — ✅ DONE
+- FollowUpRevisionPanel now fetches version history from /api/documents/[id]/versions API
+- Shows all versions with version number, revision instruction, date
+- Restore/revert button on each old version (creates new version with old content)
+- Confirms before restore
+- Version history visible even with just 1 version
+
+### Supabase Storage — ✅ DONE (from previous round)
+- 6 buckets created, listening audio uploads work
+- 2 listening sets have Supabase Storage URLs
+
+## (c) FINAL CHECKLIST — DONE / PARTIAL / NOT STARTED / BLOCKED
+
+| Task | Status | Details |
+|------|--------|---------|
+| A. Configurable Generation | 🟡 PARTIAL | GenerationConfig type + ConfigPanel component created. CV ATS API accepts config. NOT wired to all builder UIs (existing config sidebars still in place). |
+| B. Follow-up Revision | ✅ DONE | Revision API + panel + version history UI + restore/revert. Wired to all 4 document viewers. |
+| C. Supabase Storage | ✅ DONE | 6 buckets, listening audio uploads, signed URL support. |
+| D. Database (Turso) | ✅ DONE | Turso/libSQL live, all tables pushed, verified end-to-end. |
+| E. TOEFL Bank Scale-up | 🟡 PARTIAL | Pipeline works (generate→validate→upload→report). 13/600 listening sets. |
+| F. TOEFL Scoring | ✅ DONE | CEFR, TOEFL 1-6, IELTS band, confidence, skill breakdown, weakness tags, disclaimer. |
+| G. Practice Certificate | ✅ DONE | Model, API, pages, verification, print-to-PDF, disclaimer. Verified end-to-end. |
+| H. Artifact QA Pipeline | 🟡 PARTIAL | Bank validation exists. Automated DOCX/PDF/PPTX validation NOT built. |
+| I. Browser E2E QA | 🟡 PARTIAL | Turso signup/login, English practice, scoring, certificate verified. Full hostile E2E not done. |
+| J. Founder Review | ❌ NOT STARTED | |
+
+## Bank numbers (actual):
+- Listening: 13 published (5 easy, 5 medium, 3 hard), 2 on Supabase Storage
+- Reading: on-the-go (not banked)
+- Structure: on-the-go (not banked)
+
+## Turso DB status: ✅ DONE
+- All 18 tables in Turso
+- Verified: signup, login, profile, onboarding, English practice, scoring, certificate
+- DATABASE_URL=libsql://laras-aryariap.aws-ap-northeast-1.turso.io
+
+## Supabase Storage status: ✅ DONE
+- 6 buckets: listening-audio (public), generated-documents, user-exports, deck-exports, pdf-exports, profile-photos (private)
+- 2 listening sets on Supabase Storage, 11 on local (fallback)
+
+## Certificate status: ✅ DONE
+- Certificate generation from scored practice
+- Certificate detail page with print-to-PDF
+- Public verification page at /verify/certificate/[code]
+- Mandatory disclaimer on certificate + verification
+
+## Artifact QA result: 🟡 PARTIAL
+- Bank validation: 13 valid, 1 invalid
+- DOCX ATS previously verified manually
+- PPTX structural integrity verified
+- Automated DOCX/PDF/PPTX validation script NOT built
+
+## Browser E2E result: 🟡 PARTIAL
+- Verified: Turso signup/login, onboarding, English practice (reading), scoring (CEFR/TOEFL/IELTS/disclaimer/skill breakdown), certificate generation + detail + public verification
+- NOT verified: CV ATS revision, cover letter, essay, deck, mobile, dark mode, locale toggle, application ops
+
+## Critical/High bugs found + fixed:
+- EnglishCertificate table missing from Turso → created via SQL
+- PrismaLibSQL export name (SQL→Sql) → fixed import
+- No other Critical/High bugs
+
+## Remaining HIGH items:
+1. **ConfigPanel wiring to all builder UIs** — ConfigPanel exists but old config sidebars still in place. Need to replace them. HIGH but not blocking core functionality.
+2. **TOEFL bank scale-up** — 13/600 sets. Pipeline works, needs more batch runs. MEDIUM (can be done gradually).
+3. **Automated Artifact QA scripts** — DOCX/PDF/PPTX validation. MEDIUM.
+4. **Full hostile Browser E2E** — More flows to test. MEDIUM.
+5. **Founder-level review** — LOW (after all above done).
+
+## Architecture decisions:
+1. Turso/libSQL = production database (Supabase Postgres blocked by IPv6/pooler)
+2. Supabase Storage = production file storage (REST API works)
+3. Local SQLite = dev fallback
+4. Custom JWT auth retained (Supabase Auth migration not in scope)
+5. edge-tts for TTS (Kokoro requires Python ML infra impractical in sandbox)
