@@ -1,14 +1,8 @@
 import { NextResponse } from "next/server"
-import ZAI from "z-ai-web-dev-sdk"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { generateReading, generateStructure, generateListening } from "@/lib/content-engine"
-
-let _zai: Awaited<ReturnType<typeof ZAI.create>> | null = null
-async function getZai() {
-  if (!_zai) _zai = await ZAI.create()
-  return _zai
-}
+import { generateAudioEdgeTTS } from "@/lib/tts-edge"
 
 export async function POST(request: Request) {
   const session = await getSession()
@@ -60,21 +54,12 @@ export async function POST(request: Request) {
       .trim()
       .slice(0, 1020) // TTS limit
 
-    let audioBase64: string | null = null
+    let audioUrl: string | null = null
     try {
-      const zai = await getZai()
-      const ttsResponse = await zai.audio.tts.create({
-        input: ttsText,
-        voice: "jam", // British English gentleman — good for TOEFL/IELTS style
-        speed: 1.0,
-        response_format: "wav",
-        stream: false,
-      })
-      const arrayBuffer = await ttsResponse.arrayBuffer()
-      const buffer = Buffer.from(new Uint8Array(arrayBuffer))
-      audioBase64 = `data:audio/wav;base64,${buffer.toString("base64")}`
+      // Use edge-tts (Brief Section 10.3 fallback) instead of ZAI SDK TTS
+      audioUrl = await generateAudioEdgeTTS(ttsText, "en-GB-SoniaNeural")
     } catch (e) {
-      console.error("[listening] TTS failed:", (e as Error).message)
+      console.error("[listening] edge-tts failed:", (e as Error).message)
       // Continue without audio — user can still read the script
     }
 
@@ -85,14 +70,14 @@ export async function POST(request: Request) {
         module: "listening",
         passage: JSON.stringify({ title: listening.title, script: listening.script, speaker: listening.speaker, topic: listening.topic }),
         questions: JSON.stringify(listening.questions),
-        audioUrl: audioBase64, // store base64 data URL (dev mode; production would use Supabase Storage URL)
+        audioUrl: audioUrl, // file path in dev, Supabase URL in production
       },
     })
 
     return NextResponse.json({
       ok: true,
       sessionId: eng.id,
-      data: { ...listening, audioUrl: audioBase64 },
+      data: { ...listening, audioUrl: audioUrl },
     })
   }
   return NextResponse.json({ error: "invalid-module" }, { status: 400 })

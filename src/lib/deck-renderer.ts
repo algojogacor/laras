@@ -26,6 +26,10 @@ export const THEMES: DeckTheme[] = [
   { id: "slate", name: "Slate", bg: "1E293B", accent: "60A5FA", text: "F1F5F9", muted: "94A3B8", font: "Calibri", fontHead: "Georgia" },
   { id: "warm", name: "Warm", bg: "3D2B1F", accent: "E0A458", text: "FBF4E6", muted: "B89B7A", font: "Calibri", fontHead: "Georgia" },
   { id: "ink", name: "Ink", bg: "0F0F0F", accent: "D4AF37", text: "FAFAFA", muted: "888888", font: "Calibri", fontHead: "Georgia" },
+  { id: "minimal", name: "Minimal", bg: "FAFAFA", accent: "2D2D2D", text: "1A1A1A", muted: "999999", font: "Calibri", fontHead: "Georgia" },
+  { id: "corporate", name: "Corporate", bg: "1A2332", accent: "C0A062", text: "FFFFFF", muted: "A0AEC0", font: "Calibri", fontHead: "Georgia" },
+  { id: "academic", name: "Academic", bg: "F8F6F0", accent: "8B0000", text: "2D2D2D", muted: "888888", font: "Calibri", fontHead: "Georgia" },
+  { id: "creative", name: "Creative", bg: "1A0A2E", accent: "E94560", text: "F5F5F5", muted: "9D8FB5", font: "Calibri", fontHead: "Georgia" },
 ]
 
 export async function buildDeck(

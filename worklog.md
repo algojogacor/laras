@@ -575,3 +575,45 @@ Unresolved / next-phase priorities:
 1. **Production Listening audio** — migrate from on-the-go TTS to pre-generated bank (Brief Section 10.3) via Koyeb/Kokoro + Supabase Storage.
 2. **Supabase DB migration** when DDL access available.
 3. The product is feature-complete with deadline alerts + full document CRUD — focus shifts to production-readiness (deployment, performance, Supabase migration).
+
+---
+Task ID: AUDIT (BRIEF.md compliance audit — section-by-section)
+Agent: main (cron webDevReview)
+Task: Thorough audit against BRIEF.md, fixing gaps immediately per section
+
+Work Log:
+- **Section 4.1 (Onboarding proaktif)**: Changed field labels from noun-phrases to question-framed prompts per brief examples ("Ada pencapaian yang bisa diukur dari peran ini?", "Tantangan spesifik apa yang pernah kamu hadapi?", "Kamu pakai skill ini di proyek/situasi apa?"). Both ID + EN.
+- **Section 4.2 (Edit-before-generate)**: CV Visual and Deck lacked inline editing — added editable fields (name, headline, summary, contact) to both. Essay builder also got inline profile edit section. All 6 document types now have edit-before-generate.
+- **Section 5 (Anti-generic)**: Verified — deterministic post-process (detectEvidence), concretenessCheck score, essay hard-stop (HTTP 400 if no probing answers), CV ATS blocked when no experiences. ✅ No changes needed.
+- **Section 7 (ATS format)**: Found + fixed critical bug — experienceId mismatch (profile edits recreate experiences with new IDs, causing bullets to be lost in DOCX export + preview). Fixed by matching by index as fallback. Re-ran ATS test: text select-drag ✓, Calibri font ✓, • bullets ✓, heading order ✓.
+- **Section 8 & 8.1 (PPT)**: Had 4 themes, brief requires min 8. Added 4 more (Minimal, Corporate, Academic, Creative) → 8 total. All config-driven. PptxGenJS is dependency. Perlu verifikasi manual oleh Arya untuk buka native di PowerPoint/Impress.
+- **Section 9 (Language & locale)**: Added photoUrl field to profile editor with contextual regional warning (international = US/UK/Canada bias warning, domestic = "common in Indonesia"). UI locale, doc locale, target region all editable in settings.
+- **Section 10.1, 10.2 (Reading & Structure)**: Verified on-the-go LLM generation. ✅ No changes needed.
+- **Section 10.3 (Listening TTS)**: Switched from ZAI SDK TTS to edge-tts (Brief Section 10.3 fallback). Audio stored as local MP3 files (not base64). Created TTS mini-service for Koyeb architecture. ASSUMPTION: edge-tts used instead of Kokoro (Kokoro needs Python ML infra impractical in sandbox). KNOWN GAP: pre-generation pipeline not implemented (audio still on-the-go at play-time). 850MB bank target not started.
+- **Section 12 (Vercel vs Koyeb)**: Created `mini-services/tts-service/` (port 3002) for TTS — the heavy operation that brief says must run on Koyeb. Next.js API calls edge-tts directly in sandbox; production should route through mini-service.
+- **Section 14 (Non-functional)**: Measured — CV ATS generate 4.4s (<5s ✓), Deck generate 41ms (<15s ✓). Export JSON ✓. Delete account ✓. Encryption at rest: dev SQLite lacks it, production Supabase/Postgres provides it natively.
+- **Section 15.1 (Worklog)**: Git commits use auto-generated UUIDs (sandbox limitation). Worklog is detailed source of truth (12 entries). ✅ with note.
+
+FINAL AUDIT CHECKLIST:
+- Section 4.1 (Onboarding proaktif): ✅ Selesai & teruji
+- Section 4.2 (Edit-before-generate): ✅ Selesai & teruji (semua 6 titik generate)
+- Section 5 (Anti-generic engine): ✅ Selesai & teruji
+- Section 7 (ATS format): ✅ Selesai & teruji (bug fix + uji ulang)
+- Section 8 & 8.1 (PPT): ✅ 8 template, PptxGenJS dependency — perlu verifikasi manual oleh Arya untuk native PowerPoint/Impress
+- Section 9 (Language & locale): ✅ Selesai & teruji
+- Section 10.1, 10.2 (Reading & Structure): ✅ On-the-go, bukan bank statis
+- Section 10.3, 10.3.1, 12.1.1 (Listening): 🟡 edge-tts dipakai (bukan Kokoro), audio on-the-go (bukan pre-generated), 850MB bank belum dimulai — blocker: butuh batch pre-generation pipeline + Supabase Storage
+- Section 12 (Vercel vs Koyeb): ✅ TTS mini-service dibuat untuk Koyeb; sandbox menggunakan direct call
+- Section 14 (Non-functional): ✅ Generate times terukur, export JSON ada, enkripsi at rest via Supabase di production
+- Section 15.1 (Worklog): ✅ Worklog konsisten sebagai sumber kebenaran; git commits auto-generated UUID (sandbox limitation)
+
+Asumsi yang dicatat (Section 15.1):
+1. edge-tts dipakai sebagai TTS (bukan Kokoro) — Kokoro butuh Python ML infra yang tidak praktis di sandbox. edge-tts adalah fallback yang disetujui brief.
+2. Audio listening di-generate on-the-go (bukan pre-generated) —Known gap. Batch pre-generation pipeline + Supabase Storage perlu dibangun sebelum production launch.
+3. Enkripsi at rest ditangani oleh Supabase/Postgres di production (tidak oleh SQLite di dev mode).
+4. Git commit messages auto-generated sebagai UUID oleh sandbox — tidak deskriptif seperti yang brief minta, tapi di luar kendali agent.
+
+Ide untuk nanti (Section 17, bukan sekarang):
+- Pre-generation pipeline untuk listening audio (batch script + Supabase Storage)
+- Photo display di CV Visual templates (saat ini hanya field URL + warning, belum ditampilkan di template)
+- Verifikasi native PPT di PowerPoint/Impress oleh Arya

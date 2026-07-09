@@ -28,6 +28,11 @@ export function EssayBuilder({ initialProfile }: { initialProfile: SerializedPro
   const [wordLimit, setWordLimit] = useState("")
   const [locale, setLocale] = useState<"id" | "en">((initialProfile.docLocale as "id" | "en") || "id")
   const [tone, setTone] = useState(initialProfile.preferredTone || "warm")
+  const [edits, setEdits] = useState({
+    fullName: initialProfile.fullName ?? "",
+    headline: initialProfile.headline ?? "",
+    summary: initialProfile.summary ?? "",
+  })
 
   const [probing, setProbing] = useState<EssayProbingQuestion[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -80,7 +85,7 @@ export function EssayBuilder({ initialProfile }: { initialProfile: SerializedPro
       const res = await fetch("/api/documents/essay/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locale, tone, essayType, prompt, targetOrg, wordLimit, probingQA }),
+        body: JSON.stringify({ locale, tone, essayType, prompt, targetOrg, wordLimit, probingQA, edits }),
       })
       const data = await res.json()
       if (!res.ok) { toast.error(t.documents.generateError); return }
@@ -177,6 +182,25 @@ export function EssayBuilder({ initialProfile }: { initialProfile: SerializedPro
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Inline profile edit (Section 4.2) */}
+              <Card className="shadow-soft">
+                <CardHeader><CardTitle className="font-serif text-sm">{t.documents.editBeforeGenerate}</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">{t.onboarding.fullName}</Label>
+                    <Input value={edits.fullName} onChange={(e) => setEdits({ ...edits, fullName: e.target.value })} className="h-9 text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">{t.onboarding.headline}</Label>
+                    <Input value={edits.headline} onChange={(e) => setEdits({ ...edits, headline: e.target.value })} className="h-9 text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">{t.onboarding.summary}</Label>
+                    <Textarea rows={2} value={edits.summary} onChange={(e) => setEdits({ ...edits, summary: e.target.value })} className="text-sm" />
                   </div>
                 </CardContent>
               </Card>

@@ -141,8 +141,10 @@ export function buildCVATSDocx(
   // ── Experience ──
   if (profile.experiences.length > 0) {
     children.push(sectionHeading(L.experience))
-    for (const exp of profile.experiences) {
-      const gen = cv.experiences.find((e) => e.experienceId === exp.id)
+    for (let idx = 0; idx < profile.experiences.length; idx++) {
+      const exp = profile.experiences[idx]
+      // Match by ID first, then by index as fallback (profile edits recreate experiences with new IDs)
+      const gen = cv.experiences.find((e) => e.experienceId === exp.id) || cv.experiences[idx]
       // Title row: "Title — Organization" bold, dates right (but one-column → dates on next line for ATS safety)
       children.push(
         new Paragraph({

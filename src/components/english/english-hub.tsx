@@ -232,7 +232,7 @@ export function EnglishHub({ locale, history }: { locale: Locale; history: Histo
                         <Headphones className="h-4 w-4" /> {t.english.passage}
                       </div>
                       <audio controls className="w-full">
-                        <source src={listening.audioUrl} type="audio/wav" />
+                        <source src={listening.audioUrl} type="audio/mpeg" />
                       </audio>
                       <p className="mt-2 text-[11px] text-muted-foreground">{t.english.yourAnswerHint}</p>
                     </div>

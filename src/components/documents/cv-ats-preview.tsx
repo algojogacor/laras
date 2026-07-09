@@ -78,8 +78,8 @@ export function CVATSPreview({
       {/* Experience */}
       {profile.experiences.length > 0 && (
         <Section title={t.documents.sectionExperience}>
-          {profile.experiences.map((exp) => {
-            const gen = cv.experiences.find((e) => e.experienceId === exp.id)
+          {profile.experiences.map((exp, idx) => {
+            const gen = cv.experiences.find((e) => e.experienceId === exp.id) || cv.experiences[idx]
             const dateStr = [fmtDate(exp.startDate), fmtDate(exp.current ? "Present" : exp.endDate)]
               .filter(Boolean)
               .join(" – ")

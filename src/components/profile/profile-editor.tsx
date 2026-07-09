@@ -28,7 +28,7 @@ type Lang = { language: string; level: string }
 
 type State = {
   fullName: string; headline: string; email: string; phone: string; location: string; summary: string
-  linkedin: string; portfolio: string
+  photoUrl: string; linkedin: string; portfolio: string
   experiences: Exp[]; skills: Skill[]; educations: Edu[]; certifications: Cert[]; languages: Lang[]
   opportunityTypes: string[]; targetRegion: string; urgency: string; preferredTone: string
 }
@@ -42,7 +42,7 @@ const emptyLang = (): Lang => ({ language: "", level: "intermediate" })
 function init(p: SerializedProfile): State {
   return {
     fullName: p.fullName ?? "", headline: p.headline ?? "", email: p.email ?? "", phone: p.phone ?? "", location: p.location ?? "", summary: p.summary ?? "",
-    linkedin: p.links?.linkedin ?? "", portfolio: p.links?.portfolio ?? "",
+    photoUrl: p.photoUrl ?? "", linkedin: p.links?.linkedin ?? "", portfolio: p.links?.portfolio ?? "",
     experiences: (p.experiences ?? []).map((e) => ({ type: e.type, title: e.title, organization: e.organization, startDate: e.startDate ?? "", endDate: e.endDate ?? "", current: e.current, description: e.description ?? "", achievementsText: (e.achievements ?? []).join("\n"), contextNotes: e.contextNotes ?? "" })),
     skills: (p.skills ?? []).map((s) => ({ name: s.name, category: s.category ?? "technical", proficiency: s.proficiency ?? "intermediate", context: s.context ?? "" })),
     educations: (p.educations ?? []).map((e) => ({ institution: e.institution, degree: e.degree ?? "", field: e.field ?? "", startDate: e.startDate ?? "", endDate: e.endDate ?? "", current: e.current, gpa: e.gpa ?? "" })),
@@ -87,6 +87,7 @@ function reducer(s: State, a: Action): State {
 function buildPayload(s: State) {
   return {
     fullName: s.fullName, headline: s.headline, summary: s.summary, email: s.email, phone: s.phone, location: s.location,
+    photoUrl: s.photoUrl || null,
     links: { linkedin: s.linkedin, portfolio: s.portfolio },
     targetRegion: s.targetRegion, opportunityTypes: s.opportunityTypes, preferredTone: s.preferredTone, urgency: s.urgency,
     experiences: s.experiences.filter((e) => e.title || e.organization).map((e) => ({ type: e.type, title: e.title, organization: e.organization, startDate: e.startDate || null, endDate: e.current ? "Present" : e.endDate || null, current: e.current, description: e.description || null, achievements: e.achievementsText.split("\n").map((x) => x.trim()).filter(Boolean), contextNotes: e.contextNotes || null })),
@@ -211,6 +212,9 @@ export function ProfileEditor({
             <Field label={t.onboarding.phone}><Input value={state.phone} onChange={(e) => dispatch({ type: "set", field: "phone", value: e.target.value })} className="h-11" /></Field>
           </div>
           <Field label={t.onboarding.location}><Input value={state.location} onChange={(e) => dispatch({ type: "set", field: "location", value: e.target.value })} className="h-11" /></Field>
+          <Field label={t.onboarding.photoUrl || "URL foto (opsional)"} hint={state.targetRegion === "international" ? "⚠️ Untuk lamaran ke AS/UK/Kanada, foto profil umumnya dihindari — bisa memicu bias rekrutmen. Pertimbangkan untuk tidak menyertakan." : "Opsional. Umum dipakai untuk lamaran domestik Indonesia."}>
+            <Input value={state.photoUrl} onChange={(e) => dispatch({ type: "set", field: "photoUrl", value: e.target.value })} className="h-11" placeholder="https://...foto.jpg" />
+          </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={t.onboarding.linkedin}><Input value={state.linkedin} onChange={(e) => dispatch({ type: "set", field: "linkedin", value: e.target.value })} className="h-11" placeholder="https://linkedin.com/in/..." /></Field>
             <Field label={t.onboarding.portfolio}><Input value={state.portfolio} onChange={(e) => dispatch({ type: "set", field: "portfolio", value: e.target.value })} className="h-11" placeholder="https://..." /></Field>

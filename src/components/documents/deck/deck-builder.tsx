@@ -7,6 +7,9 @@ import { toast } from "sonner"
 import { useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import type { SerializedProfile } from "@/lib/profile"
 import { THEMES } from "@/lib/deck-renderer"
@@ -15,6 +18,11 @@ export function DeckBuilder({ initialProfile }: { initialProfile: SerializedProf
   const t = useT()
   const [theme, setTheme] = useState("forest")
   const [downloading, setDownloading] = useState(false)
+  const [edits, setEdits] = useState({
+    fullName: initialProfile.fullName ?? "",
+    headline: initialProfile.headline ?? "",
+    summary: initialProfile.summary ?? "",
+  })
 
   const slides = [
     { n: 1, title: "Cover", desc: t.profile.basics },
@@ -76,12 +84,26 @@ export function DeckBuilder({ initialProfile }: { initialProfile: SerializedProf
               </div>
             </button>
           ))}
+          {/* Inline edit section (Section 4.2) */}
           <Card className="shadow-soft">
-            <CardContent className="p-3">
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
+            <CardContent className="space-y-3 p-3">
+              <p className="text-xs font-medium text-muted-foreground">{t.documents.editBeforeGenerate}</p>
+              <div className="space-y-1.5">
+                <Label className="text-[11px]">{t.onboarding.fullName}</Label>
+                <Input value={edits.fullName} onChange={(e) => setEdits({ ...edits, fullName: e.target.value })} className="h-8 text-xs" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px]">{t.onboarding.headline}</Label>
+                <Input value={edits.headline} onChange={(e) => setEdits({ ...edits, headline: e.target.value })} className="h-8 text-xs" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px]">{t.onboarding.summary}</Label>
+                <Textarea rows={2} value={edits.summary} onChange={(e) => setEdits({ ...edits, summary: e.target.value })} className="text-xs" />
+              </div>
+              <p className="text-[10px] text-muted-foreground">
                 {t.profile.experience}: {initialProfile.experiences.length} · {t.profile.skills}: {initialProfile.skills.length} · {t.profile.education}: {initialProfile.educations.length}
               </p>
-              <Button asChild variant="outline" size="sm" className="mt-2 w-full">
+              <Button asChild variant="outline" size="sm" className="w-full">
                 <Link href="/profile">{t.profile.edit}</Link>
               </Button>
             </CardContent>
