@@ -537,3 +537,41 @@ Unresolved / next-phase priorities:
 2. **Supabase DB migration** when DDL access available.
 3. **Application deadline alerts banner** on /applications page (the suggestions engine already detects deadlines, but a dedicated banner would be more visible).
 4. The product is feature-complete with smart recommendations — focus shifts to production-readiness.
+
+---
+Task ID: CRON-10 (webDevReview round 10 — Deadline Alerts Banner + Document Delete)
+Agent: main (cron webDevReview)
+Task: Build application deadline alerts banner on /applications, add document delete functionality to all document viewers
+
+Work Log:
+- QA pass: confirmed all verticals + smart suggestions stable. No bugs.
+- Built Deadline Alerts banner (`src/components/applications/deadline-alerts.tsx`):
+  - Detects overdue deadlines + upcoming deadlines (≤7 days) from active applications (excludes rejected/accepted).
+  - Color-coded: red left-border + red icon for overdue, amber for upcoming.
+  - Shows each alert with badge (overdue/days-left), position, organization.
+  - Renders above the kanban board on /applications page.
+  - Only shows when there are alerts (returns null otherwise).
+  - Integrated into applications page: fetches all applications, passes to DeadlineAlerts.
+- Built Document Delete functionality:
+  - API: `DELETE /api/documents/[id]` — deletes document (cascades to ApplicationDocument links).
+  - Created `DeleteDocButton` component: destructive-styled button with confirm dialog (Dialog), loading state, redirects to /documents after delete.
+  - Added to all 4 document viewers: CV ATS, Cover Letter, Bio, Essay.
+  - Confirm dialog: "Dokumen ini akan dihapus permanen." with Cancel/Delete buttons.
+- Styling: deadline banner with left-border accent (red/amber), icon backgrounds, badge styling; delete button with destructive outline styling, confirm dialog with destructive button.
+
+Verification results (agent-browser):
+- Deadline alerts: set application deadline to 3 days from now via API → reloaded /applications → banner shows "Deadline mendesak / 3 hari lagi / Social Media Specialist / · PT Kreatif Nusantara" with amber styling. ✓
+- Document delete: opened essay detail → "Hapus dokumen" button present → clicked → confirm dialog shows "Dokumen ini akan dihapus permanen." with Batal/Hapus buttons. ✓
+- Kanban card also shows "3 hari lagi · segera" deadline badge. ✓
+- Console: no errors. Lint: 0 errors.
+
+Stage Summary:
+- **Deadline Alerts banner added** to /applications — users see overdue + upcoming deadlines at a glance, color-coded by urgency.
+- **Document Delete added** to all 4 document viewers — users can delete unwanted documents with a confirm dialog.
+- The applications page now has both the deadline banner (top) + the kanban board (below) — a complete application tracking experience.
+- The document management is now full CRUD (create via generate, read via viewer, update via regenerate, delete via DeleteDocButton).
+
+Unresolved / next-phase priorities:
+1. **Production Listening audio** — migrate from on-the-go TTS to pre-generated bank (Brief Section 10.3) via Koyeb/Kokoro + Supabase Storage.
+2. **Supabase DB migration** when DDL access available.
+3. The product is feature-complete with deadline alerts + full document CRUD — focus shifts to production-readiness (deployment, performance, Supabase migration).

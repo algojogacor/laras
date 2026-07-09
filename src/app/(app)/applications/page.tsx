@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { getLocaleAndDict } from "@/lib/i18n"
 import { ApplicationsBoard } from "@/components/applications/applications-board"
+import { DeadlineAlerts } from "@/components/applications/deadline-alerts"
 
 export default async function ApplicationsPage() {
   const session = await getSession()
@@ -58,5 +59,14 @@ export default async function ApplicationsPage() {
 
   const docs = documents.map((d) => ({ id: d.id, type: d.type, title: d.title }))
 
-  return <ApplicationsBoard initialApplications={serialized} documents={docs} locale={locale} />
+  const alertApps = applications.map((a) => ({
+    id: a.id, position: a.position, organization: a.organization, status: a.status, deadline: a.deadline,
+  }))
+
+  return (
+    <div className="space-y-6">
+      <DeadlineAlerts applications={alertApps} />
+      <ApplicationsBoard initialApplications={serialized} documents={docs} locale={locale} />
+    </div>
+  )
 }

@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { Download, ArrowLeft, Calendar, FileText } from "lucide-react"
 import { PrintButton } from "@/components/documents/print-button"
+import { DeleteDocButton } from "@/components/documents/delete-doc-button"
 import type { Dictionary } from "@/lib/i18n/dictionary"
 import type { SerializedProfile } from "@/lib/profile"
 import type { GeneratedCVATS } from "@/lib/content-engine"
@@ -66,6 +67,7 @@ export function CVATSViewer({
               {t.documents.downloadDocx}
             </Button>
             <PrintButton className="print:hidden" />
+            <DeleteDocButton documentId={documentId} />
           </div>
         </div>
       </div>

@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useState } from "react"
 import { Download, ArrowLeft, Calendar, Copy, Check } from "lucide-react"
 import { PrintButton } from "@/components/documents/print-button"
+import { DeleteDocButton } from "@/components/documents/delete-doc-button"
 import { toast } from "sonner"
 import type { Dictionary } from "@/lib/i18n/dictionary"
 import type { SerializedProfile } from "@/lib/profile"
@@ -61,6 +62,7 @@ export function CoverLetterViewer({
                 <Download className="mr-1.5 h-4 w-4" />{t.documents.downloadDocx}
               </Button>
               <PrintButton className="print:hidden" />
+              <DeleteDocButton documentId={documentId} />
             </div>
           </div>
         </div>
