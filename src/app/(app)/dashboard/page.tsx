@@ -71,8 +71,8 @@ export default async function DashboardPage() {
       desc: t.landing.v4Desc,
       Icon: Headphones,
       cta: t.dashboard.v4Cta,
-      href: "/profile",
-      active: false,
+      href: "/english",
+      active: true,
     },
     {
       title: t.landing.v5Title,

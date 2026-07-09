@@ -244,3 +244,48 @@ Unresolved / next-phase priorities:
 5. Link documents to applications (ApplicationDocument model exists but not wired in UI).
 6. PDF export for all document types (currently DOCX only).
 7. Styling: skeleton loaders, more micro-interactions.
+
+---
+Task ID: CRON-3 (webDevReview round 3 — English Readiness, the 5th & final vertical)
+Agent: main (cron webDevReview)
+Task: QA existing app, build English Readiness (Phase 7 — Reading + Structure on-the-go generation), complete all 5 verticals
+
+Work Log:
+- QA pass: confirmed all prior phases (0/1/CRON-1/CRON-2) stable. Login → dashboard clean, no errors.
+- Extended `src/lib/content-engine.ts` with:
+  - `generateReading()`: TOEFL/IELTS-style passage (200-500 words by difficulty) + 5 comprehension questions (main idea, detail, inference, vocabulary-in-context, author purpose). 12 rotating topics. Anti-hafalan: always fresh.
+  - `generateStructure()`: 8 grammar questions mixing sentence-completion + error-identification. Tests subject-verb agreement, tense, parallel structure, word form, articles, prepositions, relative clauses, conditionals.
+- Built English Readiness (Phase 7, Brief Section 10.1/10.2):
+  - `/english` page with 3-phase flow: Hub → Practice → Results.
+  - Hub: difficulty selector (easy/medium/hard), 3 module cards (Reading active, Structure active, Listening "coming soon"), practice history with scores.
+  - Practice: Reading shows passage in scrollable box + 5 questions with A-D radio options; Structure shows 8 questions with type badges. Progress counter (X/total).
+  - Results: big score card with trophy + verdict color, full review showing correct/incorrect with green/red highlighting, explanations per question, "Next practice" + "Back to modules".
+  - APIs: `POST /api/english/generate` (creates EnglishSession, generates reading/structure), `POST /api/english/submit` (scores answers, saves score).
+  - Added `english.*` i18n keys to both ID and EN.
+- Fixed lint error: `const module` in API route → `const mod` (Next.js forbids `module` variable name). Also fixed over-aggressive sed rename in english-hub.tsx (HistoryItem field + API body key restored to `module`).
+- Wired dashboard English Readiness card → `/english` (active). Added "English/Bahasa Inggris" nav link (nav now has 6 links).
+- Styling: difficulty pill selector, module cards with icons, scrollable passage box with custom scrollbar, A-D option labels, color-coded answer review (green correct / red incorrect), trophy score card, history cards.
+
+Verification results (agent-browser):
+- English hub loads with Reading/Structure/Listening modules + difficulty selector. ✓
+- Started Reading practice (medium) → generated "The Science of Sleep" passage (~280 words on sleep science) + 5 questions (main idea, detail, inference, vocabulary "elude", author purpose). ✓
+- Answered all 5 questions → submitted → scored 5/5 (100%) with explanations for each ("The passage discusses the critical importance of sleep while noting that its exact purpose remains unknown..."). ✓
+- Results review shows green/red highlighting + explanations. ✓
+- Dashboard: ALL 5 vertical cards now active (no "coming soon" badges). ✓
+- Lint: 0 errors. Server healthy.
+
+Stage Summary:
+- **ALL 5 PRODUCT VERTICALS ARE NOW FUNCTIONAL** — Document Suite (CV ATS + Cover Letter + Bio + Essay), Application Ops, Interview Prep, English Readiness (Reading + Structure), Opportunity Essays.
+- English Readiness uses on-the-go generation per Brief Section 10.1/10.2 (not pre-built bank) — passages/questions are always fresh, anti-hafalan.
+- Listening (Section 10.3) marked "coming soon" — requires Phase 8 (Koyeb/Kokoro TTS + Supabase Storage audio).
+- Dashboard has 5 active cards, 0 coming-soon. Nav has 6 links (Dashboard/Documents/Applications/Interview/English/Profile).
+- The Content Engine now powers: 5 document types + interview coaching + English practice — all reusing the same anti-generic LLM infrastructure.
+
+Unresolved / next-phase priorities:
+1. **Listening audio** (Phase 8, Section 10.3) — needs Koyeb/Kokoro TTS mini-service + Supabase Storage. Last unfinished piece of English Readiness.
+2. **CV Visual** (Section 6.2) — multi-template PDF.
+3. **Personal Deck PPT** (Section 6.4/8) — PptxGenJS + 8-10 templates.
+4. Link documents to applications (ApplicationDocument model exists but not wired in UI).
+5. PDF export for all document types (currently DOCX only).
+6. Styling: skeleton loaders, more micro-interactions.
+7. Overall polish & QA pass across all 5 verticals (Phase 9).

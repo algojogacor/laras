@@ -18,8 +18,8 @@ export function AppHeader({
       : { profile: "Profile", logout: "Log out" }
   const navLabels =
     locale === "id"
-      ? { dashboard: "Dasbor", documents: "Dokumen", applications: "Lamaran", interview: "Wawancara", profile: "Profil" }
-      : { dashboard: "Dashboard", documents: "Documents", applications: "Applications", interview: "Interview", profile: "Profile" }
+      ? { dashboard: "Dasbor", documents: "Dokumen", applications: "Lamaran", interview: "Wawancara", english: "Bahasa Inggris", profile: "Profil" }
+      : { dashboard: "Dashboard", documents: "Documents", applications: "Applications", interview: "Interview", english: "English", profile: "Profile" }
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
@@ -52,6 +52,12 @@ export function AppHeader({
               className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               {navLabels.interview}
+            </Link>
+            <Link
+              href="/english"
+              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              {navLabels.english}
             </Link>
             <Link
               href="/profile"

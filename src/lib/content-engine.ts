@@ -732,3 +732,129 @@ Output JSON: {"structureScore":N,"specificityScore":N,"lengthScore":N,"overall":
     }
   }
 }
+
+/* ===========================================================================
+   English Readiness (Brief Section 10.1, 10.2)
+   Reading + Structure — generated on-the-go (text only, no audio, serverless-safe).
+   Passages/questions are always new (anti-hafalan), varied difficulty.
+   =========================================================================== */
+export type ReadingQuestion = {
+  id: string
+  question: string
+  options: string[]
+  answer: number // index of correct option
+  explanation: string
+}
+export type GeneratedReading = {
+  title: string
+  passage: string
+  questions: ReadingQuestion[]
+  difficulty: "easy" | "medium" | "hard"
+  topic: string
+}
+
+const READING_TOPICS = [
+  "technology", "environment", "culture", "education", "health", "business",
+  "science", "history", "psychology", "society", "art", "travel",
+]
+
+export async function generateReading(opts: {
+  locale: "id" | "en" // always generates English passages (TOEFL-style) but UI locale for meta
+  difficulty: "easy" | "medium" | "hard"
+  topic?: string
+}): Promise<GeneratedReading> {
+  const topic = opts.topic || READING_TOPICS[Math.floor(Math.random() * READING_TOPICS.length)]
+  const diffWordCount = opts.difficulty === "easy" ? "200-280" : opts.difficulty === "medium" ? "280-380" : "380-500"
+  const sys = `You are an English exam writer creating TOEFL/IELTS-style reading comprehension passages and questions. Rules:
+1. Write an ORIGINAL academic-style passage (not copied) about the given topic. Length: ${diffWordCount} words. Difficulty: ${opts.difficulty}.
+2. Generate 5 multiple-choice questions testing comprehension (main idea, detail, inference, vocabulary-in-context, author purpose).
+3. Each question has 4 options (A-D). Mark the correct answer index (0-3).
+4. Provide a short explanation for each answer.
+5. Vary the passage and questions every time — never reuse.
+Output STRICT JSON only: {"title":"<short title>","passage":"<full passage>","difficulty":"${opts.difficulty}","topic":"${topic}","questions":[{"id":"q1","question":"...","options":["A","B","C","D"],"answer":0,"explanation":"..."}]}`
+
+  const zai = await getZai()
+  const completion = await zai.chat.completions.create({
+    messages: [
+      { role: "assistant", content: sys },
+      { role: "user", content: `Topic: ${topic}. Difficulty: ${opts.difficulty}. Generate a fresh passage + 5 questions.` },
+    ],
+    thinking: { type: "disabled" },
+  })
+  const raw = completion.choices[0]?.message?.content ?? ""
+  try {
+    const parsed = extractJSON(raw) as GeneratedReading
+    return {
+      title: parsed.title || topic,
+      passage: parsed.passage || "",
+      difficulty: parsed.difficulty || opts.difficulty,
+      topic: parsed.topic || topic,
+      questions: (parsed.questions || []).slice(0, 5).map((q, i) => ({
+        id: q.id || `q${i + 1}`,
+        question: q.question || "",
+        options: Array.isArray(q.options) ? q.options.slice(0, 4) : [],
+        answer: typeof q.answer === "number" ? q.answer : 0,
+        explanation: q.explanation || "",
+      })).filter((q) => q.question && q.options.length === 4),
+    }
+  } catch {
+    return {
+      title: topic, passage: "", difficulty: opts.difficulty, topic, questions: [],
+    }
+  }
+}
+
+export type StructureQuestion = {
+  id: string
+  question: string
+  options: string[]
+  answer: number
+  explanation: string
+  type: "error-identification" | "sentence-completion"
+}
+export type GeneratedStructure = {
+  questions: StructureQuestion[]
+  difficulty: "easy" | "medium" | "hard"
+}
+
+export async function generateStructure(opts: {
+  difficulty: "easy" | "medium" | "hard"
+  count?: number
+}): Promise<GeneratedStructure> {
+  const count = opts.count ?? 8
+  const sys = `You are an English grammar exam writer creating TOEFL-style "Structure and Written Expression" questions. Rules:
+1. Generate ${count} questions. Mix two types:
+   - "sentence-completion": a sentence with a blank, 4 options to fill it.
+   - "error-identification": a sentence with 4 underlined parts (A-D), pick the one with the grammatical error.
+2. Difficulty: ${opts.difficulty}. Test: subject-verb agreement, tense, parallel structure, word form, articles, prepositions, relative clauses, conditionals.
+3. Each question has 4 options. Mark correct answer index (0-3). Provide a short grammar explanation.
+4. Vary questions every time.
+Output STRICT JSON only: {"difficulty":"${opts.difficulty}","questions":[{"id":"q1","question":"...","options":["A","B","C","D"],"answer":0,"explanation":"...","type":"sentence-completion"}]}`
+
+  const zai = await getZai()
+  const completion = await zai.chat.completions.create({
+    messages: [
+      { role: "assistant", content: sys },
+      { role: "user", content: `Generate ${count} ${opts.difficulty} structure questions.` },
+    ],
+    thinking: { type: "disabled" },
+  })
+  const raw = completion.choices[0]?.message?.content ?? ""
+  try {
+    const parsed = extractJSON(raw) as GeneratedStructure
+    return {
+      difficulty: parsed.difficulty || opts.difficulty,
+      questions: (parsed.questions || []).slice(0, count).map((q, i) => ({
+        id: q.id || `q${i + 1}`,
+        question: q.question || "",
+        options: Array.isArray(q.options) ? q.options.slice(0, 4) : [],
+        answer: typeof q.answer === "number" ? q.answer : 0,
+        explanation: q.explanation || "",
+        type: q.type === "error-identification" ? "error-identification" : "sentence-completion",
+      })).filter((q) => q.question && q.options.length === 4),
+    }
+  } catch {
+    return { difficulty: opts.difficulty, questions: [] }
+  }
+}
+
