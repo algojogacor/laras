@@ -6,7 +6,20 @@ import { getLocaleAndDict } from "@/lib/i18n"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { FileText, Plus, ArrowRight, FileStack } from "lucide-react"
+import { FileText, Plus, ArrowRight, FileStack, Mail, Quote } from "lucide-react"
+import { DocumentsTypePicker } from "@/components/documents/type-picker"
+
+const TYPE_HREF: Record<string, string> = {
+  "cv-ats": "/documents/cv-ats",
+  "cover-letter": "/documents/cover-letter",
+  bio: "/documents/bio",
+}
+
+const TYPE_ICON: Record<string, typeof FileText> = {
+  "cv-ats": FileText,
+  "cover-letter": Mail,
+  bio: Quote,
+}
 
 export default async function DocumentsPage() {
   const session = await getSession()
@@ -26,8 +39,6 @@ export default async function DocumentsPage() {
     select: { id: true, type: true, title: true, version: true, updatedAt: true, config: true },
   })
 
-  const canCreate = true // gate could go here if profile too thin
-
   return (
     <div className="space-y-8 animate-rise">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -35,14 +46,7 @@ export default async function DocumentsPage() {
           <h1 className="font-serif text-3xl font-semibold tracking-tight">{t.documents.title}</h1>
           <p className="mt-1.5 text-muted-foreground">{t.documents.subtitle}</p>
         </div>
-        {canCreate && (
-          <Button asChild size="sm" className="shadow-soft">
-            <Link href="/documents/cv-ats/new">
-              <Plus className="mr-1.5 h-4 w-4" />
-              {t.documents.new}
-            </Link>
-          </Button>
-        )}
+        <DocumentsTypePicker />
       </div>
 
       {documents.length === 0 ? (
@@ -52,24 +56,20 @@ export default async function DocumentsPage() {
               <FileStack className="h-6 w-6 text-primary" />
             </div>
             <p className="mt-4 max-w-sm text-sm text-muted-foreground">{t.documents.empty}</p>
-            <Button asChild className="mt-5 shadow-soft">
-              <Link href="/documents/cv-ats/new">
-                <FileText className="mr-1.5 h-4 w-4" />
-                {t.documents.types["cv-ats"]}
-              </Link>
-            </Button>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {documents.map((d) => {
             const config = d.config ? JSON.parse(d.config) : {}
+            const base = TYPE_HREF[d.type] || "/documents/cv-ats"
+            const Icon = TYPE_ICON[d.type] || FileText
             return (
               <Card key={d.id} className="group shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-lift">
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between">
                     <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <FileText className="h-5 w-5" />
+                      <Icon className="h-5 w-5" />
                     </div>
                     <Badge variant="secondary" className="text-xs">
                       {t.documents.types[d.type as keyof typeof t.documents.types] ?? d.type}
@@ -87,7 +87,7 @@ export default async function DocumentsPage() {
                     </p>
                   )}
                   <Button asChild variant="ghost" size="sm" className="mt-3 -ml-2 text-primary hover:bg-primary/5">
-                    <Link href={`/documents/cv-ats/${d.id}`}>
+                    <Link href={`${base}/${d.id}`}>
                       {t.documents.preview}
                       <ArrowRight className="ml-1.5 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                     </Link>

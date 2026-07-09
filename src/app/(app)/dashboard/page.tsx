@@ -55,8 +55,8 @@ export default async function DashboardPage() {
       desc: t.landing.v2Desc,
       Icon: ClipboardList,
       cta: t.dashboard.v2Cta,
-      href: "/profile",
-      active: false,
+      href: "/applications",
+      active: true,
     },
     {
       title: t.landing.v3Title,

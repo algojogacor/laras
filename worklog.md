@@ -141,3 +141,56 @@ Unresolved / next-phase priorities:
 4. **Application Ops** (Phase 4, Section 2.2) — kanban tracker, fully independent of Content Engine.
 5. PDF export for CV ATS (currently DOCX only; Section 7 says DOCX primary + PDF secondary). Can use `@react-pdf/renderer` or a libreoffice headless conversion mini-service.
 6. Keep enriching styling/empty states per cron mandate.
+
+---
+Task ID: CRON-1 (webDevReview round 1 — Cover Letter + Bio + Application Ops)
+Agent: main (cron webDevReview)
+Task: QA existing app, fix bugs, add Cover Letter + Bio document types, build Application Ops kanban, improve styling
+
+Work Log:
+- QA pass via agent-browser: confirmed Phase 0 + Phase 1 stable. Login → dashboard → documents all working. Found 1 bug: documents list routed ALL types to `/documents/cv-ats/[id]` (would break for new types).
+- Fixed bug: documents list now routes by type via `TYPE_HREF` map; added `TYPE_ICON` map for per-type icons.
+- Added document-type picker dialog (`type-picker.tsx`) — replaces single "new CV" button with a 3-option dialog (CV ATS / Cover Letter / Bio) with descriptions.
+- Extended `src/lib/content-engine.ts` with:
+  - `generateCoverLetter()`: 250-350 words, 3-4 paragraphs, from context_notes. Locale-aware (ID/EN), tone-aware. Anti-generic rules enforced.
+  - `generateBio()`: 3 versions (1-sentence headline, 1-paragraph about, 3-paragraph personal). Anti-generic.
+  - `textConcretenessCheck()`: simpler check for letter/bio (evidence + buzzword detection).
+- Created `src/lib/text-docx.ts` — shared DOCX renderer for letter/bio (sender block + paragraphs + optional sign-off).
+- APIs: `POST /api/documents/cover-letter/generate`, `GET /api/documents/cover-letter/[id]/export` (DOCX), `POST /api/documents/bio/generate`, `GET /api/documents/bio/[id]/export` (DOCX).
+- UI pages: `/documents/cover-letter/new` (builder with position/org inputs + locale/tone + generate → preview with letter-style paper view + word count + concreteness + copy-to-clipboard), `/documents/cover-letter/[id]` (viewer), `/documents/bio/new` (builder → 3-card preview with per-card copy buttons), `/documents/bio/[id]` (viewer).
+- Built Application Ops (Phase 4, Brief Section 2.2) — full kanban board:
+  - `/applications` page with 6 status columns (saved/applied/interview/offer/rejected/accepted), each with colored dot + count.
+  - Cards show type icon, position, organization, location, deadline (color-coded: overdue/soon/normal), AI summary preview.
+  - Add/Edit dialog with all fields + AI summarize (paste job description → LLM extracts requirements/responsibilities/deadline/contacts/highlights).
+  - Move cards between columns via chevron buttons (optimistic update + PATCH).
+  - Delete from edit dialog.
+  - APIs: `GET/POST /api/applications`, `PATCH/DELETE /api/applications/[id]`, `POST /api/applications/summarize`.
+- Added `documents.*` (cl/bio keys) and `applications.*` i18n keys to both ID and EN.
+- Wired dashboard Application Ops card → `/applications` (marked active). Added "Applications/Lamaran" nav link to app header.
+- Styling: letter-style paper preview for cover letter, 3-card bio layout with copy buttons, kanban column color dots, deadline color-coding (red overdue / amber soon), card hover lift + chevron reveal.
+
+Verification results (agent-browser):
+- Documents type picker: opens dialog with 3 options (CV ATS / Cover Letter / Bio). ✓
+- Cover Letter: filled position "Content Creator" + org "Studio Kreatif Nusantara" → generated ID cover letter with greeting "Yth. Tim Rekrutmen, Studio Kreatif Nusantara", 3 paragraphs mentioning position+org, word count shown, concreteness check. ✓
+- Bio: generated 3 versions — headline ("Mahasiswa Ilmu Komunikasi yang aktif di gerakan kampus"), about (mentions Himpunan + real experience), personal (3 paragraphs with #SuaraMahasiswa, 5 orang, Rp2 juta, 3 unit kampus — all from context_notes). Copy buttons work. ✓
+- Applications kanban: empty state → add dialog → filled form → AI summarize extracted REQUIREMENTS + deadline → saved → card appears under "Tersimpan" → moved to "Dilamar" via chevron button. ✓
+- Documents list: shows all 4 docs (Bio, Cover Letter, 2x CV ATS) with correct titles and per-type routing. ✓
+- Mobile responsive: 390×844, 0px overflow on applications page. ✓
+- Console: only stale RSC hot-reload "Failed to fetch" glitches (not real bugs — hard navigation works). Lint: 0 errors.
+
+Stage Summary:
+- **3 new features added**: Cover Letter (full), Bio (full, 3 versions), Application Ops kanban (full new vertical). 
+- **1 bug fixed**: documents list now routes by type.
+- Document Suite now has 3 working types (CV ATS + Cover Letter + Bio), all with edit-before-generate, anti-generic engine, preview, DOCX export, copy-to-clipboard.
+- Application Ops is the 2nd fully-functional vertical (after Document Suite) — kanban with AI job-description summarizer.
+- Dashboard now has 2 active vertical cards (was 1). Nav has 4 links (Dashboard/Documents/Applications/Profile).
+
+Unresolved / next-phase priorities:
+1. **Opportunity Essays** (Phase 5, Section 2.5/6.6) — strictest verification (probing Q&A before generation). Reuses Content Engine.
+2. **Interview Prep** (Phase 6, Section 11) — question generation from role + answer building from real experience.
+3. **English Readiness** (Phase 7, Section 10.1/10.2) — Reading + Structure on-the-go generation (text only, no audio).
+4. **CV Visual** (Section 6.2) — multi-template PDF.
+5. **Personal Deck PPT** (Section 6.4/8) — PptxGenJS.
+6. Link documents to applications (ApplicationDocument model exists in schema but not yet wired in UI).
+7. PDF export for all document types (currently DOCX only).
+8. Styling: add skeleton loaders, more micro-interactions.

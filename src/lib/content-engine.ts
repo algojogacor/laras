@@ -266,3 +266,194 @@ export async function generateCVATS(
 function isID(locale: string) {
   return locale === "id"
 }
+
+/* ===========================================================================
+   Cover Letter (Brief Section 6.3)
+   250-350 words, 3-4 paragraphs, from context_notes + specific experience.
+   =========================================================================== */
+export type GeneratedCoverLetter = {
+  recipientGreeting: string
+  paragraphs: string[]
+  closing: string
+  wordCount: number
+  warnings: string[]
+}
+
+function buildCoverLetterPrompt(
+  profile: SerializedProfile,
+  opts: { locale: "id" | "en"; tone: string; region: string; position?: string; organization?: string }
+) {
+  const isIDLocale = opts.locale === "id"
+  const sys = isIDLocale
+    ? `Kamu penulis cover letter profesional. Aturan MUTLAK:
+1. Tulis HANYA dari data pengalaman asli user. JANGAN mengarang pencapaian/angka/nama proyek yang tidak ada di data.
+2. 250-350 kata, 3-4 paragraf.
+3. Paragraf 1: pembuka yang menyebut posisi & organisasi tujuan, lalu satu kalimat mengapa kamu cocok (dari headline/profil).
+4. Paragraf 2-3: bukti konkret dari 1-2 pengalaman ASLI user — sebut nama proyek/organisasi/angka dari context_notes. Pola Aksi+Konteks+Hasil.
+5. Paragraf terakhir: penutup yang menghubungkan ke tujuan organisasi, bukan generik "Saya menantikan kabar Anda".
+6. DILARANG buzzword tanpa bukti (results-driven, berorientasi hasil, dll).
+7. Bahasa Indonesia, ${opts.tone === "formal" ? "formal" : opts.tone === "direct" ? "langsung" : "hangat & personal"}.`
+    : `You are a professional cover letter writer. STRICT rules:
+1. Write ONLY from the user's real experience data. NEVER invent achievements/numbers/project names not in the data.
+2. 250-350 words, 3-4 paragraphs.
+3. Paragraph 1: opening mentioning the position & target organization, then one sentence on why you fit (from headline/profile).
+4. Paragraphs 2-3: concrete evidence from 1-2 REAL experiences — name projects/organizations/numbers from context_notes. Action+Context+Result pattern.
+5. Last paragraph: closing connecting to the organization's goals, not generic "I look forward to hearing from you".
+6. FORBIDDEN buzzwords without evidence (results-driven, detail-oriented, etc).
+7. Professional English, ${opts.tone === "formal" ? "formal" : opts.tone === "direct" ? "direct" : "warm & personal"}.`
+
+  const experiencesBlock = profile.experiences.length
+    ? profile.experiences.map((e) => `- ${e.title} @ ${e.organization}: ${e.description || ""} | achievements: ${(e.achievements || []).join("; ")} | context: ${e.contextNotes || "(none)"}`).join("\n")
+    : "(no experiences)"
+
+  const user = `Generate a cover letter. Output STRICT JSON only.
+
+Profile:
+- Name: ${profile.fullName || "(name)"}
+- Headline: ${profile.headline || ""}
+- Email: ${profile.email || ""}
+- Phone: ${profile.phone || ""}
+- Summary: ${profile.summary || ""}
+
+Target:
+- Position: ${opts.position || "(general application)"}
+- Organization: ${opts.organization || "(not specified)"}
+
+Experiences:
+${experiencesBlock}
+
+Skills: ${profile.skills.map((s) => s.name).join(", ")}
+
+Return JSON:
+{
+  "recipientGreeting": "<greeting line, e.g. 'Yth. Tim Rekrutmen,[org]' or 'Dear Hiring Team,[org]'>",
+  "paragraphs": ["<p1>", "<p2>", "<p3>"],
+  "closing": "<closing line + sign-off>",
+  "wordCount": <actual total word count of all paragraphs>,
+  "warnings": ["<any anti-generic warning>"]
+}`
+
+  return { sys, user }
+}
+
+export async function generateCoverLetter(
+  profile: SerializedProfile,
+  opts: { locale: "id" | "en"; tone: string; region: string; position?: string; organization?: string }
+): Promise<GeneratedCoverLetter> {
+  const { sys, user } = buildCoverLetterPrompt(profile, opts)
+  const zai = await getZai()
+  const completion = await zai.chat.completions.create({
+    messages: [
+      { role: "assistant", content: sys },
+      { role: "user", content: user },
+    ],
+    thinking: { type: "disabled" },
+  })
+  const raw = completion.choices[0]?.message?.content ?? ""
+  let parsed: GeneratedCoverLetter
+  try {
+    parsed = extractJSON(raw) as GeneratedCoverLetter
+  } catch {
+    parsed = {
+      recipientGreeting: opts.locale === "id" ? "Yth. Tim Rekrutmen," : "Dear Hiring Team,",
+      paragraphs: [profile.summary || profile.headline || ""],
+      closing: opts.locale === "id" ? "Hormat saya," : "Sincerely,",
+      wordCount: 0,
+      warnings: ["LLM returned non-JSON; showing fallback. Try regenerating."],
+    }
+  }
+  if (!Array.isArray(parsed.paragraphs)) parsed.paragraphs = []
+  if (!Array.isArray(parsed.warnings)) parsed.warnings = []
+  // recompute word count
+  parsed.wordCount = parsed.paragraphs.join(" ").split(/\s+/).filter(Boolean).length
+  return parsed
+}
+
+/* ===========================================================================
+   Bio (Brief Section 6.5)
+   Three versions: 1 sentence (headline), 1 paragraph (about), 3 paragraphs (personal page).
+   =========================================================================== */
+export type GeneratedBio = {
+  headline: string // 1 sentence
+  about: string // 1 paragraph
+  personal: string[] // 3 paragraphs
+  warnings: string[]
+}
+
+function buildBioPrompt(profile: SerializedProfile, opts: { locale: "id" | "en"; tone: string }) {
+  const isIDLocale = opts.locale === "id"
+  const sys = isIDLocale
+    ? `Kamu penulis bio profesional. Aturan MUTLAK:
+1. Tulis HANYA dari data asli user. Jangan mengarang.
+2. DILARANG buzzword tanpa bukti.
+3. Bahasa Indonesia, ${opts.tone === "formal" ? "formal" : opts.tone === "direct" ? "langsung" : "hangat & personal"}.
+4. Hasilkan 3 versi: 1 kalimat (headline), 1 paragraf (about, 2-3 kalimat), 3 paragraf (untuk halaman personal — narasi lebih dalam dari pengalaman asli).`
+    : `You are a professional bio writer. STRICT rules:
+1. Write ONLY from the user's real data. Never invent.
+2. FORBIDDEN buzzwords without evidence.
+3. Professional English, ${opts.tone === "formal" ? "formal" : opts.tone === "direct" ? "direct" : "warm & personal"}.
+4. Produce 3 versions: 1 sentence (headline), 1 paragraph (about, 2-3 sentences), 3 paragraphs (for a personal page — deeper narrative from real experience).`
+
+  const experiencesBlock = profile.experiences.length
+    ? profile.experiences.map((e) => `- ${e.title} @ ${e.organization}: ${e.contextNotes || e.description || ""}`).join("\n")
+    : "(no experiences)"
+
+  const user = `Generate a bio. Output STRICT JSON only.
+
+Profile:
+- Name: ${profile.fullName || "(name)"}
+- Headline: ${profile.headline || ""}
+- Summary: ${profile.summary || ""}
+Experiences:
+${experiencesBlock}
+Skills: ${profile.skills.map((s) => s.name).join(", ")}
+
+Return JSON:
+{
+  "headline": "<one sentence, max 20 words>",
+  "about": "<one paragraph, 2-3 sentences>",
+  "personal": ["<p1>", "<p2>", "<p3>"],
+  "warnings": ["<any anti-generic warning>"]
+}`
+
+  return { sys, user }
+}
+
+export async function generateBio(
+  profile: SerializedProfile,
+  opts: { locale: "id" | "en"; tone: string }
+): Promise<GeneratedBio> {
+  const { sys, user } = buildBioPrompt(profile, opts)
+  const zai = await getZai()
+  const completion = await zai.chat.completions.create({
+    messages: [
+      { role: "assistant", content: sys },
+      { role: "user", content: user },
+    ],
+    thinking: { type: "disabled" },
+  })
+  const raw = completion.choices[0]?.message?.content ?? ""
+  let parsed: GeneratedBio
+  try {
+    parsed = extractJSON(raw) as GeneratedBio
+  } catch {
+    parsed = {
+      headline: profile.headline || "",
+      about: profile.summary || "",
+      personal: [profile.summary || ""],
+      warnings: ["LLM returned non-JSON; showing fallback. Try regenerating."],
+    }
+  }
+  if (!Array.isArray(parsed.personal)) parsed.personal = []
+  if (!Array.isArray(parsed.warnings)) parsed.warnings = []
+  return parsed
+}
+
+/** Concreteness check for cover letter / bio (simpler: check for evidence in paragraphs). */
+export function textConcretenessCheck(text: string, locale: "id" | "en"): { hasEvidence: boolean; buzzwords: string[] } {
+  const hasEvidence = detectEvidence(text) !== "none"
+  const list = locale === "id" ? BUZZWORDS_ID : BUZZWORDS_EN
+  const t = text.toLowerCase()
+  const buzzwords = list.filter((b) => t.includes(b))
+  return { hasEvidence, buzzwords }
+}

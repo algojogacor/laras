@@ -18,8 +18,8 @@ export function AppHeader({
       : { profile: "Profile", logout: "Log out" }
   const navLabels =
     locale === "id"
-      ? { dashboard: "Dasbor", documents: "Dokumen", profile: "Profil" }
-      : { dashboard: "Dashboard", documents: "Documents", profile: "Profile" }
+      ? { dashboard: "Dasbor", documents: "Dokumen", applications: "Lamaran", profile: "Profil" }
+      : { dashboard: "Dashboard", documents: "Documents", applications: "Applications", profile: "Profile" }
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
@@ -40,6 +40,12 @@ export function AppHeader({
               className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               {navLabels.documents}
+            </Link>
+            <Link
+              href="/applications"
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              {navLabels.applications}
             </Link>
             <Link
               href="/profile"
