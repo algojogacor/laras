@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Loader2, Sparkles, Send, History, RotateCcw, GitCompare } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Loader2, Sparkles, Send, History, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import { useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
@@ -21,11 +21,12 @@ type Version = {
  * Reusable follow-up revision panel (Brief Task 2).
  * Lets users instruct changes: "shorten", "more formal", "add X", etc.
  * Creates a new version (never overwrites), shows version history.
+ * Fetches version history from API automatically.
  */
 export function FollowUpRevisionPanel({
   documentId,
   documentType,
-  versions = [],
+  versions: initialVersions = [],
   onRevised,
 }: {
   documentId: string
@@ -37,6 +38,39 @@ export function FollowUpRevisionPanel({
   const [instruction, setInstruction] = useState("")
   const [loading, setLoading] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [versions, setVersions] = useState<Version[]>(initialVersions)
+
+  // Fetch version history from API
+  useEffect(() => {
+    fetch(`/api/documents/${documentId}/versions`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.versions) setVersions(data.versions)
+      })
+      .catch(() => {})
+  }, [documentId])
+
+  // Restore an old version (loads its content as the current document content)
+  async function restoreVersion(versionId: string, versionNumber: number) {
+    if (!confirm(`Restore version ${versionNumber}? This will create a new version with the old content.`)) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/documents/${documentId}/revise`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instruction: `Restore to version ${versionNumber}`,
+          documentType,
+          restoreVersionId: versionId,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error("Restore failed"); return }
+      toast.success(`Restored to v${versionNumber} → new v${data.versionNumber}`)
+      if (onRevised) onRevised(data.content, data.versionId)
+    } catch { toast.error("Restore failed") }
+    finally { setLoading(false) }
+  }
 
   const quickActions = [
     { label: "Shorten", instruction: "pendekkan / shorten this output" },
@@ -123,7 +157,7 @@ export function FollowUpRevisionPanel({
         </div>
 
         {/* Version history */}
-        {versions.length > 1 && (
+        {versions.length > 0 && (
           <div>
             <button
               onClick={() => setShowHistory(!showHistory)}
@@ -131,11 +165,10 @@ export function FollowUpRevisionPanel({
             >
               <History className="h-3 w-3" />
               Version history ({versions.length})
-              {showHistory ? <RotateCcw className="ml-1 h-3 w-3" /> : null}
             </button>
             {showHistory && (
               <div className="mt-2 space-y-1.5">
-                {versions.map((v) => (
+                {versions.map((v, idx) => (
                   <div key={v.id} className="flex items-center gap-2 rounded-lg border border-border p-2 text-xs">
                     <Badge variant="secondary" className="text-[10px]">v{v.versionNumber}</Badge>
                     <span className="flex-1 truncate text-muted-foreground">
@@ -144,6 +177,16 @@ export function FollowUpRevisionPanel({
                     <span className="text-[10px] text-muted-foreground">
                       {new Date(v.createdAt).toLocaleDateString()}
                     </span>
+                    {idx > 0 && (
+                      <button
+                        onClick={() => restoreVersion(v.id, v.versionNumber)}
+                        disabled={loading}
+                        className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-primary hover:bg-primary/10 disabled:opacity-50"
+                        title="Restore this version"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
