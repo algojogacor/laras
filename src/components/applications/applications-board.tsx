@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import {
   Plus, Trash2, Loader2, Sparkles, X, ExternalLink, Calendar, MapPin,
-  ChevronLeft, ChevronRight, Briefcase, GraduationCap, HandHeart, Users, AlertTriangle,
+  ChevronLeft, ChevronRight, Briefcase, GraduationCap, HandHeart, Users, AlertTriangle, FileText, Link2, Unlink,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useT } from "@/components/providers/locale-provider"
@@ -27,7 +27,10 @@ type Application = {
   deadline: string | null; location: string | null; url: string | null; summary: string | null
   notes: string | null; jobDescription: string | null
   createdAt: string; updatedAt: string
+  linkedDocIds: string[]
 }
+
+type DocRef = { id: string; type: string; title: string }
 
 const COLUMNS = ["saved", "applied", "interview", "offer", "rejected", "accepted"] as const
 const COLUMN_ORDER = [...COLUMNS] as string[]
@@ -47,7 +50,7 @@ function daysUntil(deadline: string | null, t: any): { text: string; tone: "over
   return { text: `${diff} ${t.applications.daysLeft}`, tone: "normal" }
 }
 
-export function ApplicationsBoard({ initialApplications, locale }: { initialApplications: Application[]; locale: Locale }) {
+export function ApplicationsBoard({ initialApplications, documents, locale }: { initialApplications: Application[]; documents: DocRef[]; locale: Locale }) {
   const t = useT()
   const [apps, setApps] = useState<Application[]>(initialApplications)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -56,7 +59,7 @@ export function ApplicationsBoard({ initialApplications, locale }: { initialAppl
   // refresh from server on mount (in case of stale props)
   useEffect(() => {
     fetch("/api/applications").then((r) => r.json()).then((d) => {
-      if (d.applications) setApps(d.applications)
+      if (d.applications) setApps(d.applications.map((a: any) => ({ ...a, linkedDocIds: a.linkedDocIds || [] })))
     }).catch(() => {})
   }, [])
 
@@ -188,6 +191,23 @@ export function ApplicationsBoard({ initialApplications, locale }: { initialAppl
                           {app.summary && (
                             <p className="mt-2 line-clamp-2 text-[11px] italic text-muted-foreground/80">{app.summary.slice(0, 100)}…</p>
                           )}
+                          {(app.linkedDocIds || []).length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {(app.linkedDocIds || []).slice(0, 3).map((did) => {
+                                const doc = documents.find((d) => d.id === did)
+                                if (!doc) return null
+                                return (
+                                  <span key={did} className="flex items-center gap-0.5 rounded bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
+                                    <FileText className="h-2.5 w-2.5" />
+                                    {t.documents.types[doc.type as keyof typeof t.documents.types] || doc.type}
+                                  </span>
+                                )
+                              })}
+                              {(app.linkedDocIds || []).length > 3 && (
+                                <span className="text-[9px] text-muted-foreground">+{(app.linkedDocIds || []).length - 3}</span>
+                              )}
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     )
@@ -208,6 +228,19 @@ export function ApplicationsBoard({ initialApplications, locale }: { initialAppl
         editing={editing}
         onSaved={onSaved}
         locale={locale}
+        documents={documents}
+        onLinkChange={(appId, docId, linked) => {
+          setApps((prev) => prev.map((a) => a.id === appId ? {
+            ...a,
+            linkedDocIds: linked ? [...a.linkedDocIds, docId] : a.linkedDocIds.filter((id) => id !== docId),
+          } : a))
+          if (editing && editing.id === appId) {
+            setEditing({
+              ...editing,
+              linkedDocIds: linked ? [...editing.linkedDocIds, docId] : editing.linkedDocIds.filter((id) => id !== docId),
+            })
+          }
+        }}
       />
     </div>
   )
@@ -215,13 +248,15 @@ export function ApplicationsBoard({ initialApplications, locale }: { initialAppl
 
 /* ---------- Add/Edit dialog with AI summarize ---------- */
 function ApplicationDialog({
-  open, onOpenChange, editing, onSaved, locale,
+  open, onOpenChange, editing, onSaved, locale, documents, onLinkChange,
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
   editing: Application | null
   onSaved: (a: Application) => void
   locale: Locale
+  documents: DocRef[]
+  onLinkChange: (appId: string, docId: string, linked: boolean) => void
 }) {
   const t = useT()
   const [form, setForm] = useState({
@@ -366,6 +401,49 @@ function ApplicationDialog({
                 </div>
               )}
               {summary.deadline && <p className="text-xs"><span className="font-medium">{t.applications.deadline}:</span> {summary.deadline}</p>}
+            </div>
+          )}
+
+          {/* Linked documents */}
+          {editing && documents.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs flex items-center gap-1"><Link2 className="h-3 w-3" />{t.applications.linkedDocs}</Label>
+              <div className="max-h-32 space-y-1 overflow-y-auto scrollbar-laras rounded-lg border border-border p-2">
+                {documents.map((doc) => {
+                  const linked = (editing.linkedDocIds || []).includes(doc.id)
+                  return (
+                    <div key={doc.id} className="flex items-center justify-between rounded px-1.5 py-1 hover:bg-secondary">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <FileText className="h-3 w-3 shrink-0 text-muted-foreground" />
+                        <span className="truncate text-xs">{doc.title}</span>
+                        <span className="shrink-0 text-[9px] text-muted-foreground">({t.documents.types[doc.type as keyof typeof t.documents.types] || doc.type})</span>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          try {
+                            if (linked) {
+                              await fetch(`/api/applications/${editing.id}/documents?documentId=${doc.id}`, { method: "DELETE" })
+                              onLinkChange(editing.id, doc.id, false)
+                            } else {
+                              await fetch(`/api/applications/${editing.id}/documents`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ documentId: doc.id }),
+                              })
+                              onLinkChange(editing.id, doc.id, true)
+                            }
+                            toast.success(t.applications.saved)
+                          } catch { toast.error(t.auth.errGeneric) }
+                        }}
+                        className={cn("ml-1.5 shrink-0 rounded p-0.5 transition-colors", linked ? "text-primary hover:bg-destructive/10 hover:text-destructive" : "text-muted-foreground hover:text-primary")}
+                        aria-label={linked ? "Unlink" : "Link"}
+                      >
+                        {linked ? <Unlink className="h-3 w-3" /> : <Link2 className="h-3 w-3" />}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
 

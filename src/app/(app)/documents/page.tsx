@@ -6,7 +6,7 @@ import { getLocaleAndDict } from "@/lib/i18n"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { FileText, Plus, ArrowRight, FileStack, Mail, Quote, PenLine, Palette } from "lucide-react"
+import { FileText, Plus, ArrowRight, FileStack, Mail, Quote, PenLine, Palette, Presentation } from "lucide-react"
 import { DocumentsTypePicker } from "@/components/documents/type-picker"
 
 const TYPE_HREF: Record<string, string> = {
@@ -15,6 +15,7 @@ const TYPE_HREF: Record<string, string> = {
   "cover-letter": "/documents/cover-letter",
   bio: "/documents/bio",
   essay: "/documents/essay",
+  deck: "/documents/deck",
 }
 
 const TYPE_ICON: Record<string, typeof FileText> = {
@@ -23,6 +24,7 @@ const TYPE_ICON: Record<string, typeof FileText> = {
   "cover-letter": Mail,
   bio: Quote,
   essay: PenLine,
+  deck: Presentation,
 }
 
 export default async function DocumentsPage() {

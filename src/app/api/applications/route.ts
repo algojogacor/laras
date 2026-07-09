@@ -12,10 +12,21 @@ export async function GET() {
   })
   if (!profile) return NextResponse.json({ applications: [] })
 
-  const applications = await db.application.findMany({
-    where: { userProfileId: profile.id },
-    orderBy: { order: "asc" },
-  })
+  const [applications, appDocs] = await Promise.all([
+    db.application.findMany({
+      where: { userProfileId: profile.id },
+      orderBy: { order: "asc" },
+    }),
+    db.applicationDocument.findMany({
+      where: { application: { userProfileId: profile.id } },
+      select: { applicationId: true, documentId: true },
+    }),
+  ])
+  const linkedMap: Record<string, string[]> = {}
+  for (const ad of appDocs) {
+    if (!linkedMap[ad.applicationId]) linkedMap[ad.applicationId] = []
+    linkedMap[ad.applicationId].push(ad.documentId)
+  }
   return NextResponse.json({
     applications: applications.map((a) => ({
       ...a,
@@ -31,6 +42,7 @@ export async function GET() {
       notes: a.notes,
       createdAt: a.createdAt,
       updatedAt: a.updatedAt,
+      linkedDocIds: linkedMap[a.id] || [],
     })),
   })
 }

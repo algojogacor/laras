@@ -332,3 +332,42 @@ Unresolved / next-phase priorities:
 4. PDF export for ATS/cover-letter/bio/essay (currently DOCX only; CV Visual uses print-to-PDF).
 5. Skeleton loaders, more micro-interactions.
 6. Overall polish & QA pass (Phase 9).
+
+---
+Task ID: CRON-5 (webDevReview round 5 — Personal Deck PPT + Link Documents to Applications)
+Agent: main (cron webDevReview)
+Task: QA existing app, build Personal Deck (PptxGenJS), wire document-application linking
+
+Work Log:
+- QA pass: confirmed all 5 verticals + CV Visual + dashboard stats stable. No errors.
+- Installed `pptxgenjs` (v4.0.1) for Personal Deck.
+- Built Personal Deck (Brief Section 6.4/8):
+  - `src/lib/deck-renderer.ts`: config-driven theme system (4 themes: Forest, Slate, Warm, Ink) — bg/accent/text/muted/font per theme. 6 slides: Cover (name+headline+contact), About Me (summary), Timeline (career with dots+lines), Skills (chips grouped by category), Project Highlights (3-card layout with achievements), Contact (email/phone/links). `addSectionHeader` helper for consistency.
+  - API: `GET /api/documents/deck/export?theme=X` — generates real .pptx (83KB, valid OOXML).
+  - `/documents/deck/new` page: theme picker (color swatches), 6 slide outline cards with mini preview (themed), download button, profile stats.
+  - Added to document-type picker (now 6 types), documents list routing + type icon (Presentation).
+- Built document-application linking (Brief Section 2.2 — "each application card connected to specific documents"):
+  - API: `POST /api/applications/[id]/documents` (link), `DELETE /api/applications/[id]/documents?documentId=X` (unlink).
+  - Updated `/applications` page to fetch documents + ApplicationDocument links, pass `linkedDocIds` per app + `documents` list to board.
+  - Updated `GET /api/applications` to include `linkedDocIds` (was missing — caused render error when useEffect overwrote server props).
+  - Board: linked-doc badges on kanban cards (FileText icon + type label, max 3 + "+N"). Edit dialog: "Dokumen terkait" section with scrollable list of all user's documents, Link/Unlink toggle per doc (optimistic update via onLinkChange callback).
+  - Safety guards: `linkedDocIds || []` in card render + dialog (prevents crash if field undefined).
+- Styling: themed slide preview cards (mini slide with theme bg+accent), document link/unlink icon buttons with hover states, scrollable linked-docs list with custom scrollbar.
+
+Verification results (agent-browser):
+- Personal Deck: page loads with 4 themes (Forest/Slate/Warm/Ink) + 6 slide outline cards. Downloaded PPTX → 83KB valid zip. Extracted 6 slides via python: slide1 (Rina Pratiwi + headline + contact), slide2 (About Me + summary), slide3 (Timeline: Social Media Coordinator @ Himpunan), slide4 (Skills), slide5 (Project Highlights), slide6 (Let's connect + email/phone). ✓
+- Document linking: opened application card → dialog shows "Dokumen terkait" section with all user's docs (scholarship essay, Bio, Cover Letter, 2x CV ATS) + Link buttons. Clicked Link on Bio → toast "Lamaran tersimpan" → Bio now shows Unlink button. Closed dialog → kanban card now shows "Bio" badge. ✓
+- Fixed render bug: applications page was showing source code because GET API didn't return `linkedDocIds` — useEffect overwrote server props with field-less data, then `app.linkedDocIds.length` crashed. Fixed API + added safety guards.
+- Lint: 0 errors. Server healthy.
+
+Stage Summary:
+- **Personal Deck added** (Brief Section 6.4/8) — 6-slide .pptx with 4 themes, real PowerPoint/Impress output. Document Suite now has 6 types.
+- **Document-application linking added** (Brief Section 2.2) — connect specific CV/cover-letter/etc to each application; badges on cards; link/unlink in edit dialog.
+- 1 bug fixed (applications GET missing linkedDocIds causing render crash).
+- All 5 verticals + 6 document types + cross-vertical linking fully functional.
+
+Unresolved / next-phase priorities:
+1. **Listening audio** (Phase 8, Section 10.3) — needs Koyeb/Kokoro TTS mini-service + Supabase Storage.
+2. PDF export for ATS/cover-letter/bio/essay (currently DOCX only; CV Visual uses print-to-PDF).
+3. Skeleton loaders, more micro-interactions.
+4. Overall polish & QA pass (Phase 9) — test all flows end-to-end as new user.

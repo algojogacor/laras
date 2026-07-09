@@ -16,10 +16,28 @@ export default async function ApplicationsPage() {
 
   const { t, locale } = await getLocaleAndDict()
 
-  const applications = await db.application.findMany({
-    where: { userProfileId: profile.id },
-    orderBy: { order: "asc" },
-  })
+  const [applications, documents, appDocs] = await Promise.all([
+    db.application.findMany({
+      where: { userProfileId: profile.id },
+      orderBy: { order: "asc" },
+    }),
+    db.document.findMany({
+      where: { userProfileId: profile.id },
+      orderBy: { updatedAt: "desc" },
+      select: { id: true, type: true, title: true },
+    }),
+    db.applicationDocument.findMany({
+      where: { application: { userProfileId: profile.id } },
+      select: { applicationId: true, documentId: true },
+    }),
+  ])
+
+  // map: appId -> documentIds[]
+  const linkedMap: Record<string, string[]> = {}
+  for (const ad of appDocs) {
+    if (!linkedMap[ad.applicationId]) linkedMap[ad.applicationId] = []
+    linkedMap[ad.applicationId].push(ad.documentId)
+  }
 
   const serialized = applications.map((a) => ({
     id: a.id,
@@ -35,7 +53,10 @@ export default async function ApplicationsPage() {
     jobDescription: a.jobDescription,
     createdAt: a.createdAt.toISOString(),
     updatedAt: a.updatedAt.toISOString(),
+    linkedDocIds: linkedMap[a.id] || [],
   }))
 
-  return <ApplicationsBoard initialApplications={serialized} locale={locale} />
+  const docs = documents.map((d) => ({ id: d.id, type: d.type, title: d.title }))
+
+  return <ApplicationsBoard initialApplications={serialized} documents={docs} locale={locale} />
 }
