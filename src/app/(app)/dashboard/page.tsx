@@ -4,6 +4,8 @@ import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { getLocaleAndDict } from "@/lib/i18n"
 import { computeCompletion, type ProfileWithRelations } from "@/lib/profile"
+import { generateSuggestions } from "@/lib/suggestions"
+import { SmartSuggestions } from "@/components/dashboard/smart-suggestions"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -36,7 +38,7 @@ export default async function DashboardPage() {
   if (!profile) redirect("/onboarding")
   if (!profile.onboardingComplete) redirect("/onboarding")
 
-  const { t } = await getLocaleAndDict()
+  const { t, locale } = await getLocaleAndDict()
   const completion = computeCompletion(profile)
 
   const greetingName = profile.fullName?.split(" ")[0] ?? session.email.split("@")[0]
@@ -114,6 +116,27 @@ export default async function DashboardPage() {
     select: { id: true, title: true, role: true, updatedAt: true },
   })
 
+  // All applications (for deadline-based suggestions)
+  const allApps = await db.application.findMany({
+    where: { userProfileId: profile.id },
+    select: { id: true, position: true, organization: true, status: true, deadline: true },
+  })
+
+  // Smart suggestions
+  const suggestions = generateSuggestions({
+    profile: {
+      fullName: profile.fullName, headline: profile.headline, summary: profile.summary,
+      email: profile.email, phone: profile.phone, location: profile.location,
+      preferredTone: profile.preferredTone, urgency: profile.urgency,
+      opportunityTypes: profile.opportunityTypes, targetExamScore: profile.targetExamScore,
+      profileCompletion: completion,
+    },
+    experiences: profile.experiences,
+    skillsCount: profile.skills.length,
+    docCount, appCount, interviewCount, englishCount,
+    applications: allApps,
+  }, locale)
+
   return (
     <div className="space-y-8 animate-rise">
       {/* Greeting */}
@@ -185,6 +208,9 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Smart Suggestions */}
+      <SmartSuggestions suggestions={suggestions} />
 
       {/* Verticals */}
       <section>

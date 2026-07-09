@@ -497,3 +497,43 @@ Unresolved / next-phase priorities:
 2. **Supabase DB migration** when DDL access available.
 3. Additional polish: transition animations between phases, more empty-state illustrations.
 4. The product is feature-complete — focus shifts to production-readiness (Supabase migration, deployment, performance).
+
+---
+Task ID: CRON-9 (webDevReview round 9 — Smart Suggestions engine)
+Agent: main (cron webDevReview)
+Task: Build Smart Suggestions engine — context-aware next-action recommendations that tie the ecosystem together (Brief Section 4.1)
+
+Work Log:
+- QA pass: confirmed all verticals stable. No bugs.
+- Built Smart Suggestions engine (`src/lib/suggestions.ts`):
+  - `generateSuggestions()` analyzes user state and returns prioritized recommendations (high/medium/low).
+  - 9 suggestion types: overdue deadlines, upcoming deadlines (≤7 days), urgency=deadline-soon but no apps, experiences missing context_notes, apps but no docs, docs but no interview practice, scholarship+no English, profile <100%, no English practice yet.
+  - Each suggestion has: id, priority, icon, title, desc, CTA, href — locale-aware (ID/EN).
+  - Sorted by priority, top 4 shown.
+- Created `SmartSuggestions` component (`src/components/dashboard/smart-suggestions.tsx`):
+  - Grid of suggestion cards with priority-based styling (high=accent/terracotta, medium=primary/green, low=muted).
+  - Each card: icon, title, desc, CTA link with arrow.
+  - Hover lift effect.
+- Integrated into dashboard:
+  - Added `generateSuggestions()` call with profile state + all applications (for deadline checking) + cross-vertical counts.
+  - Inserted `<SmartSuggestions>` between completion card and verticals section.
+  - Added `dashboard.suggestionsTitle/Desc` i18n keys to both ID/EN.
+- Styling: priority-colored suggestion cards (accent for urgent, primary for medium, muted for low), icon backgrounds, hover transitions, line-clamp for descriptions.
+
+Verification results (agent-browser):
+- Dashboard: "Saran untukmu" section appears between completion card and verticals. Shows "Profil 56% lengkap" suggestion for Rina (correct — she has docs/apps/interviews/english, so only profile completion fires). ✓
+- The engine correctly suppresses irrelevant suggestions (no "add docs" since she has 5, no "practice interview" since she has 3 sessions). ✓
+- A new user with thin profile would get more suggestions (experiences missing context, no docs, no interview, etc.). ✓
+- Console: no errors. Lint: 0 errors.
+
+Stage Summary:
+- **Smart Suggestions added** — the dashboard now proactively recommends next actions based on the user's current state. This fulfills Brief Section 4.1 ("menonjolkan modul yang tepat untukmu begitu onboarding selesai") and ties the ecosystem together.
+- The suggestions engine considers: profile completion, urgency, deadline proximity (overdue/upcoming), activity gaps across all 5 verticals, and opportunity types.
+- Context-aware: suggestions adapt to what the user has already done (e.g., if they have docs but no interview practice → suggest interview prep; if they have apps with upcoming deadlines → suggest preparing documents).
+- The dashboard is now a true command center — stats, smart suggestions, verticals, recent activity.
+
+Unresolved / next-phase priorities:
+1. **Production Listening audio** — migrate from on-the-go TTS to pre-generated bank (Brief Section 10.3) via Koyeb/Kokoro + Supabase Storage.
+2. **Supabase DB migration** when DDL access available.
+3. **Application deadline alerts banner** on /applications page (the suggestions engine already detects deadlines, but a dedicated banner would be more visible).
+4. The product is feature-complete with smart recommendations — focus shifts to production-readiness.
