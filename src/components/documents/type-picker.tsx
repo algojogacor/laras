@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Plus, FileText, Mail, Quote, PenLine } from "lucide-react"
+import { Plus, FileText, Mail, Quote, PenLine, Palette } from "lucide-react"
 import { useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils"
 
 const TYPES = [
   { value: "cv-ats", href: "/documents/cv-ats/new", Icon: FileText },
+  { value: "cv-visual", href: "/documents/cv-visual/new", Icon: Palette },
   { value: "cover-letter", href: "/documents/cover-letter/new", Icon: Mail },
   { value: "bio", href: "/documents/bio/new", Icon: Quote },
   { value: "essay", href: "/documents/essay/new", Icon: PenLine },
@@ -58,6 +59,7 @@ export function DocumentsTypePicker() {
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {value === "cv-ats" && t.documents.cvAtsNewSubtitle}
+                    {value === "cv-visual" && t.documents.subtitle}
                     {value === "cover-letter" && t.documents.clNewSubtitle}
                     {value === "bio" && t.documents.bioNewSubtitle}
                     {value === "essay" && t.documents.essayNewSubtitle}

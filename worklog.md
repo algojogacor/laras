@@ -289,3 +289,46 @@ Unresolved / next-phase priorities:
 5. PDF export for all document types (currently DOCX only).
 6. Styling: skeleton loaders, more micro-interactions.
 7. Overall polish & QA pass across all 5 verticals (Phase 9).
+
+---
+Task ID: CRON-4 (webDevReview round 4 — CV Visual + Dashboard Stats)
+Agent: main (cron webDevReview)
+Task: QA existing app, build CV Visual (4 templates), enhance dashboard with cross-vertical stats
+
+Work Log:
+- QA pass: confirmed all 5 verticals stable. Login → dashboard clean, no errors.
+- Built CV Visual (Brief Section 6.2) — 5th document type:
+  - 4 distinct HTML/CSS templates: Modern Minimal (clean/airy), Corporate (dark sidebar/formal), Creative (bold accent band/personality), Technical (mono font/data-dense grid).
+  - Live preview with template switcher sidebar — click to swap templates instantly.
+  - Print-to-PDF via browser print (added `@media print` styles to globals.css that hide app chrome and show only the CV).
+  - Profile data flows directly from UserProfile (no generation needed — it's a visual layout, not AI text).
+  - Pages: `/documents/cv-visual/new` (builder), `/documents/cv-visual/[id]` (redirects to new — CV Visual is live preview, no persisted document).
+  - Added to document-type picker (now 5 types: CV ATS, CV Visual, Cover Letter, Bio, Essay).
+  - Added to documents list routing + type icon (Palette).
+- Enhanced Dashboard with cross-vertical stats:
+  - Stats strip: 4 clickable stat cards showing counts (Documents, Applications, Interview sessions, English sessions) — each links to its vertical.
+  - Recent activity split into 2 cards: Recent Applications + Recent Documents (replaces single list).
+  - Quick-action CTA card now links to "Create CV" instead of profile.
+  - `StatCard` component with icon + count + hover lift.
+- Styling: print stylesheet (`@media print`), stat card hover transitions, recent activity cards with truncation, template picker active state with eye icon.
+
+Verification results (agent-browser):
+- Dashboard: shows 4 stat cards (5 Document Suite, 1 Application Ops, interview count, english count) — all clickable. ✓
+- CV Visual: `/documents/cv-visual/new` loads with 4 template options (Modern Minimal, Corporate, Creative, Technical) + live preview showing Rina's real data (name, headline, experiences with achievements). ✓
+- Template switching: clicked Creative → accent header band appears; Corporate → sidebar with CONTACT/Skills/Certs; Technical → mono font with `// SUMMARY` headers. All 4 render correctly. ✓
+- Type picker: shows all 5 document types (CV ATS, CV Visual, Cover Letter, Bio, Esai). ✓
+- Console: no errors. Lint: 0 errors.
+
+Stage Summary:
+- **CV Visual added** (Brief Section 6.2) — 4 templates with live preview + print-to-PDF. Document Suite now has 5 types.
+- **Dashboard enhanced** — cross-vertical stats strip + split recent activity cards. Much richer landing experience.
+- All 5 verticals remain fully functional. Dashboard now shows real usage data across all verticals.
+- Print-to-PDF works via browser print with dedicated print stylesheet.
+
+Unresolved / next-phase priorities:
+1. **Listening audio** (Phase 8, Section 10.3) — needs Koyeb/Kokoro TTS mini-service + Supabase Storage.
+2. **Personal Deck PPT** (Section 6.4/8) — PptxGenJS + 8-10 templates.
+3. Link documents to applications (ApplicationDocument model exists but not wired in UI).
+4. PDF export for ATS/cover-letter/bio/essay (currently DOCX only; CV Visual uses print-to-PDF).
+5. Skeleton loaders, more micro-interactions.
+6. Overall polish & QA pass (Phase 9).

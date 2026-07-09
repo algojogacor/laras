@@ -90,6 +90,30 @@ export default async function DashboardPage() {
     take: 4,
   })
 
+  // Cross-vertical stats
+  const [docCount, appCount, interviewCount, englishCount] = await Promise.all([
+    db.document.count({ where: { userProfileId: profile.id } }),
+    db.application.count({ where: { userProfileId: profile.id } }),
+    db.interviewSet.count({ where: { userProfileId: profile.id } }),
+    db.englishSession.count({ where: { userProfileId: profile.id, score: { not: null } } }),
+  ])
+
+  // Recent documents
+  const recentDocs = await db.document.findMany({
+    where: { userProfileId: profile.id },
+    orderBy: { updatedAt: "desc" },
+    take: 3,
+    select: { id: true, type: true, title: true, updatedAt: true },
+  })
+
+  // Recent interview sessions
+  const recentInterviews = await db.interviewSet.findMany({
+    where: { userProfileId: profile.id },
+    orderBy: { updatedAt: "desc" },
+    take: 3,
+    select: { id: true, title: true, role: true, updatedAt: true },
+  })
+
   return (
     <div className="space-y-8 animate-rise">
       {/* Greeting */}
@@ -98,6 +122,14 @@ export default async function DashboardPage() {
           {t.dashboard.greeting}, {greetingName}.
         </h1>
         <p className="mt-1.5 text-muted-foreground">{t.dashboard.welcomeBack}</p>
+      </div>
+
+      {/* Stats strip */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label={t.documents.title} value={docCount} href="/documents" Icon={FileText} />
+        <StatCard label={t.applications.title} value={appCount} href="/applications" Icon={ClipboardList} />
+        <StatCard label={t.interview.title} value={interviewCount} href="/interview" Icon={MessageSquareText} />
+        <StatCard label={t.english.title} value={englishCount} href="/english" Icon={Headphones} />
       </div>
 
       {/* Completion + quick action */}
@@ -147,7 +179,7 @@ export default async function DashboardPage() {
                 size="sm"
                 className="mt-4 bg-background text-foreground hover:bg-background/90"
               >
-                <Link href="/profile">{t.dashboard.completeProfile}</Link>
+                <Link href="/documents/cv-ats/new">{t.dashboard.v1Cta}</Link>
               </Button>
             </div>
           </CardContent>
@@ -198,29 +230,55 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Recent activity */}
-      <section>
-        <h2 className="font-serif text-xl font-semibold">{t.dashboard.recentTitle}</h2>
-        <Card className="mt-4 shadow-soft">
-          <CardContent className="p-6">
+      {/* Recent activity — cross-vertical */}
+      <section className="grid gap-4 lg:grid-cols-2">
+        {/* Recent applications */}
+        <Card className="shadow-soft">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-serif text-base flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-primary" />
+              {t.applications.title}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             {recentApps.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                  <Clock className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <p className="mt-4 text-sm text-muted-foreground">{t.dashboard.noActivity}</p>
-              </div>
+              <p className="py-6 text-center text-sm text-muted-foreground">{t.dashboard.noActivity}</p>
             ) : (
-              <ul className="divide-y divide-border">
+              <ul className="space-y-2">
                 {recentApps.map((a) => (
-                  <li key={a.id} className="flex items-center justify-between py-3">
-                    <div>
-                      <p className="text-sm font-medium">{a.position}</p>
-                      <p className="text-xs text-muted-foreground">{a.organization}</p>
+                  <li key={a.id} className="flex items-center justify-between rounded-lg border border-border p-2.5">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{a.position}</p>
+                      <p className="truncate text-xs text-muted-foreground">{a.organization}</p>
                     </div>
-                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs capitalize text-muted-foreground">
-                      {a.status}
-                    </span>
+                    <span className="ml-2 shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] capitalize text-muted-foreground">{a.status}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent documents */}
+        <Card className="shadow-soft">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-serif text-base flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              {t.documents.title}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentDocs.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">{t.dashboard.noActivity}</p>
+            ) : (
+              <ul className="space-y-2">
+                {recentDocs.map((d) => (
+                  <li key={d.id} className="flex items-center justify-between rounded-lg border border-border p-2.5">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{d.title}</p>
+                      <p className="text-xs text-muted-foreground">{t.documents.types[d.type as keyof typeof t.documents.types] ?? d.type}</p>
+                    </div>
+                    <span className="ml-2 shrink-0 text-[10px] text-muted-foreground">{new Date(d.updatedAt).toLocaleDateString()}</span>
                   </li>
                 ))}
               </ul>
@@ -229,5 +287,23 @@ export default async function DashboardPage() {
         </Card>
       </section>
     </div>
+  )
+}
+
+function StatCard({ label, value, href, Icon }: { label: string; value: number; href: string; Icon: typeof FileText }) {
+  return (
+    <Link href={href} className="group">
+      <Card className="shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-lift">
+        <CardContent className="flex items-center gap-3 p-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+            <Icon className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-serif text-2xl font-semibold leading-none">{value}</p>
+            <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{label}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   )
 }

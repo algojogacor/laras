@@ -215,3 +215,17 @@
 .animate-fade {
   animation: laras-fade 0.4s ease both;
 }
+
+/* ── Print styles for CV Visual (print-to-PDF) ── */
+@media print {
+  body::before { display: none !important; }
+  body { background: white !important; }
+  header, footer, nav, .print\:hidden { display: none !important; }
+  main { padding: 0 !important; }
+  .print\:block { display: block !important; }
+  .print\:border-0 { border: 0 !important; }
+  .print\:bg-white { background: white !important; }
+  .print\:p-0 { padding: 0 !important; }
+  .print\:space-y-0 > * + * { margin-top: 0 !important; }
+  @page { margin: 0.5in; }
+}
