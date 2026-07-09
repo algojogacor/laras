@@ -5,6 +5,7 @@ import { useState } from "react"
 import { Download, ArrowLeft, Calendar, Copy, Check } from "lucide-react"
 import { PrintButton } from "@/components/documents/print-button"
 import { DeleteDocButton } from "@/components/documents/delete-doc-button"
+import { FollowUpRevisionPanel } from "@/components/documents/follow-up-revision-panel"
 import { toast } from "sonner"
 import type { Dictionary } from "@/lib/i18n/dictionary"
 import type { SerializedProfile } from "@/lib/profile"
@@ -74,6 +75,13 @@ export function EssayViewer({ documentId, title, essay, profile, locale, updated
           <Badge variant="secondary" className="mt-3 text-xs">{locale === "id" ? t.documents.docLangId : t.documents.docLangEn}</Badge>
         </CardContent>
       </Card>
+
+      {/* Follow-up revision panel */}
+      <FollowUpRevisionPanel
+        documentId={documentId}
+        documentType="essay"
+        onRevised={() => window.location.reload()}
+      />
     </div>
   )
 }

@@ -52,14 +52,26 @@ export async function POST(request: Request) {
   const check = concretenessCheck(cv, locale)
 
   // Persist the document
+  const configSnapshot = JSON.stringify({ locale, tone, region, concreteness: check.score, ...(body.generationConfig || {}) })
   const doc = await db.document.create({
     data: {
       userProfileId: profile.id,
       type: "cv-ats",
       title: body.title || `${serialized.fullName || "CV"} — ATS`,
       content: JSON.stringify(cv),
-      config: JSON.stringify({ locale, tone, region, concreteness: check.score }),
+      config: configSnapshot,
       version: 1,
+    },
+  })
+
+  // Save initial version (Brief Task 2 — version history)
+  await db.documentVersion.create({
+    data: {
+      documentId: doc.id,
+      versionNumber: 1,
+      content: JSON.stringify(cv),
+      configSnapshot,
+      revisionInstruction: null, // initial generation
     },
   })
 

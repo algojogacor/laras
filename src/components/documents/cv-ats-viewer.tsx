@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Download, ArrowLeft, Calendar, FileText } from "lucide-react"
 import { PrintButton } from "@/components/documents/print-button"
 import { DeleteDocButton } from "@/components/documents/delete-doc-button"
+import { FollowUpRevisionPanel } from "@/components/documents/follow-up-revision-panel"
 import type { Dictionary } from "@/lib/i18n/dictionary"
 import type { SerializedProfile } from "@/lib/profile"
 import type { GeneratedCVATS } from "@/lib/content-engine"
@@ -97,6 +98,16 @@ export function CVATSViewer({
           </Card>
         </div>
       </div>
+
+      {/* Follow-up revision panel */}
+      <FollowUpRevisionPanel
+        documentId={documentId}
+        documentType="cv-ats"
+        onRevised={(newContent) => {
+          // Refresh the page to show updated content
+          window.location.reload()
+        }}
+      />
 
       {/* Print-only copy of the CV (no scroll container, no chrome) */}
       <div className="hidden print:block print-area">

@@ -1,0 +1,1257 @@
+     1→Kamu adalah autonomous senior full-stack product engineer untuk project Laras — Career & Opportunity Readiness Ecosystem.
+     2→
+     3→Mode kerja: autonomous production engineer. Jangan hanya memberi rencana. Kerjakan langsung di codebase, verifikasi dengan browser agent, perbaiki bug yang ditemukan, update worklog.md, dan commit perubahan dengan git workflow rapi. Tanyakan ke user hanya jika benar-benar blocked oleh credential/akses yang tidak tersedia.
+     4→
+     5→Baca ulang seluruh BRIEF.md, worklog.md, source code, schema, route, component, API, dan implementasi terakhir sebelum mulai coding. Jangan langsung menulis kode sebelum memahami status terakhir. Tujuan task ini adalah menyelesaikan next-phase production hardening: configurable generation untuk semua output, follow-up revision loop di semua fitur, listening bank completion, Supabase-first migration/storage, QA E2E, bug fixing, dan design polish.
+     6→
+     7→JANGAN menghapus fitur lama yang sudah bekerja. JANGAN membuat ulang dari nol. Lanjutkan dari struktur existing, pertahankan kompatibilitas data, dan lakukan perubahan secara bertahap dengan git workflow yang rapi.
+     8→
+     9→TASK UTAMA:
+    10→
+    11→1. GLOBAL CONFIGURABLE GENERATION SYSTEM
+    12→
+    13→Saat ini banyak fitur generate sudah berjalan, tetapi output masih terlalu “terima jadi”. Bangun sistem konfigurasi global untuk semua fitur yang menghasilkan artefak, termasuk tetapi tidak terbatas pada:
+    14→
+    15→- CV ATS
+    16→- CV Visual
+    17→- Resume
+    18→- Cover Letter
+    19→- Bio
+    20→- Opportunity Essay / Personal Statement
+    21→- Personal Deck PPTX
+    22→- DOCX export
+    23→- PDF export
+    24→- PPTX export
+    25→- English Reading/Structure/Listening generation
+    26→- Interview answer suggestion
+    27→- Application summary
+    28→- semua fitur generate lain yang ada atau akan ditambahkan
+    29→
+    30→Setiap alur generate WAJIB punya layar konfigurasi sebelum generate. Konfigurasi minimal meliputi:
+    31→
+    32→- output format: DOCX, PDF, PPTX, plain text, visual preview
+    33→- bahasa dokumen: Indonesia / English
+    34→- target region: Indonesia / Global / US / UK / custom
+    35→- tone: formal, warm, confident, concise, persuasive, academic, professional
+    36→- panjang output: jumlah kata, jumlah halaman, jumlah slide, jumlah paragraf, jumlah bullet
+    37→- density: ringkas, normal, detail, sangat detail
+    38→- template/theme: modern minimal, corporate, creative, technical, academic, forest, warm, slate, ink, dan template lain yang tersedia
+    39→- font family jika relevan
+    40→- page size: A4, Letter, 16:9, 4:3 jika relevan
+    41→- margin jika relevan
+    42→- section include/exclude
+    43→- section order
+    44→- jumlah item yang ditampilkan per section
+    45→- tingkat kreativitas model
+    46→- strictness anti-hallucination
+    47→- evidence requirement: wajib angka/bukti, boleh naratif, atau balanced
+    48→- target job/org/scholarship context
+    49→- additional instruction dari user
+    50→- export filename
+    51→- apakah output disimpan sebagai versi baru atau menimpa versi lama
+    52→
+    53→Buat tipe data terpusat, misalnya GenerationConfig atau DocumentGenerationConfig. Simpan konfigurasi yang dipakai pada setiap dokumen/output agar user bisa:
+    54→
+    55→- melihat konfigurasi lama
+    56→- clone konfigurasi
+    57→- regenerate dengan konfigurasi sama
+    58→- mengubah sebagian konfigurasi
+    59→- membandingkan versi output
+    60→
+    61→Pastikan konfigurasi ini tidak hanya UI palsu. Konfigurasi harus benar-benar memengaruhi prompt, renderer, export, layout, word count, slide count, dan validasi output.
+    62→
+    63→Jika user meminta 10 halaman, 10 slide, 1500 kata, atau format tertentu, sistem harus mencoba memenuhi secara realistis. Jika permintaan tidak masuk akal, tampilkan warning yang ramah, misalnya: “CV ATS 10 halaman berisiko tidak efektif untuk early-career. Tetap lanjut atau ubah ke 1–2 halaman?”
+    64→
+    65→Pastikan semua konfigurasi tetap tunduk pada prinsip BRIEF.md:
+    66→- edit-before-generate wajib
+    67→- verifikasi sebelum generate wajib
+    68→- jangan mengarang detail personal
+    69→- semua klaim harus bisa ditelusuri ke UserProfile/context_notes/probing answer
+    70→- output harus bisa direvisi setelah dibuat
+    71→
+    72→2. FOLLOW-UP REVISION LOOP DI SEMUA FITUR
+    73→
+    74→Audit semua fitur. Pastikan setelah output ditampilkan, selalu ada fitur follow-up/revision. Jika belum ada, tambahkan.
+    75→
+    76→Follow-up revision harus ada di:
+    77→
+    78→- CV ATS
+    79→- CV Visual
+    80→- Cover Letter
+    81→- Bio
+    82→- Essay
+    83→- Personal Deck PPTX
+    84→- Application summary
+    85→- Interview suggested answer
+    86→- English generated practice jika relevan
+    87→- Listening script/audio metadata jika relevan
+    88→- semua output generated lain
+    89→
+    90→Buat komponen reusable, misalnya FollowUpRevisionPanel, yang memungkinkan user memberi instruksi seperti:
+    91→
+    92→- “pendekkan”
+    93→- “buat lebih formal”
+    94→- “tambahkan pengalaman X”
+    95→- “hapus bagian ini”
+    96→- “ubah jadi bahasa Inggris”
+    97→- “buat lebih cocok untuk beasiswa”
+    98→- “ganti template”
+    99→- “jadikan 10 slide”
+   100→- “ubah jadi 1500 kata”
+   101→- “perbaiki bagian yang salah”
+   102→- “jangan pakai kata terlalu AI”
+   103→- “tambahkan angka dari context_notes”
+   104→- “buat versi lebih akademik”
+   105→- “buat lebih natural”
+   106→
+   107→Setiap follow-up harus:
+   108→- memakai output sebelumnya sebagai konteks
+   109→- memakai GenerationConfig sebelumnya sebagai dasar
+   110→- tetap membaca UserProfile sebagai source of truth
+   111→- tidak mengarang detail baru
+   112→- jika user meminta detail yang belum ada, sistem harus bertanya atau memberi field untuk menambahkan detail tersebut
+   113→- menyimpan hasil sebagai versi baru
+   114→- menyediakan version history
+   115→- menyediakan tombol compare/diff sederhana jika memungkinkan
+   116→- menyediakan restore/revert ke versi sebelumnya
+   117→- mencatat revision instruction yang dipakai
+   118→
+   119→Tambahkan model data jika perlu, misalnya:
+   120→- DocumentVersion
+   121→- RevisionRequest
+   122→- GeneratedArtifactVersion
+   123→- revisionInstruction
+   124→- parentVersionId
+   125→- configSnapshot
+   126→- contentSnapshot
+   127→- exportUrl
+   128→- createdAt
+   129→
+   130→Jika schema sudah punya Document, jangan rusak kompatibilitasnya. Tambahkan relasi baru secara aman.
+   131→
+   132→3. LENGKAPI LISTENING BANK
+   133→
+   134→Baca BRIEF.md Section English Listening. Listening berbeda dari Reading/Structure karena audio harus pre-generated dan disimpan, bukan generate real-time setiap user latihan.
+   135→
+   136→Supabase credentials pernah diberikan. Cari di .env, env local, deployment config, atau credential file yang sudah ada. Jangan meminta credential baru kecuali benar-benar tidak ditemukan. Jika tidak ditemukan, tulis jelas nama variable yang dibutuhkan.
+   137→
+   138→Lengkapi TOEFL/IELTS practice bank dengan target production seed:
+   139→
+   140→- minimal 600 listening sets:
+   141→  - 200 easy
+   142→  - 200 medium
+   143→  - 200 hard
+   144→
+   145→- minimal 1000 reading sets:
+   146→  - topic bervariasi
+   147→  - difficulty easy/medium/hard
+   148→  - passage 250–700 words tergantung difficulty
+   149→  - 8–10 questions per set
+   150→  - skill tags lengkap
+   151→  - answer key, explanation, distractor rationale, evidence pointers, dan validationStatus
+   152→
+   153→- minimal 3000 structure/grammar questions:
+   154→  - sentence completion
+   155→  - error identification
+   156→  - grammar tag lengkap
+   157→  - difficulty easy/medium/hard
+   158→  - answer key, explanation, distractor rationale, dan validationStatus
+   159→
+   160→Setiap listening set wajib punya:
+   161→  - title
+   162→  - difficulty
+   163→  - module type: conversation / lecture / announcement / interview / academic discussion
+   164→  - accent metadata: US / UK / mixed jika engine mendukung
+   165→  - speaker count
+   166→  - transcript
+   167→  - audio file
+   168→  - duration
+   169→  - 5 questions
+   170→  - answer key
+   171→  - explanation per question
+   172→  - skill focus: main idea, detail, inference, vocabulary, speaker attitude, purpose
+   173→  - generatedAt
+   174→  - storage path
+   175→  - checksum/hash jika memungkinkan
+   176→
+   177→Jangan scrape TOEFL/IELTS copyrighted content. Generate original scripts dan questions. Pastikan gaya mirip latihan TOEFL/IELTS, tetapi kontennya original.
+   178→
+   179→Buat pipeline yang idempotent:
+   180→
+   181→- bun run listening:generate
+   182→- bun run listening:validate
+   183→- bun run listening:upload
+   184→- bun run listening:migrate
+   185→- bun run listening:seed
+   186→- bun run listening:report
+   187→
+   188→Jika command existing berbeda, sesuaikan dengan project convention.
+   189→
+   190→Pipeline harus:
+   191→- bisa resume jika proses terputus
+   192→- tidak generate ulang audio yang sudah valid
+   193→- menyimpan metadata di DB
+   194→- menyimpan audio di Supabase Storage
+   195→- mengecek audio playable
+   196→- mengecek durasi tidak 0
+   197→- mengecek transcript cocok dengan metadata
+   198→- mengecek jumlah soal sesuai
+   199→- mengecek answer key valid
+   200→- membuat report akhir di worklog.md
+   201→
+   202→Tambahkan halaman UI untuk English Listening jika belum lengkap:
+   203→
+   204→- daftar latihan listening
+   205→- filter difficulty
+   206→- audio player
+   207→- question flow
+   208→- submit answer
+   209→- score
+   210→- explanation review
+   211→- transcript hidden by default, bisa dibuka setelah submit
+   212→- retry practice
+   213→- history score
+   214→
+   215→Jika 600 listening sets, 1000 reading sets, dan 3000 structure questions tidak realistis diselesaikan dalam satu run karena limit waktu, biaya, rate limit, storage, atau compute, jangan menurunkan standar kualitas. Bangun pipeline batch yang bisa resume, seed minimal batch pertama yang valid, lalu catat progres angka aktual di worklog.md. Prioritas utama adalah sistem generation/validation/upload/report berjalan benar, lalu bank diperbesar bertahap sampai target production seed tercapai.
+   216→
+   217→4. PINDAHKAN STORAGE KE SUPABASE
+   218→
+   219→Pindahkan semua storage penting dari local filesystem/public folder ke Supabase Storage.
+   220→
+   221→Minimal bucket:
+   222→- listening-audio
+   223→- generated-documents
+   224→- user-exports
+   225→- profile-photos jika fitur foto ada
+   226→- deck-exports jika PPTX disimpan
+   227→- pdf-exports jika PDF disimpan
+   228→
+   229→Jangan menyimpan file production di /public/audio atau local disk sebagai source of truth. Local boleh hanya untuk temp/cache/dev.
+   230→
+   231→Implementasikan:
+   232→- upload server-side menggunakan service role hanya di server
+   233→- jangan pernah expose service role key ke client
+   234→- signed URL untuk file private
+   235→- public URL hanya untuk asset yang memang aman publik
+   236→- RLS policy untuk storage.objects
+   237→- path convention yang rapi, misalnya:
+   238→  - users/{userId}/documents/{documentId}/...
+   239→  - listening/{difficulty}/{setId}.mp3
+   240→  - users/{userId}/exports/{artifactId}.pdf
+   241→
+   242→Pastikan semua export DOCX/PDF/PPTX yang perlu disimpan bisa diupload ke Supabase Storage dan URL-nya disimpan di DB.
+   243→
+   244→5. GUNAKAN SUPABASE SEBAGAI BACKEND UTAMA
+   245→
+   246→Project harus Supabase-first untuk production.
+   247→
+   248→Audit apakah saat ini masih memakai SQLite/local Prisma sebagai backend utama. Jika iya, migrasikan ke Supabase Postgres secara aman.
+   249→
+   250→Target:
+   251→- Supabase Postgres menjadi database production
+   252→- Prisma schema atau Supabase client tetap konsisten, pilih pendekatan yang paling aman dengan project existing
+   253→- buat migration SQL yang jelas
+   254→- buat seed script jika perlu
+   255→- pastikan semua tabel utama masuk Supabase:
+   256→  - Account/User/Profile
+   257→  - Experience
+   258→  - Education
+   259→  - Skill
+   260→  - Certification
+   261→  - LanguageProficiency
+   262→  - Application
+   263→  - Document
+   264→  - DocumentVersion
+   265→  - ApplicationDocument
+   266→  - InterviewSet
+   267→  - InterviewQuestion
+   268→  - Essay
+   269→  - EnglishSession
+   270→  - ListeningSet
+   271→  - GeneratedArtifact
+   272→  - RevisionRequest
+   273→  - GenerationConfig jika dibuat sebagai tabel sendiri
+   274→
+   275→Jika auth masih custom JWT, audit risikonya. Prefer Supabase Auth jika migrasi aman. Jika migrasi Auth terlalu berisiko untuk task ini, dokumentasikan alasannya dan pastikan server-side access ke Supabase tetap aman. Jangan membuat sistem setengah-migrasi yang membocorkan data user.
+   276→
+   277→Implementasikan RLS minimal:
+   278→- user hanya bisa membaca/menulis data miliknya sendiri
+   279→- service role hanya dipakai server-side
+   280→- storage private untuk user documents
+   281→- listening bank boleh public-read atau signed-read sesuai keputusan terbaik
+   282→
+   283→Tambahkan dokumentasi:
+   284→- env variables required
+   285→- migration steps
+   286→- local dev setup
+   287→- production deployment setup
+   288→- Supabase bucket setup
+   289→- RLS policy setup
+   290→
+   291→6. FEATURE PARITY CHECK
+   292→
+   293→Buat checklist semua fitur existing dan pastikan masing-masing punya:
+   294→
+   295→- config sebelum generate
+   296→- edit-before-generate
+   297→- follow-up revision
+   298→- version history
+   299→- export sesuai format
+   300→- Supabase persistence
+   301→- loading state
+   302→- empty state
+   303→- error state
+   304→- mobile responsive
+   305→- dark mode
+   306→- ID/EN support
+   307→- anti-hallucination guardrail
+   308→- concreteness/self-check jika output tentang diri user
+   309→- QA browser test
+   310→
+   311→Jika ada fitur yang belum memenuhi, tambahkan atau catat sebagai unresolved dengan alasan jelas.
+   312→
+   313→7. COMPETITOR-BEATING POLISH
+   314→
+   315→Jangan hanya menyamai resume builder umum. Buat Laras terasa lebih unggul.
+   316→
+   317→Tambahkan atau tingkatkan jika belum ada:
+   318→
+   319→- output configuration panel yang terasa powerful tapi tetap mudah
+   320→- “why this output works” explanation
+   321→- evidence/provenance marker: bagian mana berasal dari context_notes atau profile
+   322→- warning jika output terlalu generik
+   323→- warning jika klaim tidak punya bukti
+   324→- application-specific document linking
+   325→- regenerate as version, bukan overwrite
+   326→- compare versions
+   327→- quick actions: shorten, expand, more formal, more natural, more ATS-safe, more scholarship-oriented
+   328→- smart defaults berdasarkan target opportunity
+   329→- deadline-aware suggestions
+   330→- skeleton loading
+   331→- better empty states
+   332→- micro-interactions yang calm dan premium
+   333→- stronger mobile UI
+   334→- print/export preview quality
+   335→- accessible forms and keyboard navigation
+   336→- clear error handling
+   337→
+   338→8. GIT WORKFLOW WAJIB
+   339→
+   340→Gunakan git workflow yang rapi:
+   341→
+   342→- cek status awal: git status
+   343→- buat branch baru, misalnya:
+   344→  feature/configurable-generation-supabase-listening
+   345→- commit bertahap per area:
+   346→  - config generation
+   347→  - follow-up revision loop
+   348→  - Supabase migration
+   349→  - listening bank
+   350→  - storage upload
+   351→  - QA fixes
+   352→  - design polish
+   353→- jangan commit secrets
+   354→- jangan commit file audio besar jika sudah dipindah ke Supabase
+   355→- update .gitignore jika perlu
+   356→- tulis commit message jelas
+   357→
+   358→9. WORKLOG WAJIB
+   359→
+   360→Catat semua update di worklog.md secara detail.
+   361→
+   362→Format minimal:
+   363→
+   364→- tanggal/waktu
+   365→- task id
+   366→- tujuan
+   367→- file utama yang diubah
+   368→- fitur yang ditambahkan
+   369→- bug yang ditemukan
+   370→- bug yang diperbaiki
+   371→- migration yang dibuat
+   372→- Supabase bucket/policy yang dibuat
+   373→- command yang dijalankan
+   374→- hasil lint/typecheck/test/build
+   375→- hasil browser QA
+   376→- unresolved/risk
+   377→- next recommended action
+   378→
+   379→Jangan hanya tulis “done”. Worklog harus cukup jelas agar agent berikutnya bisa melanjutkan tanpa bingung.
+   380→
+   381→10. PARAGRAF PEMANTIK UNTUK E2E BROWSER AGENT QA
+   382→
+   383→Setelah implementasi selesai, jalankan analisa E2E menggunakan browser agent dengan mindset hostile QA dan product reviewer. Buka aplikasi dari landing page seperti user baru, lakukan signup/login, onboarding, isi profile, generate semua jenis dokumen dengan konfigurasi berbeda, lakukan follow-up revision, export DOCX/PDF/PPTX, cek hasil download, buka English Reading/Structure/Listening, submit latihan, cek score, cek Application Ops, link dokumen ke application, cek mobile viewport, dark mode, locale ID/EN, empty state, loading state, error state, dan protected routes. Cari bug yang mungkin tidak terlihat dari lint: tombol tidak bisa diklik, state tidak tersimpan, output tidak mengikuti konfigurasi, versi lama tertimpa, file gagal upload ke Supabase, signed URL expired, RLS error, overflow mobile, hydration error, console error, network 500, UI membingungkan, copywriting kurang jelas, dan desain yang terasa belum premium. Setelah itu lakukan troubleshooting sampai semua critical dan high severity issue selesai, lalu catat hasil QA di worklog.md.
+   384→
+   385→11. QUALITY GATE
+   386→
+   387→Sebelum menganggap selesai, jalankan:
+   388→
+   389→- bun run lint
+   390→- bun run typecheck jika ada
+   391→- bun run build
+   392→- prisma generate / db push / migration command yang sesuai
+   393→- script listening validate
+   394→- script storage validate jika dibuat
+   395→- browser E2E manual/agent
+   396→- mobile viewport check
+   397→- export validation:
+   398→  - DOCX bisa dibuka dan text selectable
+   399→  - PDF text selectable jika PDF text-based
+   400→  - PPTX valid OOXML dan bisa dibuka di PowerPoint/Impress
+   401→  - audio listening playable dari Supabase URL
+   402→
+   403→Jika ada command yang belum tersedia, tambahkan atau jelaskan alasannya di worklog.md.
+   404→
+   405→12. OUTPUT AKHIR YANG HARUS KAMU LAPORKAN
+   406→
+   407→Di akhir pekerjaan, berikan Stage Summary berisi:
+   408→
+   409→- apa saja yang selesai
+   410→- fitur baru yang ditambahkan
+   411→- file/schema/API utama yang berubah
+   412→- Supabase migration/storage status
+   413→- jumlah listening bank yang berhasil dibuat dan divalidasi
+   414→- hasil QA browser
+   415→- hasil lint/build
+   416→- bug yang ditemukan dan diperbaiki
+   417→- unresolved risks
+   418→- rekomendasi next phase
+   419→- commit hash atau nama branch terakhir
+   420→
+   421→Mulai sekarang. Audit dulu, lalu implementasikan secara iteratif. Jangan berhenti hanya karena ada detail kecil ambigu. Ambil keputusan produk yang paling masuk akal, aman secara teknis, dan sesuai BRIEF.md, lalu catat asumsinya di worklog.md.
+   422→
+   423→TAMBAHAN WAJIB — GENERATED ARTIFACT QA & RENDER VALIDATION
+   424→
+   425→Audit semua fitur yang menghasilkan artifact/output, termasuk CV ATS, CV Visual, resume, cover letter, bio, essay, personal deck PPTX, DOCX, PDF, English practice, listening audio, application summary, dan interview answer.
+   426→
+   427→Jangan hanya mengecek bahwa file berhasil dibuat. Wajib cek hasil generate secara nyata dari sisi isi, konfigurasi, render, dan usability.
+   428→
+   429→Untuk setiap artifact yang dihasilkan, jalankan validation pipeline:
+   430→
+   431→1. CONFIG-TO-OUTPUT VALIDATION
+   432→Pastikan output benar-benar mengikuti konfigurasi user:
+   433→- jumlah halaman sesuai atau mendekati target
+   434→- jumlah slide sesuai target
+   435→- jumlah kata sesuai target
+   436→- jumlah paragraf sesuai target
+   437→- jumlah bullet sesuai target
+   438→- bahasa dokumen sesuai pilihan
+   439→- tone sesuai pilihan
+   440→- template/theme sesuai pilihan
+   441→- section include/exclude diterapkan
+   442→- section order benar
+   443→- target region memengaruhi format/tone
+   444→- filename sesuai konfigurasi
+   445→- output disimpan sebagai versi baru jika diminta
+   446→- konfigurasi tersimpan sebagai configSnapshot
+   447→
+   448→Jika user meminta hal yang tidak ideal, sistem tetap harus memberi warning, bukan diam-diam mengabaikan. Contoh: CV ATS 10 halaman harus diberi warning bahwa ini berisiko tidak ATS-friendly untuk early-career.
+   449→
+   450→2. CONTENT VALIDATION
+   451→Pastikan isi artifact benar:
+   452→- nama, email, phone, location, link, education, experience, skill, dan data user tidak salah mapping
+   453→- tidak ada placeholder seperti “Lorem ipsum”, “Your Name”, “[insert here]”
+   454→- tidak ada hallucinated claim yang tidak berasal dari UserProfile, context_notes, probing answer, atau input user
+   455→- angka/metrik yang muncul bisa ditelusuri sumbernya
+   456→- tidak ada repetisi generik berlebihan
+   457→- tidak ada buzzword tanpa bukti
+   458→- tidak ada section kosong yang tetap ditampilkan
+   459→- tidak ada field undefined/null/NaN
+   460→- bahasa tidak campur-campur kecuali memang diminta bilingual
+   461→
+   462→3. DOCX VALIDATION
+   463→Untuk semua DOCX:
+   464→- file harus valid OOXML dan bisa dibuka
+   465→- unzip file dan pastikan document.xml ada
+   466→- extract text dan pastikan teks selectable
+   467→- pastikan heading section terbaca
+   468→- pastikan urutan section benar
+   469→- pastikan bullet terbaca sebagai teks
+   470→- pastikan tidak ada table/textbox/sidebar untuk CV ATS
+   471→- pastikan font, margin, dan ukuran sesuai hard constraint
+   472→- render/open via LibreOffice atau equivalent jika tersedia
+   473→- convert ke PDF preview untuk cek visual jika memungkinkan
+   474→- cek tidak ada teks terpotong, overlap, atau spacing rusak
+   475→
+   476→4. PDF VALIDATION
+   477→Untuk semua PDF:
+   478→- file harus bisa dibuka
+   479→- teks harus selectable jika output text-based
+   480→- jangan membuat PDF dari screenshot/gambar kecuali user memang meminta visual image PDF
+   481→- extract text dan bandingkan dengan preview
+   482→- cek jumlah halaman
+   483→- cek margin
+   484→- cek overflow
+   485→- cek font fallback
+   486→- cek section tidak terpotong antar halaman secara buruk
+   487→- cek link/contact tetap terbaca
+   488→- cek ukuran file wajar
+   489→
+   490→5. PPTX VALIDATION
+   491→Untuk semua PPTX:
+   492→- file harus valid OOXML
+   493→- unzip dan pastikan slide XML lengkap
+   494→- jumlah slide harus sesuai konfigurasi
+   495→- extract text dari semua slide
+   496→- pastikan tidak ada placeholder
+   497→- pastikan tiap slide punya title dan content yang sesuai
+   498→- render PPTX ke PDF/image preview via LibreOffice/Impress/headless jika tersedia
+   499→- cek visual tiap slide: tidak overflow, tidak ada teks kepotong, tidak ada elemen tabrakan, tidak ada font fallback aneh, tidak ada object keluar canvas
+   500→- cek semua template/theme yang tersedia, bukan hanya default
+   501→- cek PowerPoint/Impress compatibility semaksimal mungkin
+   502→- jika browser agent tidak bisa membuka PowerPoint asli, buat fallback automated render check dan catat bahwa manual human verification tetap diperlukan
+   503→
+   504→6. VISUAL REGRESSION & SCREENSHOT QA
+   505→Tambahkan Playwright visual screenshot testing untuk halaman penting dan artifact preview:
+   506→- landing page
+   507→- onboarding
+   508→- dashboard
+   509→- documents library
+   510→- config screen
+   511→- generated preview
+   512→- follow-up revision panel
+   513→- CV visual templates
+   514→- deck preview
+   515→- English listening page
+   516→- mobile viewport
+   517→- dark mode
+   518→- ID/EN locale
+   519→
+   520→Gunakan screenshot comparison untuk mendeteksi perubahan layout yang merusak. Jika snapshot baseline belum ada, buat baseline awal dan catat di worklog.md. Playwright memang mendukung visual comparison berbasis screenshot, jadi manfaatkan untuk QA UI dan preview artifact. 
+   521→
+   522→7. BROWSER AGENT ARTIFACT FLOW
+   523→Jalankan browser E2E seperti user nyata:
+   524→- signup/login
+   525→- onboarding
+   526→- isi profile
+   527→- buat CV ATS dengan konfigurasi custom
+   528→- generate DOCX
+   529→- download
+   530→- validasi file
+   531→- follow-up: “buat lebih pendek”
+   532→- cek versi baru tidak menimpa versi lama
+   533→- buat CV Visual dengan 4 template
+   534→- export PDF
+   535→- buat Cover Letter 350 kata
+   536→- follow-up: “buat lebih formal”
+   537→- buat Essay 1500 kata dengan probing
+   538→- buat Personal Deck 10 slide
+   539→- download PPTX
+   540→- validasi slide count dan render
+   541→- buat Application dan link dokumen
+   542→- buka English Reading/Structure/Listening
+   543→- submit jawaban
+   544→- cek score/history
+   545→- cek mobile
+   546→- cek dark mode
+   547→- cek locale ID/EN
+   548→- cek protected routes
+   549→- cek console/network error
+   550→
+   551→8. ARTIFACT BUG CLASSIFICATION
+   552→Setiap masalah artifact harus diklasifikasikan:
+   553→- Critical: file corrupt, tidak bisa dibuka, data user salah, hallucination fatal, auth/storage leak
+   554→- High: output tidak mengikuti konfigurasi, teks kepotong, PPTX overflow, PDF tidak selectable, RLS error
+   555→- Medium: spacing buruk, tone kurang sesuai, minor responsive issue
+   556→- Low: copywriting, micro-interaction, polish
+   557→
+   558→Perbaiki semua Critical dan High sebelum menganggap task selesai.
+   559→
+   560→9. ARTIFACT QA REPORT
+   561→Tambahkan laporan ke worklog.md:
+   562→- artifact yang dites
+   563→- konfigurasi yang dipakai
+   564→- hasil download
+   565→- hasil validasi text extraction
+   566→- hasil page/slide/word count
+   567→- hasil render check
+   568→- bug yang ditemukan
+   569→- fix yang dilakukan
+   570→- sisa risiko
+   571→- mana yang butuh manual verification oleh manusia
+   572→
+   573→TAMBAHAN WAJIB — TOEFL/IELTS 2026-READY TEST SPEC, SCORING, AND ITEM QUALITY ENGINE
+   574→
+   575→Sebelum membuat atau mengubah modul English Practice, lakukan audit resmi terhadap format TOEFL iBT terbaru dan IELTS terbaru dari sumber resmi ETS, IELTS.org, British Council, IDP, dan Cambridge English jika diperlukan. Catat hasil riset singkat di worklog.md. Jangan mengandalkan asumsi lama karena TOEFL iBT mengalami update mulai Januari 2026.
+   576→
+   577→Bangun sistem sebagai TOEFL/IELTS-oriented practice system, bukan official TOEFL/IELTS clone. Jangan memakai, menyalin, menyadur, atau scrape konten resmi/copyrighted dari ETS, IELTS, British Council, IDP, Cambridge, Magoosh, BestMyTest, Kaplan, Barron’s, atau prep site lain. Semua passage, transcript, audio, soal, opsi jawaban, answer key, explanation, dan distractor rationale harus original.
+   578→
+   579→1. TEST SPEC VERSIONING
+   580→
+   581→Buat sistem TestSpec yang versioned dan configurable, minimal:
+   582→
+   583→- TOEFL_IBT_2026
+   584→- TOEFL_IBT_LEGACY_COMPAT
+   585→- IELTS_ACADEMIC
+   586→- IELTS_GENERAL_TRAINING
+   587→- LARAS_TOEFL_STYLE_PRACTICE
+   588→- LARAS_IELTS_STYLE_PRACTICE
+   589→
+   590→Setiap TestSpec wajib menyimpan:
+   591→
+   592→- test family
+   593→- section: reading, listening, structure/grammar, speaking, writing
+   594→- target format
+   595→- difficulty scale
+   596→- CEFR mapping
+   597→- scoring scale
+   598→- question count rule
+   599→- timing rule jika ada
+   600→- question type distribution
+   601→- skill tag distribution
+   602→- topic distribution
+   603→- allowed item types
+   604→- scoring method
+   605→- explanation requirement
+   606→- validation rule
+   607→- lastReviewedAt
+   608→- sourceNotes di worklog.md, bukan konten copyrighted
+   609→
+   610→TOEFL 2026 harus mendukung:
+   611→- score scale 1–6 dengan increment 0.5
+   612→- CEFR-aligned interpretation
+   613→- comparable 0–120 estimate selama masa transisi, tetapi labeli sebagai “estimated/comparable practice score”, bukan official score
+   614→- adaptive practice behavior
+   615→- modern academic + real-life campus topics
+   616→- faster, more personalized practice flow
+   617→
+   618→IELTS harus mendukung:
+   619→- band scale 0–9
+   620→- half-band reporting
+   621→- raw score to estimated band untuk Listening/Reading
+   622→- Academic Reading vs General Training Reading distinction
+   623→- Writing/Speaking rubric-style feedback berdasarkan kriteria IELTS, tetapi labeli sebagai practice estimate, bukan official band
+   624→
+   625→2. QUESTION BLUEPRINT ENGINE
+   626→
+   627→Jangan generate soal secara bebas tanpa blueprint.
+   628→
+   629→Buat QuestionBlueprint untuk setiap set yang menentukan:
+   630→
+   631→- testSpec
+   632→- section
+   633→- difficulty
+   634→- CEFR target
+   635→- topic domain
+   636→- context type
+   637→- passage/transcript length
+   638→- vocabulary level
+   639→- sentence complexity
+   640→- question count
+   641→- skill tag distribution
+   642→- distractor strategy
+   643→- expected time to complete
+   644→- scoring weight
+   645→- explanation depth
+   646→- uniqueness constraints
+   647→
+   648→Contoh untuk TOEFL-style Listening:
+   649→- 1 main idea question
+   650→- 2 detail questions
+   651→- 1 inference question
+   652→- 1 speaker attitude/purpose question
+   653→- opsional 1 organization/function question
+   654→- semua jawaban benar harus didukung transcript
+   655→- distractor harus plausible tetapi jelas salah jika user memahami audio
+   656→
+   657→Contoh untuk TOEFL/IELTS-style Reading:
+   658→- main idea
+   659→- detail
+   660→- inference
+   661→- vocabulary-in-context
+   662→- author purpose
+   663→- rhetorical function
+   664→- sentence simplification jika cocok
+   665→- semua jawaban benar harus bisa dilacak ke kalimat/paragraf tertentu
+   666→
+   667→Contoh untuk Structure/Grammar:
+   668→- grammar tag wajib jelas
+   669→- hanya satu error/target structure utama
+   670→- explanation harus menyebut aturan grammar
+   671→- hindari kalimat ambigu yang punya lebih dari satu jawaban benar
+   672→
+   673→3. AI ITEM WRITER QUALITY PIPELINE
+   674→
+   675→Saat production generate soal on-the-go, jangan langsung tampilkan output LLM. Buat pipeline minimal:
+   676→
+   677→STEP 1 — Blueprint selection
+   678→Sistem memilih blueprint berdasarkan:
+   679→- testSpec
+   680→- target user
+   681→- kelemahan user
+   682→- history user
+   683→- difficulty adaptif
+   684→- topic rotation
+   685→- section target
+   686→
+   687→STEP 2 — Draft generation
+   688→LLM membuat passage/transcript/questions berdasarkan blueprint.
+   689→
+   690→STEP 3 — Self-critique
+   691→LLM kedua atau pass kedua melakukan review:
+   692→- apakah hanya ada satu jawaban benar?
+   693→- apakah jawaban benar didukung teks/audio?
+   694→- apakah distractor terlalu mudah?
+   695→- apakah ada opsi duplikat?
+   696→- apakah explanation akurat?
+   697→- apakah soal bisa dijawab tanpa membaca/mendengar?
+   698→- apakah level bahasa sesuai CEFR/difficulty?
+   699→- apakah topic terlalu mirip dengan latihan sebelumnya?
+   700→- apakah ada copyrighted-looking content?
+   701→- apakah ada konten sensitif yang tidak perlu?
+   702→
+   703→STEP 4 — Deterministic validation
+   704→Kode melakukan validasi non-LLM:
+   705→- schema valid
+   706→- jumlah soal benar
+   707→- pilihan A-D lengkap
+   708→- answerKey valid
+   709→- tidak ada duplicate options
+   710→- tidak ada empty passage/transcript
+   711→- word count sesuai range
+   712→- duration/audio metadata valid
+   713→- skill tags valid
+   714→- difficulty valid
+   715→- explanation tidak kosong
+   716→- storagePath valid jika audio
+   717→- checksum/hash ada jika file audio
+   718→- no placeholder text
+   719→- no undefined/null/NaN
+   720→
+   721→STEP 5 — Evidence grounding check
+   722→Untuk reading/listening:
+   723→- setiap question wajib punya evidence pointer:
+   724→  - passage paragraph number atau sentence id
+   725→  - transcript timestamp atau line id
+   726→- answer explanation harus merujuk evidence pointer
+   727→- jika evidence pointer tidak ada, item invalid
+   728→
+   729→STEP 6 — Quality score
+   730→Setiap generated set diberi itemQualityScore 0–100 berdasarkan:
+   731→- blueprint adherence
+   732→- uniqueness
+   733→- difficulty match
+   734→- answerability
+   735→- distractor quality
+   736→- explanation clarity
+   737→- evidence grounding
+   738→- language naturalness
+   739→- audio validity untuk listening
+   740→
+   741→Jika score < 80, jangan tampilkan ke user. Regenerate atau kirim ke review queue.
+   742→
+   743→4. SCORING SYSTEM
+   744→
+   745→Bangun scoring engine yang jelas dan tidak menyesatkan.
+   746→
+   747→Untuk practice mode:
+   748→- tampilkan raw score
+   749→- percentage
+   750→- skill breakdown
+   751→- weakness tags
+   752→- estimated CEFR
+   753→- estimated TOEFL 1–6 practice score jika TOEFL spec
+   754→- estimated comparable 0–120 practice score jika TOEFL legacy compatibility aktif
+   755→- estimated IELTS band jika IELTS spec
+   756→- confidence level: low/medium/high berdasarkan jumlah item dan konsistensi performa
+   757→
+   758→Jangan menyebut hasil sebagai official TOEFL/IELTS score. Pakai label:
+   759→- “Estimated practice score”
+   760→- “TOEFL-style practice estimate”
+   761→- “IELTS-style practice band estimate”
+   762→- “Not an official score”
+   763→
+   764→Untuk mini practice 5–10 soal, confidence harus low/medium, bukan seolah-olah akurat seperti full test.
+   765→
+   766→Untuk full mini test, confidence boleh lebih tinggi, tetapi tetap estimated.
+   767→
+   768→5. ADAPTIVE PRACTICE ENGINE
+   769→
+   770→Buat adaptive engine agar production generate tidak generik untuk tiap user.
+   771→
+   772→Sistem harus menyimpan:
+   773→
+   774→- user performance per section
+   775→- performance per skill tag
+   776→- performance per topic
+   777→- difficulty history
+   778→- repeated mistake pattern
+   779→- average response time
+   780→- skipped question count
+   781→- confidence trend
+   782→- last practiced tags
+   783→- questions already seen
+   784→- sets already attempted
+   785→
+   786→Pemilihan soal berikutnya harus mempertimbangkan:
+   787→
+   788→- lemah di tag tertentu → prioritaskan tag itu
+   789→- sudah benar berturut-turut → naikkan difficulty
+   790→- salah berturut-turut → turunkan sementara dan beri explanation lebih detail
+   791→- topic terlalu sering muncul → ganti domain
+   792→- soal pernah dikerjakan → jangan ulang terlalu cepat
+   793→- target user scholarship/study abroad/job/organization → pilih konteks yang relevan
+   794→- daily drill harus seimbang: sedikit review lemah + sedikit challenge baru
+   795→
+   796→Tambahkan mode:
+   797→
+   798→- Daily TOEFL Drill 10–15 menit
+   799→- Weakness Review
+   800→- Adaptive Practice
+   801→- Full Mini Test
+   802→- Listening Focus
+   803→- Reading Focus
+   804→- Grammar Focus
+   805→- Scholarship English Prep
+   806→- Study Abroad Prep
+   807→- Job Interview English Prep
+   808→
+   809→6. ON-THE-GO GENERATION QUALITY
+   810→
+   811→Saat production user meminta soal baru, sistem boleh generate on-the-go, tetapi wajib tetap melewati quality pipeline.
+   812→
+   813→Jangan tampilkan soal mentah dari LLM.
+   814→
+   815→Production generate flow:
+   816→- select blueprint
+   817→- generate draft
+   818→- validate schema
+   819→- critique quality
+   820→- evidence-ground
+   821→- assign quality score
+   822→- save to Supabase cache
+   823→- mark as generated_for_user or reusable
+   824→- tampilkan ke user hanya jika valid
+   825→
+   826→Jika generate gagal 2–3 kali:
+   827→- fallback ke bank soal valid dari Supabase
+   828→- tampilkan pesan ramah
+   829→- catat error ke worklog/logging
+   830→
+   831→7. BANK + LIVE GENERATION HYBRID
+   832→
+   833→Gunakan hybrid system:
+   834→
+   835→A. Pre-generated bank
+   836→Dipakai untuk:
+   837→- listening audio karena butuh TTS/storage
+   838→- fallback jika LLM gagal
+   839→- fast start
+   840→- daily drills
+   841→- validated high-quality sets
+   842→
+   843→B. On-the-go generation
+   844→Dipakai untuk:
+   845→- reading baru
+   846→- structure/grammar baru
+   847→- personalized practice
+   848→- user-specific target context
+   849→- topic yang belum banyak di bank
+   850→
+   851→C. Cache policy
+   852→Generated set yang lolos quality score bisa disimpan sebagai reusable jika:
+   853→- tidak mengandung data personal user
+   854→- kualitas >= 85
+   855→- topic dan skill tag berguna
+   856→- tidak terlalu spesifik ke satu user
+   857→
+   858→Generated set yang memakai konteks personal user harus private untuk user tersebut.
+   859→
+   860→8. DATABASE MODEL TAMBAHAN
+   861→
+   862→Tambahkan atau audit model:
+   863→
+   864→- TestSpec
+   865→- QuestionBlueprint
+   866→- ListeningSet
+   867→- ListeningQuestion
+   868→- ReadingSet
+   869→- ReadingQuestion
+   870→- StructureQuestion
+   871→- EnglishAttempt
+   872→- EnglishAttemptAnswer
+   873→- UserSkillProfile
+   874→- UserSkillTagStat
+   875→- WeaknessTag
+   876→- PracticeRecommendation
+   877→- GeneratedPracticeSet
+   878→- ItemQualityReview
+   879→- EvidencePointer
+   880→- PracticeScoreEstimate
+   881→- TOEFLScoreMapping
+   882→- IELTSBandMapping
+   883→
+   884→Setiap item wajib punya:
+   885→- sourceType: pre_generated_bank / on_the_go_generated / user_private_generated
+   886→- validationStatus
+   887→- itemQualityScore
+   888→- evidencePointers
+   889→- createdByModel
+   890→- modelVersion
+   891→- promptVersion
+   892→- blueprintId
+   893→- testSpecId
+   894→
+   895→9. CONTENT UNIQUENESS AND DUPLICATE DETECTION
+   896→
+   897→Tambahkan duplicate detection:
+   898→- hash exact text
+   899→- fuzzy similarity untuk passage/transcript
+   900→- topic repetition check
+   901→- question similarity check
+   902→- answer option similarity check
+   903→
+   904→Jangan biarkan bank besar berisi 600 listening set tapi isinya terasa sama. Buat distribusi domain dan scenario yang merata.
+   905→
+   906→10. REPORTING
+   907→
+   908→Update report script agar tidak hanya menghitung jumlah item, tetapi juga kualitas.
+   909→
+   910→bun run toefl:report harus menampilkan:
+   911→
+   912→- total listening sets
+   913→- total reading sets
+   914→- total structure questions
+   915→- valid/invalid count
+   916→- average itemQualityScore
+   917→- distribution by difficulty
+   918→- distribution by CEFR
+   919→- distribution by topic
+   920→- distribution by skill tag
+   921→- distribution by testSpec
+   922→- duplicate/similarity warning
+   923→- answer key validity
+   924→- evidence pointer coverage
+   925→- audio playable count
+   926→- average audio duration
+   927→- failed generation count
+   928→- fallback usage count
+   929→- user-personalized generated count
+   930→- reusable generated count
+   931→- unresolved risks
+   932→
+   933→11. UI REQUIREMENTS
+   934→
+   935→Di UI English Practice, tampilkan:
+   936→
+   937→- mode pilihan: TOEFL 2026 / IELTS Academic / IELTS General / Practice General
+   938→- estimated score scale yang jelas
+   939→- label “not official score”
+   940→- skill breakdown
+   941→- weakness tags
+   942→- recommended next practice
+   943→- explanation per question
+   944→- evidence view setelah submit
+   945→- transcript untuk listening hanya setelah submit atau saat review mode
+   946→- adaptive difficulty indicator
+   947→- daily drill streak
+   948→- history perkembangan score
+   949→
+   950→Jangan membuat user merasa ini official TOEFL/IELTS. Ini practice assistant yang mengikuti standar kualitas dan format latihan.
+   951→
+   952→12. QA WAJIB
+   953→
+   954→Browser-agent QA harus menguji:
+   955→
+   956→- generate reading on-the-go
+   957→- generate structure on-the-go
+   958→- ambil listening dari Supabase bank
+   959→- submit answers
+   960→- scoring raw + estimated score
+   961→- weakness tag update
+   962→- adaptive next recommendation
+   963→- fallback ke bank jika generation gagal
+   964→- duplicate prevention
+   965→- mobile UI
+   966→- ID/EN UI
+   967→- dark mode
+   968→- signed URL audio
+   969→- RLS access
+   970→- no console error
+   971→- no network 500
+   972→
+   973→Catat hasilnya di worklog.md.
+   974→
+   975→TAMBAHAN WAJIB — PRACTICE SCORE CERTIFICATE / NON-OFFICIAL CERTIFICATE
+   976→
+   977→Tambahkan fitur sertifikat hasil latihan untuk English Practice, khususnya TOEFL-style dan IELTS-style practice.
+   978→
+   979→Fitur ini BUKAN sertifikat resmi TOEFL/IELTS. Jangan menggunakan wording yang menyesatkan seperti “Official TOEFL Certificate”, “IELTS Certified Score”, atau klaim bahwa Laras mewakili ETS/IELTS/British Council/IDP/Cambridge.
+   980→
+   981→Gunakan nama aman seperti:
+   982→- Laras Practice Score Certificate
+   983→- English Readiness Practice Certificate
+   984→- Sertifikat Hasil Latihan English Readiness
+   985→- TOEFL-style Practice Score Report
+   986→- IELTS-style Practice Band Report
+   987→
+   988→Setiap sertifikat WAJIB menampilkan disclaimer besar dan jelas:
+   989→
+   990→“Bukan sertifikat resmi TOEFL/IELTS. Skor ini adalah estimasi hasil latihan di platform Laras dan tidak dapat menggantikan skor resmi dari ETS, IELTS, British Council, IDP, Cambridge, atau lembaga penguji resmi lainnya.”
+   991→
+   992→Certificate harus bisa dibuat setelah user menyelesaikan:
+   993→- Daily Drill tertentu
+   994→- Full Mini Test
+   995→- TOEFL-style Practice Test
+   996→- IELTS-style Practice Test
+   997→- Listening Focus Test
+   998→- Reading Focus Test
+   999→- Structure/Grammar Focus Test
+  1000→
+  1001→Data yang wajib muncul di certificate:
+  1002→- nama user
+  1003→- certificate title
+  1004→- test mode
+  1005→- test spec: TOEFL-style / IELTS-style / General English Practice
+  1006→- tanggal penyelesaian
+  1007→- raw score
+  1008→- percentage score
+  1009→- estimated practice score
+  1010→- estimated CEFR jika tersedia
+  1011→- estimated TOEFL-style score 1–6 jika TOEFL 2026 spec
+  1012→- estimated comparable 0–120 jika legacy-compatible estimate aktif
+  1013→- estimated IELTS-style band jika IELTS spec
+  1014→- confidence level: low / medium / high
+  1015→- section breakdown: Reading, Listening, Structure/Grammar
+  1016→- skill breakdown: main idea, detail, inference, vocabulary, grammar, speaker attitude, purpose, etc.
+  1017→- jumlah soal
+  1018→- durasi pengerjaan
+  1019→- validation status
+  1020→- certificate ID unik
+  1021→- QR code / verification URL
+  1022→- disclaimer non-official
+  1023→
+  1024→Tambahkan halaman:
+  1025→- /english/certificates
+  1026→- /english/certificates/[id]
+  1027→- /english/certificates/[id]/download
+  1028→
+  1029→Tambahkan fitur:
+  1030→- generate certificate dari attempt yang eligible
+  1031→- preview certificate
+  1032→- download PDF
+  1033→- share verification link
+  1034→- verify certificate by public ID
+  1035→- revoke certificate jika perlu
+  1036→- regenerate certificate jika nama user diperbarui
+  1037→- simpan certificate PDF ke Supabase Storage
+  1038→- signed URL untuk download private
+  1039→- public verification page hanya menampilkan data minimal dan aman
+  1040→
+  1041→Tambahkan model database jika belum ada:
+  1042→- EnglishCertificate
+  1043→- certificateId
+  1044→- userId
+  1045→- attemptId
+  1046→- testSpec
+  1047→- title
+  1048→- scoreSnapshot
+  1049→- skillBreakdownSnapshot
+  1050→- disclaimerText
+  1051→- verificationCode
+  1052→- verificationUrl
+  1053→- pdfStoragePath
+  1054→- status: active / revoked
+  1055→- issuedAt
+  1056→- expiresAt optional
+  1057→- createdAt
+  1058→- updatedAt
+  1059→
+  1060→Certificate PDF validation:
+  1061→- PDF harus bisa dibuka
+  1062→- teks harus selectable
+  1063→- disclaimer terlihat jelas
+  1064→- tidak ada klaim official TOEFL/IELTS
+  1065→- QR code bisa discan
+  1066→- verification URL valid
+  1067→- data score sama dengan attempt
+  1068→- tidak ada placeholder/undefined/null
+  1069→- layout tidak overflow
+  1070→- mobile preview rapi
+  1071→- dark mode tidak merusak preview
+  1072→
+  1073→Design direction:
+  1074→- premium, clean, academic, trustworthy
+  1075→- jangan terlalu ramai
+  1076→- gunakan brand Laras
+  1077→- tampilkan disclaimer sebagai bagian penting, bukan footnote kecil tersembunyi
+  1078→- beri label “Practice Estimate” di dekat skor
+  1079→- beri badge “Non-Official Practice Result”
+  1080→
+  1081→QA wajib:
+  1082→- selesaikan practice test
+  1083→- generate certificate
+  1084→- preview certificate
+  1085→- download PDF
+  1086→- buka verification URL
+  1087→- cek QR code
+  1088→- cek disclaimer
+  1089→- cek data score sesuai attempt
+  1090→- cek Supabase Storage upload
+  1091→- cek RLS/signed URL
+  1092→- cek mobile
+  1093→- cek console/network error
+  1094→
+  1095→Catat semua update di worklog.md.
+  1096→
+  1097→
+  1098→TAMBAHAN AKHIR — FOUNDER-LEVEL PRODUCT STRATEGY, CREATIVE AUTONOMY, AND POLISH MODE
+  1099→
+  1100→Setelah semua task wajib selesai dan semua Critical/High bug diperbaiki, masuk ke mode founder-level product strategist dan product design reviewer.
+  1101→
+  1102→Anggap kamu bukan hanya engineer, tetapi juga:
+  1103→- co-founder produk
+  1104→- head of product
+  1105→- growth strategist
+  1106→- UX reviewer
+  1107→- security reviewer
+  1108→- QA lead
+  1109→- performance engineer
+  1110→- retention strategist
+  1111→
+  1112→Tujuan akhirnya bukan sekadar “fitur selesai”, tetapi membuat Laras terasa seperti web app yang benar-benar layak dipakai banyak orang, viral secara organik, dipercaya user, dan lebih unggul dari resume builder, job tracker, TOEFL practice app, dan AI document generator biasa.
+  1113→
+  1114→Lakukan analisis menyeluruh terhadap produk dari sisi:
+  1115→
+  1116→1. PRODUCT DIFFERENTIATION
+  1117→Cari apa yang membuat Laras berbeda dan lebih kuat dibanding kompetitor. Jangan hanya meniru fitur umum. Cari “signature experience” yang membuat user merasa:
+  1118→- ini lebih personal
+  1119→- ini lebih aman dari output generik
+  1120→- ini lebih bisa dipercaya
+  1121→- ini lebih siap untuk kebutuhan Indonesia dan global
+  1122→- ini lebih membantu sampai tahap diterima, bukan hanya membuat dokumen
+  1123→
+  1124→2. MUST-HAVE FEATURES
+  1125→Identifikasi fitur yang wajib ada sebelum production launch. Jika belum ada, implementasikan jika feasible. Jika terlalu besar, tulis sebagai high-priority next phase.
+  1126→
+  1127→Pertimbangkan:
+  1128→- onboarding yang lebih proaktif dan personal
+  1129→- profile health score
+  1130→- opportunity readiness score
+  1131→- document quality score
+  1132→- application readiness checklist
+  1133→- adaptive English learning path
+  1134→- certificate verification
+  1135→- document version comparison
+  1136→- artifact quality report
+  1137→- privacy/export/delete account
+  1138→- secure storage and RLS
+  1139→- admin/ops dashboard jika dibutuhkan untuk mengelola bank soal
+  1140→
+  1141→3. NICE-TO-HAVE FEATURES
+  1142→Cari fitur tambahan yang bisa membuat produk terasa premium dan memorable, misalnya:
+  1143→- smart command palette
+  1144→- quick actions untuk semua artifact
+  1145→- “make it less AI” revision button
+  1146→- “why this works” explanation
+  1147→- evidence/provenance highlight
+  1148→- AI career coach sidebar
+  1149→- daily readiness plan
+  1150→- streak dan learning habit
+  1151→- shareable non-official certificate
+  1152→- application timeline
+  1153→- recruiter-view preview
+  1154→- mobile-first daily drill
+  1155→- intelligent empty states
+  1156→- onboarding sample data untuk demo
+  1157→
+  1158→Implementasikan yang low-risk dan high-impact. Untuk fitur besar, catat di backlog dengan prioritas.
+  1159→
+  1160→4. DESIGN POLISH
+  1161→Polish UI sampai terasa premium, calm, editorial, dan trustworthy. Audit:
+  1162→- spacing
+  1163→- typography
+  1164→- visual hierarchy
+  1165→- empty states
+  1166→- loading skeletons
+  1167→- button states
+  1168→- hover/focus states
+  1169→- mobile responsiveness
+  1170→- dark mode
+  1171→- accessibility
+  1172→- copywriting
+  1173→- micro-interactions
+  1174→- dashboard clarity
+  1175→- artifact preview quality
+  1176→- certificate design
+  1177→- English practice experience
+  1178→
+  1179→Jangan membuat desain ramai. Laras harus terasa profesional, hangat, dan meyakinkan.
+  1180→
+  1181→5. PERFORMANCE OPTIMIZATION
+  1182→Audit dan optimalkan:
+  1183→- bundle size
+  1184→- route loading
+  1185→- API latency
+  1186→- database query efficiency
+  1187→- Supabase Storage access
+  1188→- signed URL caching
+  1189→- large document export
+  1190→- large TOEFL bank query
+  1191→- audio loading
+  1192→- image/font loading
+  1193→- mobile performance
+  1194→- unnecessary re-renders
+  1195→
+  1196→Jika ada bottleneck, perbaiki atau catat jelas.
+  1197→
+  1198→6. SECURITY & PRIVACY REVIEW
+  1199→Lakukan security review serius:
+  1200→- jangan expose service role key
+  1201→- cek RLS
+  1202→- cek signed URL
+  1203→- cek user ownership di semua API
+  1204→- cek protected routes
+  1205→- cek document access
+  1206→- cek certificate verification public page agar tidak membocorkan data sensitif
+  1207→- cek prompt injection dari user input
+  1208→- cek file upload risk
+  1209→- cek data deletion/export
+  1210→- cek auth/session
+  1211→- cek environment variables
+  1212→- cek logs agar tidak menyimpan secret
+  1213→
+  1214→Perbaiki semua issue Critical/High.
+  1215→
+  1216→7. MONETIZATION & RETENTION THINKING
+  1217→Buat catatan product strategy di worklog.md:
+  1218→- fitur apa yang cocok jadi free
+  1219→- fitur apa yang cocok jadi premium
+  1220→- fitur apa yang membuat user balik lagi setiap hari
+  1221→- fitur apa yang membuat user share ke teman
+  1222→- fitur apa yang bisa jadi demo paling kuat
+  1223→- fitur apa yang paling membedakan Laras dari kompetitor
+  1224→
+  1225→Jangan langsung membangun paywall kecuali diminta. Cukup siapkan struktur dan rekomendasi.
+  1226→
+  1227→8. FINAL FOUNDER REVIEW
+  1228→Sebelum menyatakan selesai, lakukan founder-style review:
+  1229→
+  1230→“Apakah produk ini cukup jelas untuk user baru dalam 30 detik?”
+  1231→“Apakah user paham kenapa Laras lebih baik dari AI resume builder biasa?”
+  1232→“Apakah output-nya benar-benar bisa dipercaya?”
+  1233→“Apakah artifact yang dihasilkan terlihat profesional?”
+  1234→“Apakah English Practice terasa seperti sistem belajar serius, bukan soal random AI?”
+  1235→“Apakah ada momen wow?”
+  1236→“Apakah ada bagian yang masih terasa prototype?”
+  1237→“Apakah ada risiko security/privacy?”
+  1238→“Apakah ada fitur yang harus dipotong, disederhanakan, atau dipoles?”
+  1239→
+  1240→Tulis hasil review ini di worklog.md dengan:
+  1241→- must-fix before launch
+  1242→- should-fix soon
+  1243→- nice-to-have
+  1244→- product bets
+  1245→- growth ideas
+  1246→- security risks
+  1247→- design polish notes
+  1248→- next phase recommendation
+  1249→
+  1250→Kamu diberi ruang untuk berkreasi, tetapi tetap harus:
+  1251→- menjaga prinsip BRIEF.md
+  1252→- tidak menghapus fitur yang sudah bekerja
+  1253→- tidak membuat klaim menyesatkan
+  1254→- tidak membocorkan data user
+  1255→- tidak menyimpan secret di repo
+  1256→- tidak mengorbankan kualitas demi fitur banyak
+  1257→- mencatat semua keputusan penting di worklog.md

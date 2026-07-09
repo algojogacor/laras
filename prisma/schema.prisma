@@ -181,14 +181,44 @@ model Document {
   type          String // cv-ats | cv-visual | cover-letter | bio | deck | essay
   title         String
   content       String? // JSON: document structure / generated text
-  config        String? // JSON: template, locale, tone, target region
+  config        String? // JSON: GenerationConfig snapshot
   fileUrl       String? // exported file path/URL
   version       Int         @default(1)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   applications  ApplicationDocument[]
+  versions      DocumentVersion[]
+  revisions     RevisionRequest[]
 
   @@index([userProfileId])
+}
+
+// Document versioning — each revision creates a new version (Brief Task 2)
+model DocumentVersion {
+  id            String   @id @default(cuid())
+  documentId    String
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  content       String   // JSON: full content snapshot
+  configSnapshot String  // JSON: GenerationConfig used for this version
+  revisionInstruction String? // what the user asked for (null = initial generation)
+  parentVersionId String? // link to previous version
+  createdAt     DateTime @default(now())
+
+  @@index([documentId])
+}
+
+// Revision requests — user instructions for follow-up changes (Brief Task 2)
+model RevisionRequest {
+  id            String   @id @default(cuid())
+  documentId    String
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  instruction   String   // e.g. "shorten", "more formal", "add experience X"
+  status        String   @default("pending") // pending | completed | failed
+  resultVersionId String? // resulting DocumentVersion id
+  createdAt     DateTime @default(now())
+
+  @@index([documentId])
 }
 
 model ApplicationDocument {
