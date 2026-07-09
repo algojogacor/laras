@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useState, useTransition } from "react"
-import { LogOut, User, Loader2 } from "lucide-react"
+import { LogOut, User, Loader2, Settings } from "lucide-react"
 import { toast } from "sonner"
 import {
   DropdownMenu,
@@ -21,7 +21,7 @@ export function UserMenu({
 }: {
   name: string | null
   email: string
-  locale: { profile: string; logout: string }
+  locale: { profile: string; settings: string; logout: string }
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -68,6 +68,12 @@ export function UserMenu({
           <Link href="/profile" className="cursor-pointer">
             <User className="mr-2 h-4 w-4" />
             {locale.profile}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/settings" className="cursor-pointer">
+            <Settings className="mr-2 h-4 w-4" />
+            {locale.settings}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

@@ -461,3 +461,39 @@ Unresolved / next-phase priorities:
 2. **Comprehensive end-to-end QA** as a brand-new user (signup → onboarding → all 5 verticals) — Phase 9 final.
 3. **Supabase DB migration** when DDL access available.
 4. Additional polish: hover micro-interactions, transition animations between phases.
+
+---
+Task ID: CRON-8 (webDevReview round 8 — Settings page + E2E QA as new user)
+Agent: main (cron webDevReview)
+Task: Comprehensive E2E QA as new user, build Settings page (Brief Section 9 preferences), wire to user menu
+
+Work Log:
+- E2E QA as brand-new user: signed up "Budi Santoso" → onboarding (skipped all steps) → dashboard with "Halo, Budi." + 0 counts. Confirmed signup→onboarding→dashboard flow clean. CV ATS new page correctly shows "need at least 1 experience" warning + "Lengkapi profil" link for thin profiles. No bugs found.
+- Built Settings page (Brief Section 9 — Language & Locale Settings, post-onboarding editing):
+  - `/settings` page + `SettingsForm` component.
+  - 3 sections: Language & Region (UI locale, doc locale, target region), Style & Goals (preferred tone, urgency, opportunity types), Account (export JSON, delete account link).
+  - Save button (sticky bottom) calls PUT /api/profile with all preferences. If UI locale changed, calls `setLocale()` to live-update the whole app (via LocaleProvider's router.refresh).
+  - Added `settings.*` i18n keys to both ID and EN.
+  - Wired to user menu: added "Settings/Pengaturan" item with Settings icon between Profile and Log out.
+  - Updated `UserMenu` props to accept `settings` label; updated app-header `menuLabels`.
+- Styling: section cards with icons (Globe2, PenLine, UserCog), radio group cards with primary highlight, opportunity-type toggle chips with check icons, sticky save bar with shadow-lift, account section with destructive-styled delete row.
+
+Verification results (agent-browser):
+- New user signup: "Budi Santoso" → onboarding → dashboard "Halo, Budi." with 0 stats. ✓
+- CV ATS new (thin profile): "need at least 1 experience" warning + "Lengkapi profil" link. ✓
+- Settings page: loads with 3 sections (Language & Region, Style & Goals, Account), all radio groups present (UI locale, doc locale, target region, tone, urgency), opportunity-type chips, save button. ✓
+- Changed UI locale to English + saved → page live-updated to English ("Settings", "Save settings", "Delete account & all data"). ✓
+- User menu: shows Profile, Settings, Log out items. ✓
+- Console: no errors. Lint: 0 errors.
+
+Stage Summary:
+- **Settings page added** (Brief Section 9) — users can edit language/region/tone/urgency/opportunity-types post-onboarding, with live UI locale switching.
+- **E2E QA passed** as brand-new user — signup → onboarding → dashboard → all flows clean, no bugs.
+- The ecosystem now has a complete user preference system: onboarding sets initial prefs, settings page lets users change them anytime, all document generation reads from these prefs.
+- User menu now has 3 items (Profile, Settings, Log out).
+
+Unresolved / next-phase priorities:
+1. **Production Listening audio** — migrate from on-the-go TTS to pre-generated bank (Brief Section 10.3) via Koyeb/Kokoro + Supabase Storage.
+2. **Supabase DB migration** when DDL access available.
+3. Additional polish: transition animations between phases, more empty-state illustrations.
+4. The product is feature-complete — focus shifts to production-readiness (Supabase migration, deployment, performance).

@@ -14,8 +14,8 @@ export function AppHeader({
 }) {
   const menuLabels =
     locale === "id"
-      ? { profile: "Profil", logout: "Keluar" }
-      : { profile: "Profile", logout: "Log out" }
+      ? { profile: "Profil", settings: "Pengaturan", logout: "Keluar" }
+      : { profile: "Profile", settings: "Settings", logout: "Log out" }
   const navLabels =
     locale === "id"
       ? { dashboard: "Dasbor", documents: "Dokumen", applications: "Lamaran", interview: "Wawancara", english: "Bahasa Inggris", profile: "Profil" }
