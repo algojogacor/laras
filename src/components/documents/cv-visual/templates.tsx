@@ -19,17 +19,32 @@ const fmtDate = (d: string | null | undefined, present: string) => {
   return d
 }
 
+/** Photo component — renders profile photo when photoUrl is set (Brief Section 6.2, 9.2). */
+function Photo({ profile, className }: { profile: SerializedProfile; className?: string }) {
+  if (!profile.photoUrl) return null
+  return (
+    <img
+      src={profile.photoUrl}
+      alt={profile.fullName || "Profile photo"}
+      className={cn("object-cover", className)}
+    />
+  )
+}
+
 /* ── 1. Modern Minimal — clean, lots of whitespace, thin dividers ── */
 export function ModernMinimal({ profile }: TemplateProps) {
   const links = profile.links as any
   return (
     <div className="mx-auto w-full max-w-[640px] bg-white p-10 text-neutral-800" style={{ fontFamily: "Helvetica, Arial, sans-serif" }}>
-      <header className="border-b-2 border-neutral-800 pb-4">
-        <h1 className="text-3xl font-light tracking-tight">{profile.fullName}</h1>
-        <p className="mt-1 text-sm uppercase tracking-[0.2em] text-neutral-500">{profile.headline}</p>
-        <p className="mt-2 text-xs text-neutral-500">
-          {[profile.email, profile.phone, profile.location, links?.linkedin, links?.portfolio].filter(Boolean).join("  ·  ")}
-        </p>
+      <header className="flex items-start gap-4 border-b-2 border-neutral-800 pb-4">
+        <div className="flex-1">
+          <h1 className="text-3xl font-light tracking-tight">{profile.fullName}</h1>
+          <p className="mt-1 text-sm uppercase tracking-[0.2em] text-neutral-500">{profile.headline}</p>
+          <p className="mt-2 text-xs text-neutral-500">
+            {[profile.email, profile.phone, profile.location, links?.linkedin, links?.portfolio].filter(Boolean).join("  ·  ")}
+          </p>
+        </div>
+        <Photo profile={profile} className="h-20 w-20 rounded-full border-2 border-neutral-200" />
       </header>
       {profile.summary && (
         <section className="mt-4">
@@ -78,6 +93,9 @@ export function Corporate({ profile }: TemplateProps) {
       <div className="flex">
         {/* Sidebar */}
         <aside className="w-[38%] bg-neutral-800 p-5 text-neutral-200">
+          <div className="mb-3 flex justify-center">
+            <Photo profile={profile} className="h-24 w-24 rounded-full border-2 border-white/20" />
+          </div>
           <h1 className="text-xl font-bold leading-tight text-white">{profile.fullName}</h1>
           <p className="mt-1 text-[11px] text-neutral-400">{profile.headline}</p>
           <div className="mt-4 space-y-3">
@@ -126,9 +144,12 @@ export function Creative({ profile }: TemplateProps) {
   return (
     <div className="mx-auto w-full max-w-[640px] bg-white text-neutral-800" style={{ fontFamily: "Helvetica, Arial, sans-serif" }}>
       {/* Header band */}
-      <header className="bg-accent px-8 py-6 text-white">
-        <h1 className="text-4xl font-black tracking-tight">{profile.fullName}</h1>
-        <p className="mt-1 text-sm font-light uppercase tracking-widest text-white/80">{profile.headline}</p>
+      <header className="flex items-center gap-4 bg-accent px-8 py-6 text-white">
+        <div className="flex-1">
+          <h1 className="text-4xl font-black tracking-tight">{profile.fullName}</h1>
+          <p className="mt-1 text-sm font-light uppercase tracking-widest text-white/80">{profile.headline}</p>
+        </div>
+        <Photo profile={profile} className="h-20 w-20 rounded-full border-2 border-white/40" />
       </header>
       <div className="p-8">
         <div className="flex flex-wrap gap-4 text-[10px] text-neutral-500">
@@ -180,12 +201,15 @@ export function Technical({ profile }: TemplateProps) {
   const links = profile.links as any
   return (
     <div className="mx-auto w-full max-w-[640px] bg-white p-8 text-neutral-800" style={{ fontFamily: "Courier New, monospace" }}>
-      <header className="border-b-2 border-dashed border-neutral-300 pb-3">
-        <h1 className="text-2xl font-bold">{profile.fullName}</h1>
-        <p className="text-xs text-neutral-500">{profile.headline}</p>
-        <p className="mt-1 text-[10px] text-neutral-400">
-          {[profile.email, profile.phone, profile.location, links?.linkedin, links?.portfolio].filter(Boolean).join(" | ")}
-        </p>
+      <header className="flex items-start gap-3 border-b-2 border-dashed border-neutral-300 pb-3">
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold">{profile.fullName}</h1>
+          <p className="text-xs text-neutral-500">{profile.headline}</p>
+          <p className="mt-1 text-[10px] text-neutral-400">
+            {[profile.email, profile.phone, profile.location, links?.linkedin, links?.portfolio].filter(Boolean).join(" | ")}
+          </p>
+        </div>
+        <Photo profile={profile} className="h-16 w-16 rounded border border-neutral-400" />
       </header>
       <Block label="// SUMMARY">
         <p className="text-[11px] leading-relaxed text-neutral-600">{profile.summary}</p>

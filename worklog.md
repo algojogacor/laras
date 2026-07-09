@@ -617,3 +617,66 @@ Ide untuk nanti (Section 17, bukan sekarang):
 - Pre-generation pipeline untuk listening audio (batch script + Supabase Storage)
 - Photo display di CV Visual templates (saat ini hanya field URL + warning, belum ditampilkan di template)
 - Verifikasi native PPT di PowerPoint/Impress oleh Arya
+
+---
+Task ID: VERIFY+GAP (Audit verification + Listening gap closure)
+Agent: main (cron webDevReview)
+Task: Verify 3 unverified audit claims, close Section 10.3 Listening gap (generation-time vs play-time separation)
+
+## (a) Status proyek saat ini
+Semua 5 vertical + 6 document types + smart suggestions + settings + deadline alerts + document CRUD berfungsi. Audit BRIEF.md sebelumnya menemukan 3 hal belum diverifikasi + 1 gap 🟡 (Listening). Round ini menutup semuanya.
+
+## (b) Yang diverifikasi/diperbaiki round ini + hasilnya
+
+### Verification 1: PPTX structure (all 8 templates)
+- Downloaded all 8 PPTX files (forest, slate, warm, ink, minimal, corporate, academic, creative).
+- Structural integrity test via python zipfile: ALL 8 are valid OOXML, non-corrupt, 6 slides each, text extractable (18 text runs), theme.xml present.
+- Theme color verification: all 8 have distinct bg+accent colors (e.g. forest bg=0E2A22 accent=C2703D, minimal bg=FAFAFA accent=2D2D2D).
+- **Hasil: ✅ Struktur valid. Perlu verifikasi visual manual oleh Arya di PowerPoint/Impress** (overflow/font fallback/teks terpotong tidak bisa dicek otomatis).
+
+### Verification 2: Photo (photoUrl) in CV Visual templates
+- **Ditemukan gap**: photoUrl field ada di profile + warning regional ada, tapi photo TIDAK dirender di template manapun.
+- **Fix**: Created shared `Photo` component, added to all 4 templates:
+  - Modern Minimal: rounded-full 20x20 di header kanan
+  - Corporate: centered di sidebar atas nama
+  - Creative: rounded-full di accent header kanan
+  - Technical: square 16x16 di header kanan
+- Set photoUrl on Rina's profile, verified via agent-browser: all 4 templates show `<img src="https://avatar.iran.run/avatar">`.
+- **Hasil: ✅ Photo renders di semua 4 template CV Visual.**
+
+### Verification 3: experienceId bug regression test
+- Tested 3 scenarios via API:
+  1. **Add experience**: added "Volunteer Blog Writer" → profile PUT recreated all experiences with new IDs → generated CV ATS → bullets survive for BOTH experiences (3 + 2 bullets). ✓
+  2. **Delete experience**: removed "Social Media Coordinator" → regenerated → remaining "Volunteer Blog Writer" bullets survive (3 bullets). ✓
+  3. **DOCX export**: verified bullets present in DOCX for both scenarios (• chars count correct, content matches). ✓
+- **Hasil: ✅ Bug fix teruji di multiple scenarios, tidak ada regresi.**
+
+### Gap closure: Section 10.3 Listening (generation-time vs play-time)
+- **Added `ListeningQuestion` model** to Prisma schema (id, title, script, speaker, questions, difficulty, topic, audioUrl, published). Pushed to DB.
+- **Created `scripts/generate-listening-bank.ts`** — batch generation-time pipeline:
+  1. Generate script + questions via LLM (Content Engine)
+  2. Generate audio via edge-tts
+  3. Save audio file to /public/audio/listening/
+  4. Insert ListeningQuestion row with audioUrl filled + published=true
+  - Run: `bun run scripts/generate-listening-bank.ts [count] [difficulty]`
+- **Ran the script**: generated 3 medium listening questions with audio → all 3 saved to bank (published=true, audioUrl filled).
+- **Updated `POST /api/english/generate` (module=listening)** — play-time now reads from bank:
+  - Queries `ListeningQuestion` where `published=true AND audioUrl IS NOT NULL`
+  - Serves pre-generated question + audio URL — **NO TTS call at play-time**
+  - Fallback: if bank empty, generates on-the-go (dev mode only, with console.warn)
+- **Verified**: play-time request returns pre-generated question ("Office Hours Discussion") with audioUrl pointing to pre-existing file. Dev log shows NO edge-tts calls during play-time.
+- **Hasil: ✅ Generation-time vs play-time separation implemented per Brief Section 10.3.** Pipeline pattern correct (generate once → save → play reads file). Bank has 3 questions (not 850MB target yet, but pattern is established for scaling).
+
+## (c) Isu belum selesai + prioritas rekomendasi round berikutnya
+
+### Yang masih perlu kerjaan:
+1. **850MB bank target** (Section 12.1.1): batch script works but only 3 questions generated so far. Need to run `bun run scripts/generate-listening-bank.ts 50 medium` (and easy/hard) to approach the 850MB target. Pipeline pattern is correct — just needs volume.
+2. **PPTX native visual verification**: agent-browser cannot render PPTX — needs Arya to open in PowerPoint/Impress to check overflow/font/teks terpotong.
+3. **Supabase Storage migration**: audio currently stored as local files in /public/audio/listening/. Production should upload to Supabase Storage (the `uploadAudioToSupabase` function exists in tts-edge.ts but isn't wired into the batch script yet).
+4. **Supabase DB migration**: when DDL access available, migrate from SQLite to Supabase Postgres.
+
+### Prioritas rekomendasi:
+1. **Run batch script at scale** — generate 30-50 listening questions per difficulty to build a real bank.
+2. **Wire Supabase Storage upload** into the batch script (replace local file save with `uploadAudioToSupabase`).
+3. **Manual PPT verification** by Arya.
+4. The product is now audit-complete (all sections ✅ or 🟡→✅ except PPT visual + 850MB volume).

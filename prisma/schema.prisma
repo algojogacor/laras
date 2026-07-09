@@ -264,10 +264,28 @@ model EnglishSession {
   module        String // reading | structure | listening
   passage       String? // text or script
   questions     String? // JSON array of {q, options, answer, explanation}
-  audioUrl      String? // for listening (Supabase Storage)
+  audioUrl      String? // for listening — path to pre-generated audio file (Brief 10.3 play-time)
   userAnswers   String? // JSON array of selected indices
   score         Int?
   createdAt     DateTime    @default(now())
 
   @@index([userProfileId])
+}
+
+// Listening question bank — PRE-GENERATED during development (Brief Section 10.3).
+// Generation-time: script → TTS → audio file → row here with audioUrl filled.
+// Play-time: user gets a random row where audioUrl IS NOT NULL — never triggers TTS.
+// Questions without audioUrl are "drafts" not yet published to users.
+model ListeningQuestion {
+  id          String   @id @default(cuid())
+  title       String
+  script      String   // the listening script text
+  speaker     String   // description: "Conversation between two students" etc.
+  questions   String   // JSON array of {id, question, options, answer, explanation}
+  difficulty  String   @default("medium") // easy | medium | hard
+  topic       String   // scenario topic
+  audioUrl    String?  // path to pre-generated MP3 — NULL means not yet generated (draft, not published)
+  published   Boolean  @default(false) // only published=true questions are shown to users
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
