@@ -3,7 +3,8 @@
 // Designed to mirror a future Supabase/Postgres migration (supabase/migrations/0001_init.sql).
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
