@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, BookOpen, Braces, Headphones, Loader2, Check, X, RefreshCw, Trophy, Sparkles, ArrowRight } from "lucide-react"
+import { ArrowLeft, BookOpen, Braces, Headphones, Loader2, Check, X, RefreshCw, Trophy, Sparkles, ArrowRight, Award } from "lucide-react"
 import { toast } from "sonner"
 import { useT } from "@/components/providers/locale-provider"
 import type { Locale } from "@/lib/i18n/dictionary"
@@ -422,6 +422,22 @@ export function EnglishHub({ locale, history }: { locale: Locale; history: Histo
         <div className="flex justify-center gap-2">
           <Button onClick={() => start(activeModule)} variant="outline" size="sm">
             <RefreshCw className="mr-1.5 h-3.5 w-3.5" />{t.english.nextPractice}
+          </Button>
+          <Button onClick={async () => {
+            if (!sessionId) return
+            try {
+              const res = await fetch("/api/english/certificates", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sessionId }),
+              })
+              const data = await res.json()
+              if (data.ok) {
+                toast.success("Certificate generated!")
+                window.location.href = `/english/certificates/${data.certificate.id}`
+              } else { toast.error("Could not generate certificate") }
+            } catch { toast.error("Could not generate certificate") }
+          }} variant="outline" size="sm">
+            <Award className="mr-1.5 h-3.5 w-3.5" />Get Certificate
           </Button>
           <Button onClick={reset} size="sm" className="shadow-soft">
             {t.english.backToModules}<ArrowRight className="ml-1.5 h-3.5 w-3.5" />
