@@ -371,3 +371,54 @@ Unresolved / next-phase priorities:
 2. PDF export for ATS/cover-letter/bio/essay (currently DOCX only; CV Visual uses print-to-PDF).
 3. Skeleton loaders, more micro-interactions.
 4. Overall polish & QA pass (Phase 9) — test all flows end-to-end as new user.
+
+---
+Task ID: CRON-6 (webDevReview round 6 — English Listening audio, the last module)
+Agent: main (cron webDevReview)
+Task: QA existing app, build English Listening (Phase 8 — TTS audio + comprehension questions), complete all English Readiness modules
+
+Work Log:
+- QA pass: confirmed all 5 verticals + 6 document types + cross-vertical linking stable. No errors.
+- Extended `src/lib/content-engine.ts` with `generateListening()`:
+  - Generates short English listening script (<900 chars for TTS 1024 limit) — 8 rotating scenarios (student conversations, lectures, office hours, campus announcements, movie discussions, news reports, interviews, library orientation).
+  - Natural spoken English with Speaker 1/2 labels, fillers, contractions.
+  - 5 comprehension questions (main idea, detail, inference, speaker purpose, vocabulary).
+  - Difficulty-scaled word count (easy 100-130, medium 130-160, hard 160-200).
+- Updated `POST /api/english/generate` to handle `module=listening`:
+  - Generates script + questions via LLM.
+  - Generates audio via `zai.audio.tts.create()` (z-ai-web-dev-sdk TTS skill) — voice "jam" (British English), wav format, speed 1.0.
+  - Returns audio as base64 data URL (dev mode; production would use Supabase Storage URL per Brief Section 10.3).
+  - Graceful fallback: if TTS fails, continues without audio — user sees script text instead.
+  - Fixed TTS format: `mp3` rejected by API (status 400 "unsupported response_format") → switched to `wav` which works.
+- Updated `EnglishHub` component:
+  - Listening module now active (removed "coming soon" badge).
+  - `activeModule` type includes "listening"; new `listening` state variable.
+  - Practice section: audio player card (accent-bordered, Headphones icon, `<audio controls>`) with fallback to script text if no audio.
+  - Questions + results reuse the same flow as Reading (same question type).
+  - All 3 modules (Reading, Structure, Listening) now fully functional.
+- Styling: accent-bordered audio player card with Headphones icon, amber fallback box for missing audio, audio scrubber controls.
+
+Verification results (agent-browser):
+- English hub: all 3 modules active (Reading, Structure, Listening — no "coming soon"). ✓
+- Listening practice: clicked "Mulai latihan" → LLM generated "Movie Review" script (conversation between 2 friends about a sci-fi film) + TTS generated wav audio → audio player appeared with scrubber controls. ✓
+- Answered all 5 questions → submitted → scored 3/5 with explanations ("Speaker 1 explicitly mentions 'new sci-fi film' at the beginning..."). ✓
+- Results review shows correct/incorrect highlighting + explanations. ✓
+- Console: no errors. Lint: 0 errors. TTS wav format works (mp3 was rejected by API).
+
+Stage Summary:
+- **English Listening audio complete** (Phase 8, Brief Section 10.3) — the last unfinished module. All 3 English Readiness modules now functional (Reading + Structure + Listening).
+- TTS audio generated on-the-go via z-ai-web-dev-sdk (dev mode; Brief Section 10.3 specifies pre-generation for production, but on-the-go is acceptable for dev/demo).
+- **ALL PRODUCT VERTICALS AND ALL SUB-MODULES ARE NOW FUNCTIONAL:**
+  1. Document Suite: 6 types (CV ATS, CV Visual, Cover Letter, Bio, Essay, Personal Deck)
+  2. Application Ops: kanban with AI summarize + document linking
+  3. Interview Prep: question generation + answer coaching
+  4. English Readiness: 3 modules (Reading, Structure, Listening with audio)
+  5. Opportunity Essays: strictest verification with probing Q&A
+- The Content Engine + TTS now power all text + audio generation across the entire ecosystem.
+
+Unresolved / next-phase priorities:
+1. **Production Listening audio** — migrate from on-the-go TTS to pre-generated bank (Brief Section 10.3: generation-time vs play-time separation) via Koyeb/Kokoro batch pipeline + Supabase Storage.
+2. **PDF export** for ATS/cover-letter/bio/essay (currently DOCX only; CV Visual uses print-to-PDF).
+3. **Skeleton loaders** for async pages (LLM generation takes 10-30s).
+4. **Overall polish & QA pass** (Phase 9) — test all flows end-to-end as new user.
+5. **Supabase DB migration** when DDL access available.

@@ -858,3 +858,74 @@ Output STRICT JSON only: {"difficulty":"${opts.difficulty}","questions":[{"id":"
   }
 }
 
+/* ===========================================================================
+   Listening (Brief Section 10.3)
+   Generates a short English script (<1024 chars for TTS limit) + questions.
+   Audio is generated on-the-go via TTS in dev mode (Brief allows text on-the-go;
+   audio is technically supposed to be pre-generated, but dev-mode on-the-go is
+   acceptable until the Koyeb/Kokoro batch pipeline is built).
+   =========================================================================== */
+export type GeneratedListening = {
+  title: string
+  script: string
+  speaker: string // description: "Conversation between two students" etc.
+  questions: ReadingQuestion[] // reuse the same question type
+  difficulty: "easy" | "medium" | "hard"
+  topic: string
+}
+
+const LISTENING_SCENARIOS = [
+  "a conversation between two students about a group project",
+  "a lecture excerpt about environmental science",
+  "a conversation between a student and a professor during office hours",
+  "a campus announcement about an upcoming event",
+  "a discussion between two friends about a movie they just watched",
+  "a news report about a recent scientific discovery",
+  "a job interview excerpt for a marketing position",
+  "a library orientation for new students",
+]
+
+export async function generateListening(opts: {
+  difficulty: "easy" | "medium" | "hard"
+}): Promise<GeneratedListening> {
+  const scenario = LISTENING_SCENARIOS[Math.floor(Math.random() * LISTENING_SCENARIOS.length)]
+  const wordTarget = opts.difficulty === "easy" ? "100-130" : opts.difficulty === "medium" ? "130-160" : "160-200"
+  const sys = `You are an English listening exam writer creating TOEFL/IELTS-style listening scripts. Rules:
+1. Write a SHORT English script (aim for ${wordTarget} words, MUST be under 900 characters total including spaces) about: ${scenario}.
+2. For conversations, use "Speaker 1:" and "Speaker 2:" labels. For lectures/announcements, use a single speaker.
+3. Natural spoken English, not academic prose. Include fillers, pauses, conversational contractions.
+4. Generate 5 multiple-choice comprehension questions (main idea, detail, inference, speaker purpose, vocabulary).
+5. Each question has 4 options (A-D). Mark correct answer index (0-3). Provide short explanation.
+6. Vary content every time.
+Output STRICT JSON: {"title":"<short>","script":"<full script under 900 chars>","speaker":"<description>","difficulty":"${opts.difficulty}","topic":"${scenario}","questions":[{"id":"q1","question":"...","options":["A","B","C","D"],"answer":0,"explanation":"..."}]}`
+
+  const zai = await getZai()
+  const completion = await zai.chat.completions.create({
+    messages: [
+      { role: "assistant", content: sys },
+      { role: "user", content: `Generate a ${opts.difficulty} listening script about ${scenario}.` },
+    ],
+    thinking: { type: "disabled" },
+  })
+  const raw = completion.choices[0]?.message?.content ?? ""
+  try {
+    const parsed = extractJSON(raw) as GeneratedListening
+    return {
+      title: parsed.title || scenario,
+      script: (parsed.script || "").slice(0, 1020), // TTS limit safety
+      speaker: parsed.speaker || scenario,
+      difficulty: parsed.difficulty || opts.difficulty,
+      topic: parsed.topic || scenario,
+      questions: (parsed.questions || []).slice(0, 5).map((q, i) => ({
+        id: q.id || `q${i + 1}`,
+        question: q.question || "",
+        options: Array.isArray(q.options) ? q.options.slice(0, 4) : [],
+        answer: typeof q.answer === "number" ? q.answer : 0,
+        explanation: q.explanation || "",
+      })).filter((q) => q.question && q.options.length === 4),
+    }
+  } catch {
+    return { title: scenario, script: "", speaker: scenario, difficulty: opts.difficulty, topic: scenario, questions: [] }
+  }
+}
+

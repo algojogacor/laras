@@ -6,7 +6,7 @@ import { ArrowLeft, BookOpen, Braces, Headphones, Loader2, Check, X, RefreshCw, 
 import { toast } from "sonner"
 import { useT } from "@/components/providers/locale-provider"
 import type { Locale } from "@/lib/i18n/dictionary"
-import type { GeneratedReading, GeneratedStructure } from "@/lib/content-engine"
+import type { GeneratedReading, GeneratedStructure, GeneratedListening } from "@/lib/content-engine"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -19,19 +19,20 @@ type Phase = "hub" | "practice" | "results"
 export function EnglishHub({ locale, history }: { locale: Locale; history: HistoryItem[] }) {
   const t = useT()
   const [phase, setPhase] = useState<Phase>("hub")
-  const [activeModule, setModule] = useState<"reading" | "structure">("reading")
+  const [activeModule, setModule] = useState<"reading" | "structure" | "listening">("reading")
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium")
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [reading, setReading] = useState<GeneratedReading | null>(null)
   const [structure, setStructure] = useState<GeneratedStructure | null>(null)
+  const [listening, setListening] = useState<(GeneratedListening & { audioUrl?: string | null }) | null>(null)
   const [answers, setAnswers] = useState<Record<string, number>>({})
   const [results, setResults] = useState<{ score: number; correct: number; total: number; results: any[] } | null>(null)
 
-  async function start(m: "reading" | "structure") {
+  async function start(m: "reading" | "structure" | "listening") {
     setModule(m); setPhase("practice"); setLoading(true)
-    setReading(null); setStructure(null); setAnswers({}); setResults(null)
+    setReading(null); setStructure(null); setListening(null); setAnswers({}); setResults(null)
     try {
       const res = await fetch("/api/english/generate", {
         method: "POST",
@@ -42,7 +43,8 @@ export function EnglishHub({ locale, history }: { locale: Locale; history: Histo
       if (!res.ok) { toast.error(t.auth.errGeneric); setPhase("hub"); return }
       setSessionId(data.sessionId)
       if (m === "reading") setReading(data.data)
-      else setStructure(data.data)
+      else if (m === "structure") setStructure(data.data)
+      else setListening(data.data)
     } catch { toast.error(t.auth.errGeneric); setPhase("hub") }
     finally { setLoading(false) }
   }
@@ -72,7 +74,7 @@ export function EnglishHub({ locale, history }: { locale: Locale; history: Histo
     const modules = [
       { value: "reading", Icon: BookOpen, title: t.english.reading, desc: t.english.subtitle, active: true },
       { value: "structure", Icon: Braces, title: t.english.structure, desc: t.english.subtitle, active: true },
-      { value: "listening", Icon: Headphones, title: t.english.listening, desc: t.english.listeningSoon, active: false },
+      { value: "listening", Icon: Headphones, title: t.english.listening, desc: t.english.subtitle, active: true },
     ] as const
 
     return (
@@ -160,7 +162,7 @@ export function EnglishHub({ locale, history }: { locale: Locale; history: Histo
 
   // ── PRACTICE ──
   if (phase === "practice") {
-    const questions = activeModule === "reading" ? reading?.questions ?? [] : structure?.questions ?? []
+    const questions = activeModule === "reading" ? reading?.questions ?? [] : activeModule === "structure" ? structure?.questions ?? [] : listening?.questions ?? []
     return (
       <div className="space-y-6 animate-rise">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -193,6 +195,36 @@ export function EnglishHub({ locale, history }: { locale: Locale; history: Histo
                   <div className="max-h-[40vh] overflow-y-auto rounded-lg border border-border bg-muted/20 p-4 text-sm leading-relaxed scrollbar-laras">
                     {reading.passage.split("\n").map((p, i) => <p key={i} className="mb-3">{p}</p>)}
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Listening audio player */}
+            {activeModule === "listening" && listening && (
+              <Card className="shadow-soft">
+                <CardHeader>
+                  <CardTitle className="font-serif text-lg">{listening.title}</CardTitle>
+                  <CardDescription>{listening.speaker} · {listening.difficulty}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {listening.audioUrl ? (
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                      <div className="mb-2 flex items-center gap-2 text-sm font-medium text-primary">
+                        <Headphones className="h-4 w-4" /> {t.english.passage}
+                      </div>
+                      <audio controls className="w-full">
+                        <source src={listening.audioUrl} type="audio/wav" />
+                      </audio>
+                      <p className="mt-2 text-[11px] text-muted-foreground">{t.english.yourAnswerHint}</p>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40">
+                      <p className="text-sm text-amber-700 dark:text-amber-400">Audio unavailable — showing script text instead.</p>
+                      <div className="mt-2 max-h-[30vh] overflow-y-auto text-sm leading-relaxed scrollbar-laras">
+                        {listening.script.split("\n").map((p, i) => <p key={i} className="mb-2">{p}</p>)}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -245,7 +277,7 @@ export function EnglishHub({ locale, history }: { locale: Locale; history: Histo
 
   // ── RESULTS ──
   if (phase === "results" && results) {
-    const questions = activeModule === "reading" ? reading?.questions ?? [] : structure?.questions ?? []
+    const questions = activeModule === "reading" ? reading?.questions ?? [] : activeModule === "structure" ? structure?.questions ?? [] : listening?.questions ?? []
     const verdictColor = results.score >= 80 ? "text-emerald-600" : results.score >= 50 ? "text-amber-600" : "text-red-600"
     return (
       <div className="space-y-6 animate-rise">

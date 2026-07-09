@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server"
+import ZAI from "z-ai-web-dev-sdk"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
-import { generateReading, generateStructure } from "@/lib/content-engine"
+import { generateReading, generateStructure, generateListening } from "@/lib/content-engine"
+
+let _zai: Awaited<ReturnType<typeof ZAI.create>> | null = null
+async function getZai() {
+  if (!_zai) _zai = await ZAI.create()
+  return _zai
+}
 
 export async function POST(request: Request) {
   const session = await getSession()
@@ -38,6 +45,55 @@ export async function POST(request: Request) {
       },
     })
     return NextResponse.json({ ok: true, sessionId: eng.id, data: structure })
+  } else if (mod === "listening") {
+    // 1. Generate script + questions via LLM
+    const listening = await generateListening({ difficulty })
+    if (!listening.script || listening.questions.length === 0) {
+      return NextResponse.json({ error: "generation-failed" }, { status: 502 })
+    }
+
+    // 2. Generate audio via TTS (z-ai-web-dev-sdk)
+    //    Clean the script for TTS (remove "Speaker 1:" labels for natural speech)
+    const ttsText = listening.script
+      .replace(/Speaker \d+:\s*/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 1020) // TTS limit
+
+    let audioBase64: string | null = null
+    try {
+      const zai = await getZai()
+      const ttsResponse = await zai.audio.tts.create({
+        input: ttsText,
+        voice: "jam", // British English gentleman — good for TOEFL/IELTS style
+        speed: 1.0,
+        response_format: "wav",
+        stream: false,
+      })
+      const arrayBuffer = await ttsResponse.arrayBuffer()
+      const buffer = Buffer.from(new Uint8Array(arrayBuffer))
+      audioBase64 = `data:audio/wav;base64,${buffer.toString("base64")}`
+    } catch (e) {
+      console.error("[listening] TTS failed:", (e as Error).message)
+      // Continue without audio — user can still read the script
+    }
+
+    // 3. Persist session
+    const eng = await db.englishSession.create({
+      data: {
+        userProfileId: profile.id,
+        module: "listening",
+        passage: JSON.stringify({ title: listening.title, script: listening.script, speaker: listening.speaker, topic: listening.topic }),
+        questions: JSON.stringify(listening.questions),
+        audioUrl: audioBase64, // store base64 data URL (dev mode; production would use Supabase Storage URL)
+      },
+    })
+
+    return NextResponse.json({
+      ok: true,
+      sessionId: eng.id,
+      data: { ...listening, audioUrl: audioBase64 },
+    })
   }
   return NextResponse.json({ error: "invalid-module" }, { status: 400 })
 }
