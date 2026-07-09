@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useState } from "react"
 import { Download, ArrowLeft, Calendar, Copy, Check } from "lucide-react"
+import { PrintButton } from "@/components/documents/print-button"
 import { toast } from "sonner"
 import type { Dictionary } from "@/lib/i18n/dictionary"
 import type { SerializedProfile } from "@/lib/profile"
@@ -55,14 +56,17 @@ export function CoverLetterViewer({
               {copied ? <Check className="mr-1.5 h-4 w-4" /> : <Copy className="mr-1.5 h-4 w-4" />}
               {t.documents.copyToClipboard}
             </Button>
-            <Button size="sm" onClick={() => window.open(`/api/documents/cover-letter/${documentId}/export`, "_blank")} className="shadow-soft">
-              <Download className="mr-1.5 h-4 w-4" />{t.documents.downloadDocx}
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => window.open(`/api/documents/cover-letter/${documentId}/export`, "_blank")} className="shadow-soft">
+                <Download className="mr-1.5 h-4 w-4" />{t.documents.downloadDocx}
+              </Button>
+              <PrintButton className="print:hidden" />
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border bg-white p-8 shadow-lift sm:p-12" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
+      <div className="print-area overflow-hidden rounded-xl border border-border bg-white p-8 shadow-lift sm:p-12 print:border-0 print:shadow-none print:p-0" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
         <div className="mb-6 border-b border-neutral-200 pb-4">
           <p className="text-sm font-bold text-neutral-900">{profile.fullName}</p>
           <p className="text-xs text-neutral-600">{[profile.email, profile.phone, profile.location].filter(Boolean).join("  |  ")}</p>

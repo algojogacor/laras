@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useState } from "react"
 import { Download, ArrowLeft, Calendar, Copy, Check } from "lucide-react"
+import { PrintButton } from "@/components/documents/print-button"
 import { toast } from "sonner"
 import type { Dictionary } from "@/lib/i18n/dictionary"
 import type { SerializedProfile } from "@/lib/profile"
@@ -39,10 +40,11 @@ export function EssayViewer({ documentId, title, essay, profile, locale, updated
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={copyAll}>{copied ? <Check className="mr-1.5 h-4 w-4" /> : <Copy className="mr-1.5 h-4 w-4" />}{t.documents.copyToClipboard}</Button>
             <Button size="sm" onClick={() => window.open(`/api/documents/essay/${documentId}/export`, "_blank")} className="shadow-soft"><Download className="mr-1.5 h-4 w-4" />{t.documents.downloadDocx}</Button>
+            <PrintButton className="print:hidden" />
           </div>
         </div>
       </div>
-      <div className="overflow-hidden rounded-xl border border-border bg-white p-8 shadow-lift sm:p-12" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
+      <div className="print-area overflow-hidden rounded-xl border border-border bg-white p-8 shadow-lift sm:p-12 print:border-0 print:shadow-none print:p-0" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
         <h2 className="mb-6 font-serif text-xl font-bold text-neutral-900">{essay.title}</h2>
         {essay.paragraphs.map((p, i) => <p key={i} className="mb-4 text-sm leading-relaxed text-neutral-800">{p}</p>)}
       </div>

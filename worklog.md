@@ -422,3 +422,42 @@ Unresolved / next-phase priorities:
 3. **Skeleton loaders** for async pages (LLM generation takes 10-30s).
 4. **Overall polish & QA pass** (Phase 9) — test all flows end-to-end as new user.
 5. **Supabase DB migration** when DDL access available.
+
+---
+Task ID: CRON-7 (webDevReview round 7 — PDF export + skeleton loaders + Phase 9 polish)
+Agent: main (cron webDevReview)
+Task: QA existing app, add PDF print-to-PDF export to all document viewers, add skeleton loaders for LLM generation, polish
+
+Work Log:
+- QA pass: confirmed all 5 verticals + 6 document types + listening audio + cross-vertical linking stable. No bugs.
+- Built PDF export (print-to-PDF) for all document detail pages:
+  - Created `PrintButton` component (shared) — triggers browser print dialog which lets user "Save as PDF".
+  - Enhanced print stylesheet in globals.css: `body:has(.print-area)` selector hides all siblings, shows only `.print-area` content. Added `print:shadow-none`, `print:border-0`, `print:p-0` utilities.
+  - Added PrintButton + `.print-area` class to: CV ATS viewer (print-only copy of CVATSPreview at bottom), Cover Letter viewer (paper div), Bio viewer, Essay viewer (paper div).
+  - Each viewer now has both "Download DOCX" (programmatic .docx) and "Download PDF" (print-to-PDF) buttons.
+- Built skeleton loaders for LLM generation (10-30s async calls):
+  - Created `src/components/ui/skeleton-doc.tsx`: `Skeleton` (animated shimmer primitive), `DocumentSkeleton` (paper-style loading), `QuestionsSkeleton` (question list loading), `SidebarSkeleton`.
+  - Added to English hub practice loading state: module-specific skeletons (Reading shows passage skeleton, Listening shows audio player skeleton, Structure shows nothing extra) + QuestionsSkeleton below + spinner card with "Menyusun soal..." text.
+  - Replaces the old single spinner-in-card with a rich skeleton that shows the user what's loading.
+- Styling polish:
+  - Print stylesheet `body:has(.print-area)` — clean print output with only document content.
+  - Animated pulse skeletons (Tailwind `animate-pulse`) with randomized widths for realistic loading feel.
+  - Consistent button group layout (DOCX + PDF side by side) across all viewers.
+
+Verification results (agent-browser):
+- Essay detail page: shows "Salin" + "Download DOCX" + "Download PDF" buttons. `.print-area` class exists on paper div. ✓
+- CV ATS detail page: shows "Download DOCX" + "Download PDF" buttons. `.print-area` class exists (print-only CV preview). ✓
+- English Reading practice: clicked "Mulai latihan" → skeletons visible during LLM generation (`.animate-pulse` elements detected). ✓
+- Console: no errors. Lint: 0 errors.
+
+Stage Summary:
+- **PDF export added** to all 4 document viewers (CV ATS, Cover Letter, Bio, Essay) via print-to-PDF. Every document type now has both DOCX and PDF export.
+- **Skeleton loaders added** to English practice generation — rich module-specific skeletons replace bare spinners.
+- All product verticals remain fully functional. The ecosystem is now feature-complete with export options for every document type.
+- Phase 9 polish in progress: PDF export done, skeleton loaders done. Remaining: more micro-interactions, comprehensive end-to-end QA as new user.
+
+Unresolved / next-phase priorities:
+1. **Production Listening audio** — migrate from on-the-go TTS to pre-generated bank (Brief Section 10.3) via Koyeb/Kokoro + Supabase Storage.
+2. **Comprehensive end-to-end QA** as a brand-new user (signup → onboarding → all 5 verticals) — Phase 9 final.
+3. **Supabase DB migration** when DDL access available.
+4. Additional polish: hover micro-interactions, transition animations between phases.

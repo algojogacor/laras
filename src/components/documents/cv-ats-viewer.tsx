@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { Download, ArrowLeft, Calendar, FileText } from "lucide-react"
+import { PrintButton } from "@/components/documents/print-button"
 import type { Dictionary } from "@/lib/i18n/dictionary"
 import type { SerializedProfile } from "@/lib/profile"
 import type { GeneratedCVATS } from "@/lib/content-engine"
@@ -59,14 +60,17 @@ export function CVATSViewer({
               </span>
             </div>
           </div>
-          <Button onClick={() => window.open(`/api/documents/cv-ats/${documentId}/export`, "_blank")} className="shadow-soft" size="sm">
-            <Download className="mr-1.5 h-4 w-4" />
-            {t.documents.downloadDocx}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => window.open(`/api/documents/cv-ats/${documentId}/export`, "_blank")} className="shadow-soft" size="sm">
+              <Download className="mr-1.5 h-4 w-4" />
+              {t.documents.downloadDocx}
+            </Button>
+            <PrintButton className="print:hidden" />
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 print:hidden">
         {/* Preview */}
         <div className="lg:col-span-2">
           <div className="overflow-hidden rounded-xl border border-border bg-muted/30 p-4 sm:p-8 scrollbar-laras max-h-[80vh] overflow-y-auto">
@@ -90,6 +94,11 @@ export function CVATSViewer({
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* Print-only copy of the CV (no scroll container, no chrome) */}
+      <div className="hidden print:block print-area">
+        <CVATSPreview profile={profile} cv={cv} locale={locale} />
       </div>
     </div>
   )

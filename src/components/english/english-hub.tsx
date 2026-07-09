@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton, QuestionsSkeleton } from "@/components/ui/skeleton-doc"
 import { cn } from "@/lib/utils"
 
 type HistoryItem = { id: string; module: string; score: number; createdAt: string }
@@ -173,10 +174,28 @@ export function EnglishHub({ locale, history }: { locale: Locale; history: Histo
         </div>
 
         {loading ? (
-          <Card className="shadow-soft"><CardContent className="flex flex-col items-center justify-center py-24">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="mt-4 text-sm text-muted-foreground">{t.english.generating}</p>
-          </CardContent></Card>
+          <div className="space-y-4">
+            <Card className="shadow-soft"><CardContent className="flex items-center gap-3 p-4">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">{t.english.generating}</span>
+            </CardContent></Card>
+            {activeModule === "listening" ? (
+              <Card className="shadow-soft"><CardContent className="p-4 space-y-3">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-20 w-full" />
+              </CardContent></Card>
+            ) : activeModule === "reading" ? (
+              <Card className="shadow-soft"><CardContent className="p-4 space-y-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-95%" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-90%" />
+                <Skeleton className="h-3 w-full" />
+              </CardContent></Card>
+            ) : null}
+            <QuestionsSkeleton count={4} />
+          </div>
         ) : questions.length === 0 ? (
           <Card className="shadow-soft"><CardContent className="py-16 text-center">
             <p className="text-sm text-muted-foreground">{t.english.noHistory}</p>

@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useState } from "react"
 import { Download, ArrowLeft, Calendar, Copy, Check } from "lucide-react"
+import { PrintButton } from "@/components/documents/print-button"
 import { toast } from "sonner"
 import type { Dictionary } from "@/lib/i18n/dictionary"
 import type { SerializedProfile } from "@/lib/profile"
@@ -48,9 +49,12 @@ export function BioViewer({
               <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{new Date(updatedAt).toLocaleDateString()}</span>
             </div>
           </div>
-          <Button size="sm" onClick={() => window.open(`/api/documents/bio/${documentId}/export`, "_blank")} className="shadow-soft">
-            <Download className="mr-1.5 h-4 w-4" />{t.documents.downloadDocx}
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => window.open(`/api/documents/bio/${documentId}/export`, "_blank")} className="shadow-soft">
+              <Download className="mr-1.5 h-4 w-4" />{t.documents.downloadDocx}
+            </Button>
+            <PrintButton className="print:hidden" />
+          </div>
         </div>
       </div>
 
