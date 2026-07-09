@@ -90,3 +90,54 @@ Unresolved / risks / next-phase priorities (for the cron agent):
 2. **Supabase DB DDL access** still pending ("yang lain menyusul") — migrate auth + data to Supabase Postgres when available; Storage bucket creation for audio (Phase 8) can begin now via service_role key.
 3. **More verticals**: Application Ops kanban (Phase 4), Interview Prep text (Phase 6), English Reading/Structure on-the-go (Phase 7) can all be built without external deps and would add visible functionality.
 4. **Styling detail**: per cron mandate, keep enriching micro-interactions, empty states, loading skeletons, animations.
+
+---
+Task ID: P1 (Phase 1 — CV ATS Document Suite)
+Agent: main (orchestrator)
+Task: Build Phase 1 — CV ATS Document Suite with edit-before-generate, anti-generic engine, ATS-compliant DOCX export, concreteness self-check
+
+Work Log:
+- Confirmed z-ai-web-dev-sdk works in sandbox without explicit API key (`ZAI.create()` auto-auth). Tested LLM call successfully.
+- Installed `docx` package (v9.7.1) for programmatic DOCX generation.
+- Created `src/lib/content-engine.ts` — the Content Engine (Brief Section 3.1 + 5):
+  - `generateCVATS()`: LLM prompt enforcing verify-before-generate (no inventing details), Aksi+Konteks+Hasil bullets, buzzword ban without evidence, varied sentence structure. Returns strict JSON.
+  - Post-processes LLM output: deterministically recomputes `hasEvidence` (metric/scale/proper-noun detection) rather than trusting LLM self-report.
+  - Proactive warnings for experiences lacking context_notes/achievements.
+  - `concretenessCheck()`: 0-100 score = % bullets with evidence; flags buzzwords-without-evidence; verdict good/fair/weak.
+- Created `src/lib/docx-renderer.ts` — ATS-compliant DOCX (Brief Section 7 HARD CONSTRAINTS):
+  - One column, no tables/textboxes/sidebar. Font: Calibri. Name 20pt, headings 14pt, body 11pt. Margins 0.75".
+  - Section order: Kontak → Ringkasan → Keahlian → Pengalaman → Pendidikan → Sertifikasi.
+  - Bullet (•) only. Dates MM/YYYY. Contact in body.
+- APIs: `POST /api/documents/cv-ats/generate` (LLM + persist Document), `GET /api/documents` (list), `GET /api/documents/cv-ats/[id]/export` (DOCX download).
+- UI pages:
+  - `/documents` — document library (list saved docs, empty state, "new document" CTA).
+  - `/documents/cv-ats/new` — edit-before-generate screen (Section 4.2): inline-editable basics (name/headline/contact/summary), read-only experiences (with context_notes preview, link to profile to edit), locale/tone/region selectors, Generate button. After generate → switches to Preview tab.
+  - `/documents/cv-ats/[id]` — saved document detail with preview + concreteness panel + download.
+- Components: `cv-ats-preview.tsx` (paper-style one-column preview mirroring DOCX), `concreteness-panel.tsx` (score ring + stats + buzzword warnings), `cv-ats-builder.tsx` (edit+generate+preview client), `cv-ats-viewer.tsx` (saved doc viewer).
+- Added `documents.*` i18n keys to both ID and EN dictionaries.
+- Wired dashboard Document Suite card → `/documents`; added "Documents/Dokumen" nav link to app header.
+- Added nav link to app header.
+
+Verification results (agent-browser):
+- Login as existing user "rina@laras.test" → dashboard → /documents (empty state) → click CV ATS.
+- Edit-before-generate page loads with profile data pre-filled (Rina Pratiwi, email, location). Filled headline.
+- Clicked "Generate CV" → LLM generated CV in ~15s → preview tab auto-selected showing one-column ATS CV with RINGKASAN + PENGALAMAN sections, bullets using real context_notes (40% engagement, 5-person team, Rp2jt budget, #SuaraMahasiswa campaign).
+- Concreteness panel: 2/3 bullets with evidence, 1 buzzword flagged, "Cukup" verdict.
+- DOCX download: valid Microsoft Word 2007+ file (9236 bytes). Extracted text via python zipfile → text is fully select-drag-able (passes ATS test). Section headings RINGKASAN, PENGALAMAN present in correct order.
+- Tested English generation: selected "Inggris" → generated English CV with same concrete evidence ("Increased Instagram engagement by 40%", "team of 5 people", "budget of Rp2jt"). Anti-generic engine works in both languages.
+- Mobile responsive: 390×844 viewport, 0px horizontal overflow on detail page.
+- Console: no errors. `bun run lint`: 0 errors.
+
+Stage Summary:
+- **Phase 1 (CV ATS) is COMPLETE and browser-verified.** Full flow works: documents library → edit-before-generate → LLM generation with anti-generic enforcement → ATS-compliant preview → concreteness self-check → valid DOCX export. Both ID and EN.
+- Phase 2 (anti-generic engine) was built AS PART of Phase 1 (the Content Engine + concretenessCheck) — it's reusable for all future text modules (cover letter, bio, essay).
+- The CV ATS hard constraints (Section 7) are all met: one column, Calibri, correct font sizes, 0.75" margins, bullet-only, standard headings, contact in body, MM/YYYY dates, correct section order, DOCX text-selectable.
+- Key files: `src/lib/content-engine.ts`, `src/lib/docx-renderer.ts`, `src/app/api/documents/`, `src/app/(app)/documents/`, `src/components/documents/`.
+
+Unresolved / next-phase priorities:
+1. **Cover Letter + Bio** (Section 6.3, 6.5) — reuse Content Engine, add to Document Suite. Low effort now that engine exists.
+2. **CV Visual** (Section 6.2) — multi-template PDF, needs template system. Medium effort.
+3. **Personal Deck PPT** (Section 6.4, 8) — needs PptxGenJS + 8-10 templates. Higher effort.
+4. **Application Ops** (Phase 4, Section 2.2) — kanban tracker, fully independent of Content Engine.
+5. PDF export for CV ATS (currently DOCX only; Section 7 says DOCX primary + PDF secondary). Can use `@react-pdf/renderer` or a libreoffice headless conversion mini-service.
+6. Keep enriching styling/empty states per cron mandate.

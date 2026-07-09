@@ -47,7 +47,7 @@ export default async function DashboardPage() {
       desc: t.landing.v1Desc,
       Icon: FileText,
       cta: t.dashboard.v1Cta,
-      href: "/profile",
+      href: "/documents",
       active: true,
     },
     {
