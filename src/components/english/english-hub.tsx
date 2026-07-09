@@ -29,7 +29,10 @@ export function EnglishHub({ locale, history }: { locale: Locale; history: Histo
   const [structure, setStructure] = useState<GeneratedStructure | null>(null)
   const [listening, setListening] = useState<(GeneratedListening & { audioUrl?: string | null }) | null>(null)
   const [answers, setAnswers] = useState<Record<string, number>>({})
-  const [results, setResults] = useState<{ score: number; correct: number; total: number; results: any[] } | null>(null)
+  const [results, setResults] = useState<{
+    score: number; correct: number; total: number; results: any[]
+    scoring?: any; skillBreakdown?: any[]; weaknessTags?: string[]
+  } | null>(null)
 
   async function start(m: "reading" | "structure" | "listening") {
     setModule(m); setPhase("practice"); setLoading(true)
@@ -308,11 +311,67 @@ export function EnglishHub({ locale, history }: { locale: Locale; history: Histo
         <Card className="shadow-lift">
           <CardContent className="flex flex-col items-center py-10">
             <Trophy className="h-10 w-10 text-accent" />
-            <p className="mt-3 text-sm font-medium text-muted-foreground">{t.english.score}</p>
+            <p className="mt-3 text-sm font-medium text-muted-foreground">Estimated Practice Score</p>
             <p className={cn("font-serif text-6xl font-semibold", verdictColor)}>{results.score}</p>
             <p className="mt-1 text-sm text-muted-foreground">{results.correct} {t.english.ofTotal} {results.total} {t.english.correct.toLowerCase()}</p>
+
+            {/* Estimated scores */}
+            {results.scoring && (
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <ScorePill label="CEFR" value={results.scoring.estimatedCEFR} />
+                <ScorePill label="TOEFL-style (1-6)" value={results.scoring.estimatedTOEFL2026} />
+                {results.scoring.estimatedTOEFLLegacy !== null && (
+                  <ScorePill label="TOEFL est. (0-120)" value={results.scoring.estimatedTOEFLLegacy} />
+                )}
+                {results.scoring.estimatedIELTSBand !== null && (
+                  <ScorePill label="IELTS-style band" value={results.scoring.estimatedIELTSBand} />
+                )}
+                <ScorePill label="Confidence" value={results.scoring.confidence} />
+              </div>
+            )}
+
+            {/* Disclaimer */}
+            <div className="mt-6 max-w-md rounded-lg border border-amber-200 bg-amber-50 p-3 text-center text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
+              {results.scoring?.disclaimer || "Bukan skor resmi TOEFL/IELTS. Ini adalah estimasi hasil latihan."}
+            </div>
           </CardContent>
         </Card>
+
+        {/* Skill breakdown + weakness tags */}
+        {results.skillBreakdown && results.skillBreakdown.length > 0 && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Card className="shadow-soft">
+              <CardContent className="p-4">
+                <p className="mb-3 text-sm font-medium">Skill Breakdown</p>
+                <div className="space-y-2">
+                  {results.skillBreakdown.map((s) => (
+                    <div key={s.tag} className="flex items-center gap-2">
+                      <span className="w-24 text-xs capitalize text-muted-foreground">{s.tag}</span>
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                        <div className={cn("h-full rounded-full", s.percentage >= 70 ? "bg-emerald-500" : s.percentage >= 40 ? "bg-amber-500" : "bg-red-500")} style={{ width: `${s.percentage}%` }} />
+                      </div>
+                      <span className="w-10 text-right text-xs font-medium">{s.percentage}%</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-soft">
+              <CardContent className="p-4">
+                <p className="mb-3 text-sm font-medium">Weakness Tags</p>
+                {results.weaknessTags && results.weaknessTags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {results.weaknessTags.map((tag) => (
+                      <span key={tag} className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-400 capitalize">{tag}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No significant weaknesses detected. Great job!</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Review */}
         <div className="space-y-4">
@@ -373,4 +432,13 @@ export function EnglishHub({ locale, history }: { locale: Locale; history: Histo
   }
 
   return null
+}
+
+function ScorePill({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-lg border border-border p-2 text-center">
+      <p className="text-[10px] text-muted-foreground">{label}</p>
+      <p className="font-serif text-lg font-semibold text-primary">{value}</p>
+    </div>
+  )
 }

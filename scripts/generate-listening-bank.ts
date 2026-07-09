@@ -14,8 +14,10 @@
  * serve from this pre-generated bank instead of generating on-the-go.
  */
 
+import path from "path"
 import { generateListening } from "../src/lib/content-engine"
 import { generateAudioEdgeTTS } from "../src/lib/tts-edge"
+import { uploadLocalFileToSupabase } from "../src/lib/supabase"
 import { PrismaClient } from "@prisma/client"
 
 const db = new PrismaClient()
@@ -49,8 +51,8 @@ async function main() {
         .slice(0, 1020)
 
       console.log(`  Generating audio via edge-tts...`)
-      const audioUrl = await generateAudioEdgeTTS(ttsText, "en-GB-SoniaNeural")
-      if (!audioUrl) {
+      const localAudioUrl = await generateAudioEdgeTTS(ttsText, "en-GB-SoniaNeural")
+      if (!localAudioUrl) {
         console.log(`  ✗ TTS failed — saving as draft (published=false)`)
         await db.listeningQuestion.create({
           data: {
@@ -61,15 +63,29 @@ async function main() {
             difficulty: listening.difficulty,
             topic: listening.topic,
             audioUrl: null,
-            published: false, // draft — not shown to users until audio is generated
+            published: false,
           },
         })
         failed++
         continue
       }
-      console.log(`  ✓ Audio: ${audioUrl}`)
+      console.log(`  ✓ Local audio: ${localAudioUrl}`)
 
-      // 3. Save to database with audioUrl + published=true
+      // Upload to Supabase Storage (Brief Section 10.3 — production storage)
+      const localPath = path.join(process.cwd(), "public", localAudioUrl)
+      const storagePath = `listening/${listening.difficulty}/${localAudioUrl.split("/").pop()}`
+      console.log(`  Uploading to Supabase Storage...`)
+      const supabaseUrl = await uploadLocalFileToSupabase(
+        "listening-audio",
+        localPath,
+        storagePath,
+        "audio/mpeg",
+        true // public bucket
+      )
+      const finalAudioUrl = supabaseUrl || localAudioUrl // fallback to local if Supabase fails
+      console.log(`  ✓ Final audio URL: ${finalAudioUrl.substring(0, 60)}...`)
+
+      // 3. Save to database with finalAudioUrl + published=true
       await db.listeningQuestion.create({
         data: {
           title: listening.title,
@@ -78,11 +94,11 @@ async function main() {
           questions: JSON.stringify(listening.questions),
           difficulty: listening.difficulty,
           topic: listening.topic,
-          audioUrl: audioUrl,
-          published: true, // ready for users — audio is pre-generated
+          audioUrl: finalAudioUrl,
+          published: true,
         },
       })
-      console.log(`  ✓ Saved to bank (published=true)`)
+      console.log(`  ✓ Saved to bank (published=true, supabase=${!!supabaseUrl})`)
       success++
     } catch (e) {
       console.log(`  ✗ Error: ${(e as Error).message}`)

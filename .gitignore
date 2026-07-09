@@ -54,4 +54,4 @@ server.log
 /db/*.db
 /db/*.db-journal
 # Skills directory
-/skills/
+/skills/.env.local
