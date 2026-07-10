@@ -928,7 +928,7 @@ Turso/libSQL adalah production database (live, verified). Supabase Storage aktif
 ## Turso DB status: ✅ DONE
 - All 18 tables in Turso
 - Verified: signup, login, profile, onboarding, English practice, scoring, certificate
-- DATABASE_URL=libsql://laras-aryariap.aws-ap-northeast-1.turso.io
+- DATABASE_URL=libsql://<REDACTED_TURSO_HOST>.turso.io
 
 ## Supabase Storage status: ✅ DONE
 - 6 buckets: listening-audio (public), generated-documents, user-exports, deck-exports, pdf-exports, profile-photos (private)
@@ -968,3 +968,83 @@ Turso/libSQL adalah production database (live, verified). Supabase Storage aktif
 3. Local SQLite = dev fallback
 4. Custom JWT auth retained (Supabase Auth migration not in scope)
 5. edge-tts for TTS (Kokoro requires Python ML infra impractical in sandbox)
+
+---
+Task ID: RESTORE-001
+Agent: main (orchestrator)
+Task: Restore Laras project from LARAS_MASTER_BACKUP.zip to active project root, security audit, push to public GitHub repo algojogacor/laras
+
+Work Log:
+- TAHAP 1 (Restore): Extracted LARAS_MASTER_BACKUP.zip.zip (49MB) to staging, copied laras/ contents (including .git history, src, public, prisma, package.json, worklog.md) directly to /home/z/my-project/ — NO nested laras/ folder. Structure verified: /home/z/my-project/src, /public, /prisma, /package.json, /worklog.md.
+- TAHAP 2 (Secret Scan): CRITICAL finding — .env was TRACKED in git (committed in 4 commits: initial + 3 feature commits). .env contained live credentials: DATABASE_URL, TURSO_AUTH_TOKEN, TURSO_DATABASE_URL, AUTH_SECRET, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SECRET_KEY, SUPABASE_SERVICE_ROLE_KEY, ZAI_API_KEY. Also found Turso DB hostname in worklog.md line 931.
+- TAHAP 2 (Remediation): Used git-filter-repo to (a) purge .env from ALL 24 commits (history rewritten, new hashes), (b) redact Turso DB hostname across all history. Verified: no secret patterns remain in any blob across all history. Re-created .env (gitignored, chmod 600) with Turso credentials only; other vars left empty. Created .env.example with variable names only. Hardened .gitignore: added !.env.example, *.key, credentials.json, service-account.json, dist/, *.zip, *.tar.gz.
+- TAHAP 3 (Verify): bun install (883 packages, 11.77s). prisma generate (Prisma Client v6.19.2). typecheck: 381 pre-existing errors (i18n dictionary ID/EN literal type mismatch — NOT from restore, next.config has ignoreBuildErrors=true). lint: 0 errors. production build: SUCCESS (exit 0, standalone output verified, BUILD_ID=nFbUhOJN2fHtz49SuKmlj).
+- TAHAP 4 (Turso): Wrote scripts/verify-turso.ts (safe output, no credential leak). Connection VERIFIED: SELECT 1 OK, 22 tables (Account, UserProfile, Experience, Education, Skill, Certification, Application, Document, Essay, EnglishSession, EnglishCertificate, InterviewSet, InterviewQuestion, ListeningQuestion, ReadingQuestion, StructureQuestion, LanguageProficiency, Achievement, AuditLog, ApplicationDocument, DocumentVersion, RevisionRequest), Prisma ORM OK (Account count=6). No destructive operations.
+- TAHAP 5 (Push): Verified GITHUB_TOKEN via API — authenticated as algojogacor. Repo algojogacor/laras exists (public, default=main, permissions: admin+push). Remote was EMPTY (0 branches). Added remote with CLEAN URL (https://github.com/algojogacor/laras.git, NO token in URL). Committed security hardening (commit 61e8553). Pushed to origin main via http.extraheader auth (token NOT in remote URL, NOT stored in .git/config). NOT a force-push (first push to empty remote). Verified: local HEAD = origin/main = 61e8553. Remote tree has 1777 files, .env NOT present, .env.example present, no .pem/.key/credentials files.
+
+Stage Summary:
+- Project fully restored to /home/z/my-project/ (no nested folder).
+- Git history rewritten (24 commits, new hashes) — all secrets purged.
+- 25 commits pushed to origin main (24 rewritten + 1 new security hardening commit).
+- Remote verified clean: .env absent, .env.example present, no sensitive files.
+- Turso connection live (22 tables, 6 accounts).
+- Build passes (standalone output ready for deployment).
+- Working tree clean except backup artifacts.
+
+Verification results:
+- Restore structure: ✓ (/home/z/my-project/src, /public, /prisma, /package.json, /worklog.md)
+- Secret scan: ✓ (history purged, no secrets in any blob)
+- .gitignore: ✓ (comprehensive, .env ignored, .env.example allowed)
+- .env.example: ✓ (variable names only, no values)
+- Dependencies: ✓ (883 packages installed)
+- Prisma generate: ✓
+- Typecheck: 381 pre-existing errors (non-blocking, ignoreBuildErrors=true)
+- Lint: ✓ (0 errors)
+- Production build: ✓ (exit 0, standalone output verified)
+- Turso connection: ✓ (22 tables, 6 accounts, no destructive ops)
+- GitHub auth: ✓ (algojogacor, push permission)
+- Push: ✓ (origin main, not force, clean URL)
+- Remote verification: ✓ (HEAD matches, .env absent, 1777 files)
+- Working tree: clean (only backup artifacts untracked/ignored)
+
+---
+Task ID: RESTORE-002
+Agent: main (orchestrator) — second restore pass with typecheck/build hardening
+Task: Re-restore Laras from LARAS_MASTER_BACKUP.zip, fix all TypeScript errors left by RESTORE-001, merge with origin/main, push to restore branch for review
+
+Work Log:
+- TAHAP 1 (Restore): Extracted ZIP to /tmp, copied laras/ contents (including .git history) directly to /home/z/my-project/ — no nested folder. Moved upload/Pasted Content_*.txt -> brief/ (system upload mount conflict). Restored .zscripts executable modes.
+- TAHAP 2 (Secret Scan): Found .env TRACKED in git history (5 commits). Ran git-filter-repo to purge .env from ALL history (25 commits rewritten). Verified 0 secret patterns (eyJhbGci, ghp_, sb_secret_, sb_publishable_) remain in any blob across all history. Redacted Turso hostname in worklog.md. Untracked .env locally (gitignored). Created .env.example (names only). Hardened .gitignore: added *.key, credentials.json, service-account.json, dist/, /upload/, !.env.example exception.
+- TAHAP 3 (Verify + FIX): bun install (60 packages). prisma generate (v6.19.2). typecheck: 372 errors found (RESTORE-001 left these unfixed, relying on next.config ignoreBuildErrors=true). FIXED ALL 372:
+  * src/lib/i18n/dictionary.ts: removed `as const` (364 errors — literal-type mismatch between id/en)
+  * src/lib/i18n/dictionary.ts: added missing keys `photoUrl` (onboarding id+en), `yourAnswerHint` (english id+en)
+  * src/lib/db.ts: cast libsql client to any for PrismaLibSql adapter v7 type compat
+  * src/app/(app)/interview/[id]/page.tsx: coalesce null category -> "general"
+  * src/lib/content-engine.ts: cast StructureQuestion type field to literal union
+  * src/components/documents/cv-visual/templates.tsx: typed filter predicates (string | null)[] -> string[]
+  * src/components/ui/skeleton-doc.tsx: accept style prop on Skeleton
+  * src/app/api/documents/cv-ats/generate/route.ts: extend body type with generationConfig
+  * tsconfig.json: exclude examples/, mini-services/, skills/, scripts/ (separate projects)
+  * Result: typecheck 0 errors, lint 0 errors, production build SUCCESS (exit 0).
+- TAHAP 4 (Turso): Connection VERIFIED via libsql client — SELECT 1 OK, 22 tables present (schema already deployed). No destructive operations.
+- TAHAP 5 (Push): GitHub auth verified as algojogacor. Remote main has 3 commits from RESTORE-001 (prior session). Histories share ancestor aaaae2e. Per safe-push rule: merged origin/main into local (resolved worklog conflict, took remote's redacted hostname + RESTORE-001 entry), pushed to NEW branch restore/laras-20260710 (NOT force-push to main). Remote main preserved.
+
+Stage Summary:
+- All 372 typecheck errors fixed (RESTORE-001 left them; this pass resolves them properly).
+- History scrubbed of .env (0 secrets in any blob). Turso hostname redacted in worklog.
+- Merged with origin/main to preserve RESTORE-001's security hardening + verify-turso.ts script.
+- Branch restore/laras-20260710 contains: RESTORE-001 security work + RESTORE-002 typecheck fixes.
+- Remote main (bb2ddf4) still has 372 typecheck errors — recommend merging restore/laras-20260710 into main.
+
+Verification results:
+- Restore structure: OK (/home/z/my-project/src, /public, /prisma, /package.json, /worklog.md)
+- Secret scan: OK (history purged, 0 secret patterns, hostname redacted)
+- Typecheck: OK (0 errors — was 372)
+- Lint: OK (0 errors)
+- Production build: OK (exit 0, standalone output)
+- Turso connection: OK (22 tables, no destructive ops)
+- GitHub auth: OK (algojogacor)
+- Push: restore/laras-20260710 branch (no force-push to main)
+- Working tree: clean after commit
+
+Next priority: merge restore/laras-20260710 into main (or rebase), then continue autonomous development loop — Baseline QA, Product Audit, Roadmap.

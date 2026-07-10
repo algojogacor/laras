@@ -113,6 +113,7 @@ const id = {
     email: "Email",
     phone: "Nomor telepon",
     location: "Lokasi",
+    photoUrl: "URL foto (opsional)",
     linkedin: "URL LinkedIn",
     portfolio: "URL portofolio",
     summary: "Ringkasan tentang dirimu",
@@ -384,6 +385,7 @@ const id = {
     incorrect: "Salah",
     explanation: "Penjelasan",
     yourAnswer: "Jawabanmu",
+    yourAnswerHint: "Tulis jawabanmu, lalu minta feedback.",
     correctAnswer: "Jawaban benar",
     nextPractice: "Latihan berikutnya",
     backToModules: "Kembali ke modul",
@@ -448,7 +450,7 @@ const id = {
     terms: "Ketentuan",
     builtWith: "Dibangun dengan hati untuk pencari kesempatan.",
   },
-} as const
+}
 
 export type Dictionary = typeof id
 
@@ -559,6 +561,7 @@ const en: Dictionary = {
     email: "Email",
     phone: "Phone number",
     location: "Location",
+    photoUrl: "Photo URL (optional)",
     linkedin: "LinkedIn URL",
     portfolio: "Portfolio URL",
     summary: "About you",
@@ -830,6 +833,7 @@ const en: Dictionary = {
     incorrect: "Incorrect",
     explanation: "Explanation",
     yourAnswer: "Your answer",
+    yourAnswerHint: "Write your answer, then request feedback.",
     correctAnswer: "Correct answer",
     nextPractice: "Next practice",
     backToModules: "Back to modules",

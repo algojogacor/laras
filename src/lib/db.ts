@@ -13,7 +13,9 @@ function createPrismaClient(): PrismaClient {
   if (url && url.startsWith('libsql://')) {
     const authToken = process.env.TURSO_AUTH_TOKEN
     const libsql = createClient({ url, authToken })
-    const adapter = new PrismaLibSql(libsql)
+    // Cast: @prisma/adapter-libsql v7 expects a Config shape that differs from
+    // @libsql/client's Client type at the type level; runtime is compatible.
+    const adapter = new PrismaLibSql(libsql as any)
     return new PrismaClient({ adapter } as any)
   }
 
