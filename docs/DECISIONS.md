@@ -2,6 +2,8 @@
 
 Record of architecture and product decisions — valid, superseded, and requiring confirmation.
 
+**Canonical master prompt:** `docs/MASTER_PROMPT.md` (4088 source lines, SHA-256 `64948d6e574054b1194f62f6d99ce0d64a32f4bf8e3408dbe130b556d9369905`). All decisions below are evaluated against this document.
+
 ---
 
 ## Valid decisions (remain in force)
@@ -105,6 +107,14 @@ Record of architecture and product decisions — valid, superseded, and requirin
 - **Question**: Is the full License Code System (§25 — individual/batch/campaign/trial/sponsored codes) required for pre-production?
 - **Impact**: If yes, Phase 5A is a significant build. If no, admin-granted licenses suffice for pre-production.
 - **Recommendation**: Admin-granted for pre-production. Build the full code system in Phase 5A before public launch.
+
+### A7b. Personal plan names: Free/Pro/Org vs FREE/PLUS/PRO/MAX
+- **Current**: The codebase implements 3 plans: `free`, `pro`, `org`. The `PLAN_FEATURES` map and `PLAN_RANK` in `src/lib/entitlement.ts` use these 3 values.
+- **Master prompt (§23)**: Mandates 4 personal plans: `FREE`, `PLUS`, `PRO`, `MAX`, plus separate workspace products: `INSTITUTION`, `ORGANIZATION`.
+- **Discrepancy**: `org` in the codebase conflates the personal-tier concept with the workspace-product concept. `PLUS` and `MAX` tiers are entirely missing.
+- **Question**: Should the codebase be migrated to the 4-plan model (FREE/PLUS/PRO/MAX) + 2 workspace products (INSTITUTION/ORGANIZATION)?
+- **Impact**: Schema change to `License.plan` values; entitlement engine rewrite; settings UI update; admin license panel update.
+- **Recommendation**: Migrate to the 4-plan + 2-workspace-product model in Phase 4 (Plans, Entitlements, Licenses, and Campaigns per §34 Round 4). The current 3-plan model is a prototype that must be corrected before production.
 
 ### A8. Dashboard status: prototype versus final
 - **Current**: The dashboard is a prototype with real but shallow data (readiness score from activity counts, trust score from auto-derived badges, activity timeline from on-the-fly queries).

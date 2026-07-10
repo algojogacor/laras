@@ -3,6 +3,7 @@
 IMPORTANT:
 The historical log below contains superseded information.
 The current verified source of truth is:
+- /docs/MASTER_PROMPT.md (canonical product constitution)
 - /docs/CURRENT_STATE.md
 - /docs/ARCHITECTURE_GAPS.md
 - /docs/PHASE_PLAN.md

@@ -2,6 +2,12 @@
 
 The remaining Laras 100X transformation, broken into small, dependency-first phases. Each phase is independently shippable and testable. Do NOT begin any phase until the product owner has reviewed this plan.
 
+**Canonical reference:** `docs/MASTER_PROMPT.md` §34 (Suggested Ten-Round Execution Map) and §37 (Definition of Done — 35 criteria).
+
+**Phase-to-round mapping:** The phases below are granular sub-phases within the brief's ten-round structure. The brief's §34 round ordering is authoritative; deviations require owner approval. The current codebase has completed informal "rounds" (SURFACE-0 through ROUND-10) that partially overlap with the brief's Round 1 (baseline) and Round 2 (identity/career/privacy), but did not follow the brief's structure and skipped critical foundations.
+
+**Definition of Done (§37):** Every phase must satisfy all 35 criteria before being marked complete. A database model, route, button, or placeholder page alone is not a complete feature (§37 explicit warning).
+
 ---
 
 ## Phase 1A — Type-safety restoration and build-green baseline

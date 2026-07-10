@@ -2,6 +2,10 @@
 
 For every missing or shallow Laras 100X capability: current state, target state, dependency, risk of premature implementation, recommended phase, and acceptance criteria.
 
+**Canonical reference:** `docs/MASTER_PROMPT.md` (§9.1 Laras Core, §17 Governance, §23 Plans, §24 Entitlement Engine, §25 License Code System, §34 Ten-Round Execution Map, §37 Definition of Done).
+
+**Note on phase numbering:** The phases below are cross-referenced to the brief's §34 Suggested Ten-Round Execution Map. The brief's round structure is the authoritative ordering; the phase numbers here are for granular tracking within each round.
+
 ## Dependency graph (topological order)
 
 ```

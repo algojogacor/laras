@@ -1,6 +1,6 @@
 # CURRENT_STATE.md
 
-Last verified: 2026-07-11
+Last verified: 2026-07-11 (canonical master-prompt gate)
 Current branch: main
 Current commit: d75a5fa70ca13aa218832b64f92012367275e854
 Database: SQLite (local file: /home/z/my-project/db/custom.db)
@@ -11,7 +11,8 @@ Typecheck: FAIL (10 pre-existing errors)
 Lint: PASS
 Build: FAIL (blocked by type errors)
 Browser QA: PARTIAL (dev server runs, all routes return 200, but type errors block production build)
-Tests: NONE (no test files, no test framework; listening bank validator passes with 0 questions)
+Tests: NONE (no test files, no test framework; listening bank validator reports '0 valid, 0 invalid out of 0 total' — bank is empty, not actually validated)
+Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948d6e...)
 
 ---
 
@@ -29,8 +30,8 @@ Tests: NONE (no test files, no test framework; listening bank validator passes w
 | Document export (DOCX) | /api/documents/[type]/[id]/export returns 200 |
 | Application tracking (CRUD) | /api/applications create/list/update work |
 | Interview practice (generate questions) | /api/interview-sets POST returns 200 with LLM questions |
-| English practice (reading/structure/listening) | /api/english/generate returns 200 with LLM content |
-| Listening audio playback | 15 pre-generated MP3 files in public/audio/listening/ |
+| English practice (reading/structure) | /api/english/generate returns 200 with LLM-generated content |
+| English practice (listening) | Bank is EMPTY (0 DB records); runtime falls back to on-demand LLM + edge-TTS. 15 orphaned MP3 files exist on disk but are NOT served (no DB records reference them). See §2 below. |
 | English certificate generation + verification | /api/english/certificates + /verify/certificate/[code] |
 | i18n (ID/EN toggle) | Locale cookie + dictionary, toggle works in browser |
 | Dark mode | next-themes toggle + `set media dark` verified |
@@ -40,7 +41,18 @@ Tests: NONE (no test files, no test framework; listening bank validator passes w
 | Privacy settings (per-field consent) | /api/profile/privacy GET/PATCH work, persisted to DB |
 | Entitlement gates (document cap, visual CV lock, interview cap, English hard) | API returns 402 on cap; page shows FeatureLock |
 
-## 2. Partially working
+## 2. Listening-bank investigation (Step 6 resolution)
+
+**Verified truth:**
+- `ListeningQuestion` table in the local SQLite DB contains **0 records** (confirmed via `db.listeningQuestion.count()`).
+- 15 MP3 files exist in `public/audio/listening/` (copied from the ZIP extraction). They are **orphans** — no DB records reference them.
+- The English generate route (`/api/english/generate`) first tries `db.listeningQuestion.findFirst()` (the bank). When the bank is empty (as it is), it falls back to on-demand LLM generation (`generateListening`) + on-demand edge-TTS (`generateAudioEdgeTTS`).
+- The validator (`scripts/validate-bank.ts`) queries the DB, finds 0 questions, and prints 'All questions are valid! ✅' — a **misleading pass message** for an empty bank.
+- The earlier rebaseline claim 'listening playback works with 15 pre-generated audio files' was **inaccurate**: the files exist on disk but are not served by the application.
+- **Root cause**: The local SQLite DB was freshly pushed during SURFACE-0 (`prisma db push`), which created empty tables. The listening bank was never re-populated from the ZIP's data (the ZIP's DB had records, but they were not migrated to the new local DB).
+- **Impact**: Listening practice works at runtime (on-demand LLM+TTS), but the pre-generated bank is non-functional. The 15 audio files are dead weight.
+
+## 3. Partially working
 
 | System | Issue |
 |--------|-------|
@@ -53,7 +65,7 @@ Tests: NONE (no test files, no test framework; listening bank validator passes w
 | Activity timeline | Dashboard shows merged recent activity, but computed on-the-fly (not a durable event store) |
 | Audit log | AuditLog model exists + written by admin actions, but no admin UI to view logs, no private-data access logging |
 
-## 3. UI-only
+## 4. UI-only
 
 | System | Issue |
 |--------|-------|
@@ -62,14 +74,14 @@ Tests: NONE (no test files, no test framework; listening bank validator passes w
 | Trust score | Computed from auto-derived badge statuses — self-declared data marked as "verified" inflates the score |
 | License card (settings) | Shows plan + features, but the "features" are hardcoded per-plan, not dynamically resolved from a capability engine |
 
-## 4. Broken
+## 5. Broken
 
 | System | Issue |
 |--------|-------|
 | TypeScript type-checking | 10 pre-existing type errors (nullable field mismatches in dashboard, public profile, connections, privacy, connections lib) — blocks `tsc --noEmit` and `bun run build` |
 | Production build | Fails at "Running TypeScript" step due to the 10 type errors |
 
-## 5. Missing
+## 6. Missing
 
 | Laras 100X capability | Status |
 |------------------------|--------|
@@ -96,8 +108,17 @@ Tests: NONE (no test files, no test framework; listening bank validator passes w
 | Voice interview | MISSING |
 | MFA | MISSING |
 | Owner bootstrap (secure first-owner) | MISSING — roles set via DB/script, no secure bootstrap |
+| Personal plans: FREE / PLUS / PRO / MAX (§23) | MISSING — codebase has Free/Pro/Org (3 plans, not 4); PLUS and MAX tiers not implemented |
+| INSTITUTION / ORGANIZATION workspace products (§23) | MISSING |
+| Activity and Action Center (§9.1) | MISSING — dashboard has on-the-fly activity timeline, not a durable action center |
+| Analytics Event Layer (§9.1) | MISSING |
+| Configuration Engine / Feature Flags (§9.1, §26) | MISSING |
+| AI Context Layer (§9.1, §13) | MISSING |
+| Universal Search (§9.1) | MISSING |
+| Unified Inbox (§9.1) | MISSING |
+| Definition of Done enforcement (§37 — 35 criteria) | NOT ENFORCED — no checklist or gate for the 35 completion criteria |
 
-## 6. Superseded decisions
+## 7. Superseded decisions
 
 | Decision | Status |
 |----------|--------|
@@ -106,7 +127,7 @@ Tests: NONE (no test files, no test framework; listening bank validator passes w
 | prisma:query logging in dev | ACTIVE but noisy — `db.ts` logs all queries in dev; should be gated behind a VERBOSE flag |
 | Worklog as source of truth | SUPERSEDED — this document is now the verified source of truth |
 
-## 7. Security risks
+## 8. Security risks
 
 1. **CRITICAL — Public profile data leak**: The `/u/[profileId]` page passes the full unredacted profile (including email, phone) to the client component as RSC props. A public viewer can read "connections"-only and "private" fields in the page source. `filterProfileByConsent` exists but is never called server-side.
 2. **HIGH — No server-side authorization for non-admin APIs**: Most APIs check only `getSession()` (authenticated), not ownership or relationship. E.g., `/api/documents/[id]` doesn't verify the document belongs to the caller; `/api/connections/[id]` PATCH checks addressee but other resource APIs may not check ownership.
@@ -115,7 +136,7 @@ Tests: NONE (no test files, no test framework; listening bank validator passes w
 5. **MEDIUM — No rate limiting on connection requests / privacy changes**: `applyRateLimit` exists for generation endpoints but not for connections, privacy, or admin APIs.
 6. **MEDIUM — Verification badges auto-derive "verified" from self-declared data**: Email/phone/education/employment/skill badges are marked "verified" just because the field is non-empty — this is misleading and inflates trust.
 
-## 8. Data-model risks
+## 9. Data-model risks
 
 1. **Nullable field mismatches**: 10 type errors stem from Prisma nullable fields (organization, role, degree, category, level, headline) being passed to functions expecting non-nullable strings. Indicates the type contracts between the DB layer and consumers are not aligned.
 2. **No soft-delete on any model**: All deletions are hard (`onDelete: Cascade`). No `deletedAt` field on Document, Application, Connection, etc.
@@ -124,7 +145,7 @@ Tests: NONE (no test files, no test framework; listening bank validator passes w
 5. **Connection model is one-directional**: `@@unique([requesterId, addresseeId])` allows both A→B and B→A to coexist as separate rows. `areConnected` checks both directions but the schema doesn't prevent duplicate bidirectional pairs.
 6. **License has no `code` field**: Licenses are admin-granted only; no redemption code system. The brief (§25) requires individual/batch/campaign code redemption.
 
-## 9. Product-semantic risks
+## 10. Product-semantic risks
 
 1. **"Verified" is misleading**: 5/6 verification badge types auto-mark as "verified" when the user simply fills in their own profile data. This creates false trust signals. Only identity badges require admin issuance.
 2. **Trust score is inflated**: The 70% trust score shown on the dashboard is computed from auto-derived badges — a user who fills in their email gets a "verified email" badge, inflating their trust score without any real verification.
@@ -133,7 +154,7 @@ Tests: NONE (no test files, no test framework; listening bank validator passes w
 5. **Entitlement is not atomic**: `canCreateDocument` does a `count()` then allows/blocks — under concurrent requests, a user could exceed the cap before the count updates. No transaction or lock.
 6. **Announcements reappear**: No read state means published announcements show forever, training users to ignore them.
 
-## 10. Deployment risks
+## 11. Deployment risks
 
 1. **Build fails**: `bun run build` fails due to 10 type errors. Cannot deploy a production build until fixed.
 2. **No CI/CD**: No GitHub Actions or CI pipeline. All checks are manual.
