@@ -1941,3 +1941,81 @@ documents/interviews, advanced English bank, priority support).
   on the visual CV card for free users with an upgrade nudge.
 - Alternatively, begin the Consent/Privacy Graph (brief §9.1) — a per-field
   visibility consent model on the Profile page.
+
+---
+
+## ROUND-5 — Wire entitlement gates: document cap + visual CV lock (Brief §9.4)
+
+Tanggal: 2026-07-10
+Branch: upgrade/laras-100x (pushed: f218cef..6214bb1)
+Commit: 6214bb1 (feat(entitlement): wire feature gates)
+Agent: Z.ai Code (webDevReview cron, round 5)
+
+### QA assessment (start of round)
+- Dev server UP, all 8 pages return HTTP 200, no errors. Previous cron
+  commit (21a2d24) only appended a worklog entry.
+- App stable → advanced ROUND-4's recommendation: wire the entitlement
+  engine into the actual feature routes so gating is enforced end-to-end.
+
+### Decision: wire the entitlement gates
+ROUND-4 built the engine + admin UI but the gates weren't enforced. This
+round makes the entitlement engine functional: free-tier document cap (5)
+at the API layer, and visual CV locked to Pro+ at the page layer.
+
+### Work Log
+1. API gates (free-tier document cap):
+   - `src/app/api/documents/{cv-ats,cover-letter,bio,essay}/generate/route.ts`:
+     added `canCreateDocument()` check after the profile lookup. Returns 402
+     with `{error:'entitlement-limit', reason, used, limit}` when the free-
+     tier cap (5 docs) is hit. Pro/org with `documents.unlimited` bypass.
+
+2. UI gate (visual CV is Pro+):
+   - `src/app/(app)/documents/cv-visual/new/page.tsx`: calls
+     `canAccessVisualCV()`; renders the new FeatureLock component for free
+     users instead of the CVVisualBuilder.
+   - `src/components/shared/feature-lock.tsx` (NEW): reusable locked-feature
+     card with a lock+crown icon, message, optional usage counter, dashed
+     upgrade nudge, and a back link. Used by any feature gate.
+   - `src/components/documents/type-picker.tsx`: accepts `lockedTypes` prop;
+     shows a "PRO" lock badge + muted styling on locked document types.
+   - `src/app/(app)/documents/page.tsx`: computes entitlement server-side
+     and passes `lockedTypes` (['cv-visual'] for free users) to the picker.
+
+3. i18n: +11 gate keys (ID + EN) — lockedTitle, lockedVisualCv,
+   lockedDocLimit, lockedUpgrade, lockedContactAdmin, lockedBack, proOnly,
+   freeLimit, used, of.
+
+### Verification (agent-browser + curl + VLM)
+- Pro user (qa): cv-visual/new → 200 (builder renders); generate → 200
+  (unlimited, no cap).
+- Suspended qa license → free tier: cv-visual/new renders the "Feature
+  locked" card ("Visual CV is a Pro feature", upgrade nudge, back link).
+  VLM: "lock icon clear, message readable, no visual issues."
+- Free-tier doc cap: created docs until count=5 → 6th generate returns 402
+  `{"error":"entitlement-limit","reason":"document-limit","used":5,"limit":5}`.
+  Reactivated Pro → generate unlimited again (200).
+- Type picker shows "PRO" lock badge on cv-visual for free users.
+- ESLint clean. No console errors.
+- Screenshot: download/feature-locked.png.
+
+### Unresolved / next-phase priorities
+1. The visual CV gate is page-level only; the cv-visual generate API (if
+   any) should also check entitlement. LOW (cv-visual is client-rendered).
+2. Other Pro features (interview.unlimited, english.advanced) have helpers
+   but aren't gated yet — interview-set creation and advanced listening bank
+   access could use the same pattern. MEDIUM.
+3. The 402 response is JSON-only; the client-side generate buttons don't
+   show a friendly upgrade modal on 402 — they'd just error. Could add a
+   client-side entitlement error handler. LOW.
+4. Brief §9 remaining: Consent/Privacy Graph, network, announcements,
+   opportunities deepening.
+5. The free-tier cap counts ALL documents including old ones; consider
+   counting only non-deleted or letting admins reset. LOW.
+
+### Next-round recommendation
+- Gate the remaining Pro features: interview.unlimited on interview-set
+  creation (free cap of 3) and english.advanced on the advanced listening
+  bank. Reuse the FeatureLock component.
+- Alternatively, begin the Consent/Privacy Graph (brief §9.1) — a per-field
+  visibility consent model on the Profile page, since the Trust/Verification
+  and Entitlement graphs are now in place.
