@@ -1,5 +1,13 @@
 # Laras — Worklog
 
+IMPORTANT:
+The historical log below contains superseded information.
+The current verified source of truth is:
+- /docs/CURRENT_STATE.md
+- /docs/ARCHITECTURE_GAPS.md
+- /docs/PHASE_PLAN.md
+- /docs/DECISIONS.md
+
 **Project:** Laras — Career & Opportunity Readiness Ecosystem
 **Stack:** Next.js 16 (App Router) · TypeScript · Tailwind v4 · shadcn/ui · Prisma + SQLite (local) · Supabase (Storage now; Auth/DB migration pending DDL access) · Framer Motion
 **Brief source:** `/home/z/my-project/upload/Pasted Content_1783586279230.txt` (BRIEF.md)
