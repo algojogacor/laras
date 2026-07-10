@@ -2376,3 +2376,104 @@ The four Laras Core graphs now interoperate:
 - Alternatively, deepen the Opportunities workflow (brief §9.6) — the
   Application tracker exists but could integrate with the Career Graph to
   suggest relevant opportunities based on profile + readiness score.
+
+---
+
+## ROUND-10 — Announcements: targeted platform communications (Brief §9.4/§9.5)
+
+Tanggal: 2026-07-10
+Branch: upgrade/laras-100x (pushed: 65ff6b0..51c0a47)
+Commit: 51c0a47 (feat(announcements): targeted platform communications)
+Agent: Z.ai Code (webDevReview cron, round 10)
+
+### QA assessment (start of round)
+- Dev server UP, all 9 pages return HTTP 200, no errors. Previous cron
+  commit (415c265) only appended a worklog entry.
+- App stable → advanced ROUND-9's recommendation: add the Announcements
+  system (brief §9.4/§9.5).
+
+### Decision: build the Announcements system
+Adds the Announcement model + admin authoring surface (3rd admin tab) +
+a targeted feed on the dashboard. Announcements are filtered by audience
+(all/free/pro/admin) so users only see what's relevant to their plan +
+admin status.
+
+### Work Log
+1. Schema:
+   - `prisma/schema.prisma`: `Announcement` model (title, body, audience,
+     priority, status, publishedAt). Audiences: all|free|pro|admin.
+     Priorities: low|normal|high|urgent. Statuses: draft|published|archived.
+     `db:push` applied.
+
+2. API:
+   - `src/app/api/admin/announcements/route.ts`: GET (list all), POST
+     (create), PATCH (update), DELETE. Admin/owner only. Sets publishedAt
+     on publish transition.
+   - `src/app/api/announcements/route.ts`: GET — returns published
+     announcements targeted to the current user (all + their plan + admin
+     if applicable).
+
+3. Admin UI:
+   - `src/components/admin/announcements-panel.tsx`: full CRUD surface with
+     3 stat cards (published/drafts/urgent), announcement list with
+     audience + priority + status badges, quick actions (publish/unpublish/
+     archive/delete), and a create/edit dialog (title, body, audience,
+     priority, status selectors).
+   - `src/components/admin/admin-tabs.tsx`: 3rd "Announcements" tab
+     (Megaphone icon).
+   - `src/app/(app)/admin/page.tsx`: passes announcementLabels to AdminTabs.
+
+4. Dashboard feed:
+   - `src/components/dashboard/announcement-feed.tsx`: client component with
+     priority-coloured cards (urgent=destructive, high=chart-4, normal=
+     primary, low=muted), expandable body, staggered reveal.
+   - `src/app/(app)/dashboard/page.tsx`: fetches targeted announcements
+     server-side (filtered by user's plan + admin role) and renders the feed
+     between the greeting and the readiness hero.
+
+5. i18n: +32 announcement keys (ID + EN).
+
+### Bug fixed during round
+- `entitlement` was referenced before definition on the dashboard — the
+  announcements fetch used `entitlement.plan` but `getEntitlement` wasn't
+  imported or called. Fixed by importing `getEntitlement` + computing
+  entitlement before the announcements fetch.
+
+### Verification (agent-browser + curl)
+- Created 2 announcements via admin API: "Welcome to Laras!" (all/normal/
+  published) + "Pro feature: Advanced English bank" (pro/high/published).
+- `GET /api/announcements` → 2 announcements (qa is Pro, sees both all +
+  pro targeted).
+- Dashboard renders "Announcements" section with both cards (title + body
+  preview + date). VLM: "cards clear, no visual issues."
+- Admin → Announcements tab: shows "New announcement" button, stats
+  (Published/Drafts), both announcements with status badges + quick actions
+  (publish/unpublish/archive/edit/delete).
+- ESLint clean. No console errors.
+- Screenshot: download/dashboard-announcements.png.
+
+### Laras ecosystem coverage (after ROUND-10)
+The Laras platform now has 5 product verticals + 4 Laras Core graphs + 3
+governance surfaces:
+- Product verticals: Documents, Applications, Interview, English, Essays
+- Laras Core graphs: Trust/Verification, Entitlement/License, Consent/Privacy,
+  Relationship/Network (all interoperating via the public profile route)
+- Governance: Admin Control Plane (Verification + Licenses + Announcements)
+- Platform comms: Targeted announcements feed on dashboard
+
+### Unresolved / next-phase priorities
+1. No read-tracking (announcements reappear every visit). Could add a
+   dismissed/read flag per user.
+2. No rich-text formatting for announcement bodies (plain text only).
+3. No scheduled publishing (publishedAt is set on publish, but no future-
+   scheduling UI).
+4. Brief §9 remaining: Opportunity Graph, opportunities deepening.
+5. The priority styling could be more visually distinct (VLM noted colours
+   aren't strongly differentiated in the current theme).
+
+### Next-round recommendation
+- Add a read/dismiss tracking system for announcements (per-user
+  AnnouncementRead model) so dismissed announcements don't reappear.
+- Alternatively, begin the Opportunity Graph (brief §9.6) — integrate the
+  Application tracker with the Career Graph to suggest relevant opportunities
+  based on profile + readiness score.
