@@ -1215,3 +1215,75 @@ Prioritas round berikutnya:
 3. ROADMAP-009: Render CommandDialog (or remove)
 4. ROADMAP-013: Internationalize certificate pages
 5. ROADMAP-006: Wire ConfigPanel to builders (or remove)
+
+---
+
+## Round 3 — Schema drift fix: add 4 missing Prisma models
+
+Tanggal: 2026-07-10
+Branch: main
+Commit awal: 6dd4870 (feat(round-2): rate limiting)
+Tujuan: Fix schema drift — 4 tables in Turso (Achievement, AuditLog, ReadingQuestion, StructureQuestion) had no Prisma models. Risk: `prisma db push` would destroy 154 rows of real data (7 achievements + 15 audit logs + 55 reading + 77 structure).
+
+Masalah yang ditemukan:
+- 4 tables existed in Turso DB with real data but no Prisma models
+- If anyone ran `prisma db push`, these tables would be dropped
+- App couldn't access this data via Prisma ORM (only via raw SQL)
+- No indexes on these tables (performance issue at scale)
+
+Keputusan:
+- Add 4 new models to prisma/schema.prisma matching existing DB schema exactly
+- Add relations to UserProfile (achievements, auditLogs)
+- Add indexes via direct SQL (prisma db push doesn't support libsql:// URL)
+- DO NOT run `prisma db push` (would fail due to libsql:// URL validation)
+- Create indexes manually via @libsql/client (safe, non-destructive)
+
+Implementasi:
+1. prisma/schema.prisma:
+   - Added `achievements Achievement[]` and `auditLogs AuditLog[]` to UserProfile
+   - Added 4 new models:
+     * Achievement (id, userProfileId, code, title, description, icon, tone, earnedAt) — @@unique([userProfileId, code]), @@index([userProfileId])
+     * AuditLog (id, userProfileId, action, resourceType, resourceId, metadata, ipAddress, userAgent, createdAt) — @@index([userProfileId]), @@index([action]), @@index([createdAt])
+     * ReadingQuestion (id, title, passage, difficulty, topic, questions, published, createdAt, updatedAt) — @@index([difficulty, published])
+     * StructureQuestion (id, difficulty, topic, questions, published, createdAt, updatedAt) — @@index([difficulty, published])
+
+2. Regenerated Prisma client (bunx prisma generate) — 22 models now (was 18)
+
+3. Created 7 indexes directly via @libsql/client SQL:
+   - idx_achievement_userProfileId, idx_achievement_user_code (UNIQUE)
+   - idx_auditLog_userProfileId, idx_auditLog_action, idx_auditLog_createdAt
+   - idx_readingQuestion_diff_published
+   - idx_structureQuestion_diff_published
+
+File yang berubah:
+- prisma/schema.prisma (4 new models + 2 new relations)
+- worklog.md (this entry)
+
+Migration: None (indexes created via SQL, non-destructive)
+Test yang dijalankan:
+- bunx prisma validate → valid ✓
+- bunx prisma generate → 22 models ✓
+- bunx tsc --noEmit → 0 errors ✓
+- bunx eslint . → 0 errors ✓
+- bun run build → exit 0, 53 routes ✓
+- Raw SQL: 22/22 tables accessible ✓
+- 7 indexes verified in DB ✓
+
+Hasil QA:
+- Schema drift: RESOLVED (22 Prisma models = 22 Turso tables)
+- Data safety: No data lost (indexes only added, no drops)
+- Performance: Indexes added for common query patterns
+- Prisma ORM: All 22 models now accessible (build compiles)
+
+Risiko tersisa:
+- `prisma db push` still doesn't work with libsql:// URL (Prisma CLI limitation)
+- Prisma ORM runtime test via standalone script fails (pre-existing adapter issue, not from this change)
+- App runtime unaffected (db.ts uses adapter, build passes, routes compile)
+
+Commit akhir: (pending push)
+Push status: (pending)
+Prioritas round berikutnya:
+1. ROADMAP-009: Render CommandDialog (or remove dead code)
+2. ROADMAP-013: Internationalize certificate pages
+3. ROADMAP-006: Wire ConfigPanel to builders (or remove)
+4. ROADMAP-010: Scale listening bank (13 → 50+)

@@ -71,6 +71,8 @@ model UserProfile {
   essays         Essay[]
   englishSessions EnglishSession[]
   certificates   EnglishCertificate[]
+  achievements   Achievement[]
+  auditLogs      AuditLog[]
 }
 
 // --- Riwayat pengalaman (Section 4) — contextNotes is the anti-generic foundation ---
@@ -349,4 +351,76 @@ model EnglishCertificate {
   updatedAt         DateTime @updatedAt
 
   @@index([userProfileId])
+}
+
+// ---------------------------------------------------------------------------
+// Achievement — gamification badges earned by user (Brief: Achievement system)
+// ---------------------------------------------------------------------------
+model Achievement {
+  id            String   @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  code          String   // stable code: "first_cv", "first_cover_letter", "practice_streak_7", etc.
+  title         String
+  description   String
+  icon          String   // lucide icon name: "FileText", "Award", "Flame", etc.
+  tone          String   @default("primary") // primary | success | warning | info
+  earnedAt      DateTime @default(now())
+
+  @@unique([userProfileId, code]) // one badge per user per code
+  @@index([userProfileId])
+}
+
+// ---------------------------------------------------------------------------
+// AuditLog — security & action audit trail (Brief: Production Hardening)
+// ---------------------------------------------------------------------------
+model AuditLog {
+  id            String   @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  action        String   // "auth.login", "document.create", "profile.update", etc.
+  resourceType  String?  // "Account", "Document", "Application", etc.
+  resourceId    String?  // ID of the affected resource
+  metadata      String?  // JSON: additional context (email, ip, changes, etc.)
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  @@index([userProfileId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// ReadingQuestion — pre-generated reading practice bank (Brief §10.3)
+// Mirrors ListeningQuestion structure but for reading comprehension.
+// ---------------------------------------------------------------------------
+model ReadingQuestion {
+  id          String   @id @default(cuid())
+  title       String
+  passage     String   // the reading passage text
+  difficulty  String   @default("medium") // easy | medium | hard
+  topic       String?  // scenario topic: psychology, science, business, etc.
+  questions   String   // JSON array of {id, question, options, answer, explanation}
+  published   Boolean  @default(false) // only published=true questions are shown to users
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([difficulty, published])
+}
+
+// ---------------------------------------------------------------------------
+// StructureQuestion — pre-generated grammar/structure practice bank (Brief §10.3)
+// Mirrors ListeningQuestion/ReadingQuestion pattern for structure section.
+// ---------------------------------------------------------------------------
+model StructureQuestion {
+  id          String   @id @default(cuid())
+  difficulty  String   @default("medium") // easy | medium | hard
+  topic       String?  // grammar topic: grammar-mixed, tenses, conditionals, etc.
+  questions   String   // JSON array of {id, question, options, answer, explanation, type}
+  published   Boolean  @default(false) // only published=true questions are shown to users
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([difficulty, published])
 }
