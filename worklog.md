@@ -1537,3 +1537,116 @@ Remote `origin/upgrade/laras-100x` is now at 36f51f4. ✅
 then publish with `git push origin main:upgrade/laras-100x` (never push `main`
 itself). Auth via `GIT_ASKPASS` reading `LARAS_GH_TOKEN` from env — token must
 never be hardcoded, committed, or added to the remote URL.
+
+---
+
+## ROUND-1 — Career Readiness Command Center (dashboard redesign + scoring engine)
+
+Tanggal: 2026-07-10
+Branch: upgrade/laras-100x (pushed: 36f51f4..414003d)
+Commit: 414003d (feat(dashboard): Career Readiness Command Center)
+Agent: Z.ai Code (webDevReview cron, round 1)
+
+### QA assessment (start of round)
+- Dev server: UP on :3000, HTTP 200, all 7 app pages (dashboard, documents,
+  applications, interview, english, profile, settings) load with 0 error
+  keywords. No hydration/runtime errors in dev.log.
+- AI generation path VERIFIED WORKING: POST /api/documents/cv-ats/generate
+  with auth → 200, generated a valid CV (headline, summary, warnings,
+  concreteness check), persisted to DB. **Risk #1 from SURFACE-0 resolved:**
+  `ZAI_API_KEY` empty in .env is NOT a problem — z-ai-web-dev-sdk auto-
+  configures in this sandbox via `ZAI.create()` (no explicit key needed).
+- Previous cron commit d4c219a only appended the SURFACE-0 worklog entry.
+
+### Decision: no bugs to fix → advance the LARAS 100X transformation
+The app is stable. Per brief §9.1 (Laras Core: Career Graph + Progress Graph)
+and the mandatory requirements (improve styling + add features), this round
+builds a **Career Readiness Command Center** — transforming the dashboard
+from a flat stats page into a multi-dimensional readiness cockpit.
+
+### Work Log
+1. Created `src/lib/readiness.ts` — the scoring engine:
+   - `computeProfileBreakdown(profile)` → 6 dimensions (basics, experience,
+     skills, education, languages, preferences), each 0–100 with filled/total
+     counts, plus a weighted overall. Advances the "Progress Graph" primitive.
+   - `computeReadinessScore({ completion, docCount, appCount, interviewCount,
+     englishCount })` → composite 0–100 north-star metric (profile 30%,
+     docs 20%, apps 20%, interview 15%, english 15%). Activity components
+     saturate at 3 items so the score rewards breadth, not volume. Returns a
+     level (starter/building/ready/competitive).
+   - `buildActivityTimeline(...)` → merges documents + applications +
+     interviews + english sessions into a single chronological timeline.
+
+2. Created `src/components/dashboard/readiness-ring.tsx` (client):
+   - Animated SVG progress ring with gradient stroke + glow.
+   - Score number counts up via framer-motion (1.2s ease-out, staggered).
+   - Level-coloured: ≥75 chart-2 (competitive), ≥50 chart-1 (ready),
+     ≥25 chart-4 (building), else muted (starter).
+   - Accessible: role="img" + aria-label, sr-only description.
+
+3. Created `src/components/dashboard/completeness-breakdown.tsx` (client):
+   - 6 mini cards (2-col mobile, 3-col desktop) with per-dimension icon,
+     score %, animated progress bar, and a hint line.
+   - Staggered reveal animation.
+
+4. Created `src/components/dashboard/quick-actions.tsx` (client):
+   - 4 prominent action cards (Create ATS CV, Track application, Practice
+     interview, Practice English) with hover gradient wash + arrow nudge.
+   - Uses string iconKey → LucideIcon map (avoids passing function props
+     from Server Component → Client Component serialization error).
+
+5. Created `src/components/dashboard/activity-timeline.tsx` (client):
+   - Unified timeline with a vertical line, kind-coloured dots (document/
+     application/interview/english each get a distinct chart colour), and
+     relative-time labels (just now / X min ago / X h ago / X d ago).
+   - Empty state + accessible list semantics.
+
+6. Redesigned `src/app/(app)/dashboard/page.tsx` (server):
+   - New layout: greeting → readiness hero (ring card + breakdown card) →
+     stats strip → quick actions → smart suggestions (preserved) → activity
+     timeline + tagline card → verticals (preserved).
+   - Wires the scoring engine + timeline builder with i18n labels.
+
+7. Updated `src/lib/i18n/dictionary.ts`:
+   - +40 dashboard keys (ID + EN): readiness title/desc, 4 level labels +
+     descriptions, 6 dimension labels + hints, 4 quick-action titles/descs,
+     timeline title/desc/empty, 4 time-ago labels.
+   - File normalized from CRLF (Windows zip) to LF.
+
+### Bug fixed during round
+- Server→Client icon serialization: initially passed `Icon: LucideIcon`
+  function in the `quickActions` array from the server page to the
+  `QuickActions` client component → "Functions cannot be passed directly to
+  Client Components" error. Fixed by switching to a string `key` + internal
+  `ICONS` map in the client component (same pattern as SmartSuggestions).
+
+### Verification (agent-browser)
+- Seeded a test profile (qa@laras.test: full basics, 1 experience w/ context
+  notes, 3 skills, 1 education, 2 languages, preferences set, 1 doc, 1 app).
+- Dashboard renders: "Hello, QA." → Career readiness ring "62% READY" with
+  description → 6-dimension breakdown all at 100% with ✓ hints → stats strip
+  (3 docs, 1 app, 0 interview, 0 english) → 4 quick-action cards → 3 smart
+  suggestions (deadline alert, interview nudge, English nudge) → activity
+  timeline (4 merged items with relative times) → tagline card → 5 verticals.
+- No console errors. ESLint clean. Screenshot saved to
+  download/dashboard-round1.png (1280×577).
+
+### Unresolved / next-phase priorities
+1. The readiness score (62%) correctly diverges from the profile breakdown
+   (100%) by design — breakdown = profile completeness, readiness = cross-
+   vertical activity. Consider adding a tooltip/explainer so users understand
+   the difference. LOW priority.
+2. The hint text shows "✓ <hint>" when a dimension is 100% — reads slightly
+   odd (checkmark + instruction). Could show "Complete" instead. LOW.
+3. Dark mode not browser-verified this round (toggle exists, untested).
+4. Brief §9 remaining: entitlement/license engine, governance/admin,
+   network, announcements, opportunities deepening — all unstarted.
+5. The test user qa@laras.test + seeded data left in the local SQLite DB for
+   future QA rounds (harmless; DB is gitignored).
+
+### Next-round recommendation
+- Verify dark mode + mobile responsive layout for the new dashboard.
+- Begin brief §9.1 "Laras Core" consolidation: the Career Graph (already
+  partially via UserProfile + relations) and add the missing "Consent and
+  Privacy Graph" + "Trust and Verification Graph" primitives as Prisma
+  models, with a first surface in the Profile page.
