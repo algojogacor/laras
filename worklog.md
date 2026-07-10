@@ -1360,3 +1360,65 @@ Prioritas round berikutnya:
 2. ROADMAP-010: Scale listening bank (13 → 50+)
 3. ROADMAP-020: Accessibility improvements (skip-link, aria-current, reduced-motion)
 4. ROADMAP-012: Add automated tests (Vitest unit)
+
+---
+
+## Round 5 — Accessibility: skip-link, reduced-motion, focus indicators
+
+Tanggal: 2026-07-10
+Branch: main
+Commit awal: db7e9cf (feat(round-4): command palette)
+Tujuan: Add accessibility features (ROADMAP-020) — skip-to-content link, prefers-reduced-motion, visible focus indicators.
+
+Masalah yang ditemukan:
+- No skip-to-content link (keyboard users must tab through entire header/nav)
+- No prefers-reduced-motion handling (Framer Motion animations ignore user preference)
+- No visible focus indicator for keyboard navigation (default outline removed by Tailwind reset)
+
+Keputusan:
+- Add skip-to-content link in root layout (bilingual)
+- Add prefers-reduced-motion CSS that disables all animations
+- Add :focus-visible styling for keyboard users
+- Add id="main-content" to app layout main element
+- Keep changes minimal and non-breaking
+
+Implementasi:
+1. src/app/globals.css: Added 3 accessibility sections:
+   - .skip-to-content: visually hidden until focused, slides in from top
+   - @media (prefers-reduced-motion: reduce): disables all animations/transitions
+   - :focus-visible: 2px ring outline for keyboard users
+   - :focus:not(:focus-visible): hides outline for mouse users
+
+2. src/app/layout.tsx: Added skip-to-content link (bilingual ID/EN) before ThemeProvider
+
+3. src/app/(app)/layout.tsx: Added id="main-content" to main element (skip-link target)
+
+File yang berubah:
+- src/app/globals.css
+- src/app/layout.tsx
+- src/app/(app)/layout.tsx
+
+Migration: None
+Test yang dijalankan:
+- bunx tsc --noEmit → 0 errors ✓
+- bunx eslint . → 0 errors ✓
+- bun run build → exit 0, 53 routes ✓
+
+Hasil QA:
+- Skip-to-content: AVAILABLE (Tab from URL → skip link appears → Enter → focus main content)
+- Reduced motion: RESPECTED (users with prefers-reduced-motion see no animations)
+- Focus indicators: VISIBLE (keyboard users see 2px ring outline)
+- Bilingual skip link text (ID/EN)
+
+Risiko tersisa:
+- Skip link not browser-E2E tested
+- Some interactive components may still need aria-label audit (icon-only buttons)
+- Color-only state indicators (kanban dots, deadline colors) not addressed in this round
+
+Commit akhir: (pending push)
+Push status: (pending)
+Prioritas round berikutnya:
+1. ROADMAP-006: Wire ConfigPanel to document builders (or remove)
+2. ROADMAP-010: Scale listening bank (13 → 50+)
+3. ROADMAP-012: Add automated tests (Vitest unit)
+4. ROADMAP-015: PWA manifest + service worker

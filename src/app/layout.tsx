@@ -63,6 +63,9 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} antialiased bg-background text-foreground relative`}
       >
+        <a href="#main-content" className="skip-to-content">
+          {locale === "id" ? "Lewati ke konten utama" : "Skip to main content"}
+        </a>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
