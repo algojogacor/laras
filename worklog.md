@@ -1287,3 +1287,76 @@ Prioritas round berikutnya:
 2. ROADMAP-013: Internationalize certificate pages
 3. ROADMAP-006: Wire ConfigPanel to builders (or remove)
 4. ROADMAP-010: Scale listening bank (13 → 50+)
+
+---
+
+## Round 4 — Command palette (Cmd+K) + internationalize certificate pages
+
+Tanggal: 2026-07-10
+Branch: main
+Commit awal: 251c7cd (fix(round-3): schema drift)
+Tujuan: Wire CommandDialog with Cmd+K shortcut (ROADMAP-009) + internationalize certificate verify page and certificate list (ROADMAP-013).
+
+Masalah yang ditemukan:
+- ROADMAP-009: CommandDialog shadcn primitive exists but never rendered — dead code
+- ROADMAP-013: /verify/certificate/[code] page fully English-hardcoded, certificate-list.tsx partially hardcoded — breaks ID/EN bilingual UX
+
+Keputusan:
+- Build a full CommandPalette component with Cmd+K shortcut, navigation, quick actions
+- Internationalize both certificate pages (verify + list) with inline dictionary (consistent with existing pattern)
+- Don't add to main dictionary.ts to avoid type complexity (inline t-object pattern used by other components)
+
+Implementasi:
+1. src/components/site/command-palette.tsx (NEW):
+   - Cmd+K / Ctrl+K shortcut to toggle
+   - 7 navigation items (Dashboard, Documents, Applications, Interview, English, Profile, Settings)
+   - 8 quick actions (Create CV ATS/Cover Letter/CV Visual/Bio/Essay/Deck, Start Interview, Start English)
+   - Help link to keyboard shortcuts
+   - Bilingual (ID/EN) based on locale prop
+   - Hidden hint button for discoverability (sr-only, visible on focus)
+   - Uses existing CommandDialog, CommandInput, CommandList, CommandItem primitives
+
+2. src/app/(app)/layout.tsx: Added <CommandPalette locale={locale} /> to app layout (renders on all authed pages)
+
+3. src/app/verify/certificate/[code]/page.tsx: Internationalized
+   - Added getLocale() call
+   - Inline t-object with 13 strings (ID/EN)
+   - Date format follows locale (id-ID / en-US)
+   - All labels translated: Certificate ID, Recipient, Test Mode, Score, Est. CEFR, Est. TOEFL, Issued, footer
+
+4. src/components/english/certificate-list.tsx: Internationalized
+   - Inline t-object with 11 strings (ID/EN)
+   - Date format follows locale
+   - Disclaimer text in both languages
+   - Empty state, confidence badge, "View certificate" button translated
+
+File yang berubah:
+- src/components/site/command-palette.tsx (NEW)
+- src/app/(app)/layout.tsx
+- src/app/verify/certificate/[code]/page.tsx
+- src/components/english/certificate-list.tsx
+
+Migration: None
+Test yang dijalankan:
+- bunx tsc --noEmit → 0 errors ✓
+- bunx eslint . → 0 errors ✓
+- bun run build → exit 0, 53 routes ✓
+
+Hasil QA:
+- Command palette: WIRED (Cmd+K opens dialog with nav + actions + help)
+- Certificate verify page: INTERNATIONALIZED (ID/EN, locale-aware dates)
+- Certificate list: INTERNATIONALIZED (ID/EN, locale-aware dates, disclaimer)
+- Discoverability: sr-only hint button visible on keyboard focus
+
+Risiko tersisa:
+- Command palette not browser-E2E tested (deferred)
+- No visual indicator in header that Cmd+K exists (discoverability relies on hint button)
+- Dictionary not used for command labels (inline t-object — consistent with existing pattern but adds duplication)
+
+Commit akhir: (pending push)
+Push status: (pending)
+Prioritas round berikutnya:
+1. ROADMAP-006: Wire ConfigPanel to document builders (or remove)
+2. ROADMAP-010: Scale listening bank (13 → 50+)
+3. ROADMAP-020: Accessibility improvements (skip-link, aria-current, reduced-motion)
+4. ROADMAP-012: Add automated tests (Vitest unit)
