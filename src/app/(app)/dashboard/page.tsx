@@ -6,6 +6,7 @@ import { getLocaleAndDict } from "@/lib/i18n"
 import { computeCompletion, type ProfileWithRelations } from "@/lib/profile"
 import { generateSuggestions } from "@/lib/suggestions"
 import { SmartSuggestions } from "@/components/dashboard/smart-suggestions"
+import { CompletionChecklist, type ChecklistItem } from "@/components/dashboard/completion-checklist"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -145,6 +146,19 @@ export default async function DashboardPage() {
     applications: allApps,
   }, locale)
 
+  // Checklist items for the completion widget
+  const links = (() => { try { return profile.links ? JSON.parse(profile.links) : null } catch { return null } })()
+  const checklistItems: ChecklistItem[] = [
+    { key: "fullName", label: locale === "id" ? "Nama lengkap" : "Full name", done: !!(profile.fullName?.trim()), hint: locale === "id" ? "Tambahkan nama lengkapmu" : "Add your full name" },
+    { key: "headline", label: locale === "id" ? "Headline profesional" : "Professional headline", done: !!(profile.headline?.trim()), hint: locale === "id" ? "Cth: Product Designer" : "E.g. Product Designer" },
+    { key: "summary", label: locale === "id" ? "Ringkasan diri" : "Summary", done: !!(profile.summary?.trim()), hint: locale === "id" ? "Tulis ringkasan mentah" : "Write a raw summary" },
+    { key: "contact", label: locale === "id" ? "Kontak" : "Contact info", done: !!(profile.email?.trim() && profile.phone?.trim() && profile.location?.trim()), hint: locale === "id" ? "Email, telepon, lokasi" : "Email, phone, location" },
+    { key: "links", label: locale === "id" ? "Tautan" : "Links", done: !!(links && (links.linkedin || links.portfolio || links.github || links.website)), hint: locale === "id" ? "LinkedIn / portofolio" : "LinkedIn / portfolio" },
+    { key: "experiences", label: locale === "id" ? "Pengalaman" : "Experiences", done: profile.experiences.length > 0, hint: locale === "id" ? "Minimal 1 pengalaman" : "At least 1 experience" },
+    { key: "skills", label: locale === "id" ? "Keahlian" : "Skills", done: profile.skills.length >= 3, hint: locale === "id" ? "Minimal 3 keahlian" : "At least 3 skills" },
+    { key: "education", label: locale === "id" ? "Pendidikan" : "Education", done: profile.educations.length > 0, hint: locale === "id" ? "Tambahkan riwayat pendidikan" : "Add education history" },
+  ]
+
   return (
     <div className="space-y-8 animate-rise">
       {/* Greeting */}
@@ -182,39 +196,11 @@ export default async function DashboardPage() {
         <StatCard label={t.english.title} value={englishCount} href="/english" Icon={Headphones} accent={{ bar: "bg-violet-500/60", icon: "bg-violet-500/10 text-violet-600 group-hover:bg-violet-500 group-hover:text-white dark:text-violet-400" }} />
       </div>
 
-      {/* Completion + quick action */}
+      {/* Completion checklist + quick action */}
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2 shadow-soft">
-          <CardHeader className="flex flex-row items-start justify-between space-y-0">
-            <div>
-              <CardTitle className="text-base font-medium text-muted-foreground">
-                {t.dashboard.completionTitle}
-              </CardTitle>
-              <CardDescription className="mt-1">{t.dashboard.completionDesc}</CardDescription>
-            </div>
-            <div className="text-right">
-              <div className="font-serif text-4xl font-semibold text-primary">{completion}%</div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Progress value={completion} className="h-2.5" />
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                {profile.experiences.length} {t.profile.experience.toLowerCase()} ·{" "}
-                {profile.skills.length} {t.profile.skills.toLowerCase()} ·{" "}
-                {profile.educations.length} {t.profile.education.toLowerCase()}
-              </span>
-              {completion < 100 && (
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/profile">
-                    {t.dashboard.completeProfile}
-                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                  </Link>
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="lg:col-span-2">
+          <CompletionChecklist items={checklistItems} completion={completion} locale={locale} />
+        </div>
 
         <Card className="shadow-soft bg-primary text-primary-foreground">
           <CardContent className="flex h-full flex-col justify-between p-6">

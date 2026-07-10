@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import type { SerializedProfile } from "@/lib/profile"
 import type { GeneratedBio } from "@/lib/content-engine"
+import { GenerationOverlay } from "@/components/documents/generation-overlay"
 
 export function BioBuilder({ initialProfile }: { initialProfile: SerializedProfile }) {
   const t = useT()
@@ -28,6 +29,7 @@ export function BioBuilder({ initialProfile }: { initialProfile: SerializedProfi
   const [tone, setTone] = useState(initialProfile.preferredTone || "warm")
 
   const [loading, setLoading] = useState(false)
+  const [genError, setGenError] = useState<string | null>(null)
   const [bio, setBio] = useState<GeneratedBio | null>(null)
   const [documentId, setDocumentId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("edit")
@@ -36,7 +38,7 @@ export function BioBuilder({ initialProfile }: { initialProfile: SerializedProfi
   const hasExperiences = (initialProfile.experiences ?? []).length > 0
 
   async function generate() {
-    setLoading(true); setBio(null)
+    setLoading(true); setGenError(null); setBio(null)
     try {
       const res = await fetch("/api/documents/bio/generate", {
         method: "POST",
@@ -44,10 +46,14 @@ export function BioBuilder({ initialProfile }: { initialProfile: SerializedProfi
         body: JSON.stringify({ locale, tone, edits: { ...edits } }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(t.documents.generateError); return }
+      if (!res.ok) {
+        const msg = data?.message || data?.error || t.documents.generateError
+        setGenError(typeof msg === "string" ? msg : t.documents.generateError)
+        return
+      }
       setBio(data.bio); setDocumentId(data.documentId); setActiveTab("preview")
       toast.success(t.documents.preview)
-    } catch { toast.error(t.documents.generateError) }
+    } catch { setGenError(t.documents.generateError) }
     finally { setLoading(false) }
   }
 
@@ -190,6 +196,14 @@ export function BioBuilder({ initialProfile }: { initialProfile: SerializedProfi
           )}
         </TabsContent>
       </Tabs>
+
+      <GenerationOverlay
+        loading={loading}
+        error={genError}
+        onRetry={() => { setGenError(null); generate() }}
+        onCancel={() => { setGenError(null); setLoading(false) }}
+        locale={locale}
+      />
     </div>
   )
 }

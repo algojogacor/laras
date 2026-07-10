@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import type { SerializedProfile } from "@/lib/profile"
 import type { GeneratedCoverLetter } from "@/lib/content-engine"
+import { GenerationOverlay } from "@/components/documents/generation-overlay"
 
 type Check = { hasEvidence: boolean; buzzwords: string[] }
 
@@ -35,6 +36,7 @@ export function CoverLetterBuilder({ initialProfile }: { initialProfile: Seriali
   const [tone, setTone] = useState(initialProfile.preferredTone || "warm")
 
   const [loading, setLoading] = useState(false)
+  const [genError, setGenError] = useState<string | null>(null)
   const [cl, setCl] = useState<GeneratedCoverLetter | null>(null)
   const [check, setCheck] = useState<Check | null>(null)
   const [documentId, setDocumentId] = useState<string | null>(null)
@@ -46,6 +48,7 @@ export function CoverLetterBuilder({ initialProfile }: { initialProfile: Seriali
 
   async function generate(isRegen = false) {
     if (isRegen) setRegenerating(true); else setLoading(true)
+    setGenError(null)
     setCl(null)
     try {
       const res = await fetch("/api/documents/cover-letter/generate", {
@@ -58,12 +61,16 @@ export function CoverLetterBuilder({ initialProfile }: { initialProfile: Seriali
         }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(t.documents.generateError); return }
+      if (!res.ok) {
+        const msg = data?.message || data?.error || t.documents.generateError
+        setGenError(typeof msg === "string" ? msg : t.documents.generateError)
+        return
+      }
       setCl(data.cl); setCheck(data.check); setDocumentId(data.documentId)
       setActiveTab("preview")
       toast.success(t.documents.preview)
     } catch {
-      toast.error(t.documents.generateError)
+      setGenError(t.documents.generateError)
     } finally {
       setLoading(false); setRegenerating(false)
     }
@@ -244,6 +251,14 @@ export function CoverLetterBuilder({ initialProfile }: { initialProfile: Seriali
           )}
         </TabsContent>
       </Tabs>
+
+      <GenerationOverlay
+        loading={loading || regenerating}
+        error={genError}
+        onRetry={() => { setGenError(null); generate(regenerating) }}
+        onCancel={() => { setGenError(null); setLoading(false); setRegenerating(false) }}
+        locale={locale}
+      />
     </div>
   )
 }

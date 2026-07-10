@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import type { SerializedProfile } from "@/lib/profile"
 import type { GeneratedEssay, EssayProbingQuestion } from "@/lib/content-engine"
+import { GenerationOverlay } from "@/components/documents/generation-overlay"
 
 type Check = { hasEvidence: boolean; buzzwords: string[] }
 
@@ -42,6 +43,7 @@ export function EssayBuilder({ initialProfile }: { initialProfile: SerializedPro
   const [check, setCheck] = useState<Check | null>(null)
   const [documentId, setDocumentId] = useState<string | null>(null)
   const [genLoading, setGenLoading] = useState(false)
+  const [genError, setGenError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("setup")
   const [copied, setCopied] = useState(false)
 
@@ -60,6 +62,7 @@ export function EssayBuilder({ initialProfile }: { initialProfile: SerializedPro
 
   async function generateProbing() {
     setProbingLoading(true)
+    setGenError(null)
     try {
       const res = await fetch("/api/documents/essay/probe", {
         method: "POST",
@@ -67,19 +70,23 @@ export function EssayBuilder({ initialProfile }: { initialProfile: SerializedPro
         body: JSON.stringify({ locale, essayType, prompt, targetOrg }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(t.auth.errGeneric); return }
+      if (!res.ok) {
+        const msg = data?.message || data?.error || t.auth.errGeneric
+        setGenError(typeof msg === "string" ? msg : t.auth.errGeneric)
+        return
+      }
       setProbing(data.questions)
       setAnswers({})
       setActiveTab("probing")
       toast.success(t.documents.essayProbingTitle)
-    } catch { toast.error(t.auth.errGeneric) }
+    } catch { setGenError(t.auth.errGeneric) }
     finally { setProbingLoading(false) }
   }
 
   async function generateDraft() {
     const answered = Object.entries(answers).filter(([, v]) => v.trim()).length
     if (answered === 0) { toast.error(t.documents.essayNoProbing); return }
-    setGenLoading(true); setEssay(null)
+    setGenLoading(true); setGenError(null); setEssay(null)
     try {
       const probingQA = probing.map((q) => ({ id: q.id, question: q.question, answer: answers[q.id] || "" }))
       const res = await fetch("/api/documents/essay/generate", {
@@ -88,11 +95,15 @@ export function EssayBuilder({ initialProfile }: { initialProfile: SerializedPro
         body: JSON.stringify({ locale, tone, essayType, prompt, targetOrg, wordLimit, probingQA, edits }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(t.documents.generateError); return }
+      if (!res.ok) {
+        const msg = data?.message || data?.error || t.documents.generateError
+        setGenError(typeof msg === "string" ? msg : t.documents.generateError)
+        return
+      }
       setEssay(data.essay); setCheck(data.check); setDocumentId(data.documentId)
       setActiveTab("preview")
       toast.success(t.documents.preview)
-    } catch { toast.error(t.documents.generateError) }
+    } catch { setGenError(t.documents.generateError) }
     finally { setGenLoading(false) }
   }
 
@@ -318,6 +329,18 @@ export function EssayBuilder({ initialProfile }: { initialProfile: SerializedPro
           )}
         </TabsContent>
       </Tabs>
+
+      <GenerationOverlay
+        loading={genLoading || probingLoading}
+        error={genError}
+        onRetry={() => {
+          setGenError(null)
+          if (probingLoading) generateProbing()
+          else if (genLoading) generateDraft()
+        }}
+        onCancel={() => { setGenError(null); setGenLoading(false); setProbingLoading(false) }}
+        locale={locale}
+      />
     </div>
   )
 }
