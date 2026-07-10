@@ -115,6 +115,7 @@ const id = {
     location: "Lokasi",
     linkedin: "URL LinkedIn",
     portfolio: "URL portofolio",
+    photoUrl: "URL foto (opsional)",
     summary: "Ringkasan tentang dirimu",
     summaryHint: "Tulis mentah — sistem akan membantu merapikan nanti.",
     addExperience: "Tambah pengalaman",
@@ -384,6 +385,7 @@ const id = {
     incorrect: "Salah",
     explanation: "Penjelasan",
     yourAnswer: "Jawabanmu",
+    yourAnswerHint: "Tulis jawabanmu, lalu minta feedback.",
     correctAnswer: "Jawaban benar",
     nextPractice: "Latihan berikutnya",
     backToModules: "Kembali ke modul",
@@ -448,9 +450,18 @@ const id = {
     terms: "Ketentuan",
     builtWith: "Dibangun dengan hati untuk pencari kesempatan.",
   },
-} as const
+}
 
-export type Dictionary = typeof id
+// Widen literal types so the EN dictionary (different string values) is assignable.
+type DeepWiden<T> =
+  T extends string ? string :
+  T extends number ? number :
+  T extends boolean ? boolean :
+  T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepWiden<U>> :
+  T extends object ? { readonly [K in keyof T]: DeepWiden<T[K]> } :
+  T
+
+export type Dictionary = DeepWiden<typeof id>
 
 const en: Dictionary = {
   brand: {
@@ -561,6 +572,7 @@ const en: Dictionary = {
     location: "Location",
     linkedin: "LinkedIn URL",
     portfolio: "Portfolio URL",
+    photoUrl: "Photo URL (optional)",
     summary: "About you",
     summaryHint: "Write raw — the system will help refine it later.",
     addExperience: "Add experience",
@@ -830,6 +842,7 @@ const en: Dictionary = {
     incorrect: "Incorrect",
     explanation: "Explanation",
     yourAnswer: "Your answer",
+    yourAnswerHint: "Write your answer, then request feedback.",
     correctAnswer: "Correct answer",
     nextPractice: "Next practice",
     backToModules: "Back to modules",

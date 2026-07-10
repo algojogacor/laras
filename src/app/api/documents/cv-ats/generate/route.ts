@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
 
-  let body: { locale?: string; tone?: string; region?: string; title?: string; edits?: any }
+  let body: { locale?: string; tone?: string; region?: string; title?: string; edits?: any; generationConfig?: Record<string, unknown> }
   try {
     body = await request.json()
   } catch {

@@ -18,7 +18,7 @@ export default async function InterviewPracticePage({ params }: { params: Promis
   if (!set) notFound()
   const { locale } = await getLocaleAndDict()
   const questions = set.questions.map((q) => ({
-    id: q.id, question: q.question, category: q.category,
+    id: q.id, question: q.question, category: q.category ?? "general",
     userAnswer: q.userAnswer, suggestedAnswer: q.suggestedAnswer,
     feedback: q.feedback ? (JSON.parse(q.feedback) as AnswerFeedback) : null,
     order: q.order,

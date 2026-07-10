@@ -99,8 +99,8 @@ export function Corporate({ profile }: TemplateProps) {
           <h1 className="text-xl font-bold leading-tight text-white">{profile.fullName}</h1>
           <p className="mt-1 text-[11px] text-neutral-400">{profile.headline}</p>
           <div className="mt-4 space-y-3">
-            <ContactBlock label="Contact" items={[profile.email, profile.phone, profile.location].filter(Boolean)} />
-            {links && <ContactBlock label="Links" items={[links.linkedin, links.portfolio].filter(Boolean)} />}
+            <ContactBlock label="Contact" items={[profile.email, profile.phone, profile.location].filter((x): x is string => Boolean(x))} />
+            {links && <ContactBlock label="Links" items={[links.linkedin, links.portfolio].filter((x): x is string => Boolean(x))} />}
             {profile.skills.length > 0 && <ContactBlock label="Skills" items={profile.skills.map((s) => s.name)} />}
             {profile.certifications.length > 0 && <ContactBlock label="Certs" items={profile.certifications.map((c) => c.name)} />}
           </div>

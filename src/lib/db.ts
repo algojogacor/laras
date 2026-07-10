@@ -1,19 +1,19 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaLibSql } from '@prisma/adapter-libsql'
-import { createClient } from '@libsql/client'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
 function createPrismaClient(): PrismaClient {
-  const url = process.env.DATABASE_URL || process.env.TURSO_DATABASE_URL
+  // Prefer TURSO_DATABASE_URL (libsql://) — some sandboxes inject a local
+  // sqlite DATABASE_URL into the shell env that would otherwise shadow .env.
+  const url = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL
 
   // If using Turso (libsql:// protocol), use the libsql adapter
   if (url && url.startsWith('libsql://')) {
     const authToken = process.env.TURSO_AUTH_TOKEN
-    const libsql = createClient({ url, authToken })
-    const adapter = new PrismaLibSql(libsql)
+    const adapter = new PrismaLibSql({ url, authToken })
     return new PrismaClient({ adapter } as any)
   }
 
