@@ -1,0 +1,2002 @@
+     1→     1→     1→# LARAS 100X — AUTONOMOUS PRE-PRODUCTION ECOSYSTEM TRANSFORMATION
+     2→     2→     2→
+     3→     3→     3→## 0. EXECUTION MANDATE
+     4→     4→     4→
+     5→     5→     5→Transform the current Laras project into a deeply integrated, visually exceptional, secure, production-ready:
+     6→     6→     6→
+     7→     7→     7→> **Indonesia-first Career Operating System and Professional Growth Network that connects identity, evidence, readiness, learning, opportunities, people, communities, institutions, and trusted career outcomes.**
+     8→     8→     8→
+     9→     9→     9→This is a comprehensive pre-production transformation.
+    10→    10→    10→
+    11→    11→    11→Laras must no longer feel like:
+    12→    12→    12→
+    13→    13→    13→* A collection of disconnected tools
+    14→    14→    14→* A CV generator with extra pages
+    15→    15→    15→* A generic AI dashboard
+    16→    16→    16→* A shallow LinkedIn clone
+    17→    17→    17→* A basic job board
+    18→    18→    18→* A generic social network
+    19→    19→    19→* A marketplace
+    20→    20→    20→* An e-commerce application
+    21→    21→    21→* A group of unfinished experiments
+    22→    22→    22→* A template-based SaaS product
+    23→    23→    23→
+    24→    24→    24→Laras must become one coherent ecosystem in which every product, workflow, data object, recommendation, connection, community, institution, and administrative capability strengthens the others.
+    25→    25→    25→
+    26→    26→    26→You have up to 10 long-running execution rounds.
+    27→    27→    27→
+    28→    28→    28→Use every available round productively.
+    29→    29→    29→
+    30→    30→    30→Do not stop after:
+    31→    31→    31→
+    32→    32→    32→* Auditing the repository
+    33→    33→    33→* Writing a roadmap
+    34→    34→    34→* Fixing a few bugs
+    35→    35→    35→* Redesigning the landing page
+    36→    36→    36→* Creating database models
+    37→    37→    37→* Building placeholder dashboards
+    38→    38→    38→* Shipping one flagship feature
+    39→    39→    39→* Passing the build
+    40→    40→    40→* Completing the old roadmap
+    41→    41→    41→* Feeling that the product is “good enough”
+    42→    42→    42→
+    43→    43→    43→Continue researching, designing, implementing, integrating, testing, securing, polishing, and deepening Laras until the execution limit itself stops the work.
+    44→    44→    44→
+    45→    45→    45→Do not ask for confirmation between rounds.
+    46→    46→    46→
+    47→    47→    47→---
+    48→    48→    48→
+    49→    49→    49→# 1. PRE-PRODUCTION AUTHORITY
+    50→    50→    50→
+    51→    51→    51→Laras is currently a pre-production project.
+    52→    52→    52→
+    53→    53→    53→There are no real public users and no valuable production user data that must be preserved.
+    54→    54→    54→
+    55→    55→    55→You are authorized to perform a comprehensive transformation, including:
+    56→    56→    56→
+    57→    57→    57→* Major architectural refactoring
+    58→    58→    58→* Database schema redesign
+    59→    59→    59→* Prisma model restructuring
+    60→    60→    60→* Rebuilding migration history
+    61→    61→    61→* Resetting development or verified pre-production data
+    62→    62→    62→* Replacing weak implementations
+    63→    63→    63→* Removing obsolete models
+    64→    64→    64→* Removing dead routes
+    65→    65→    65→* Removing shallow or duplicate features
+    66→    66→    66→* Reorganizing navigation
+    67→    67→    67→* Rebuilding design systems
+    68→    68→    68→* Replacing inconsistent components
+    69→    69→    69→* Improving authentication and authorization foundations
+    70→    70→    70→* Introducing new core platform primitives
+    71→    71→    71→* Adding new product scopes agreed in this prompt
+    72→    72→    72→* Creating a deterministic seed dataset
+    73→    73→    73→* Reworking existing workflows end-to-end
+    74→    74→    74→
+    75→    75→    75→Do not preserve weak architecture merely for backward compatibility that is not needed.
+    76→    76→    76→
+    77→    77→    77→Preserve valuable product intent, but freely replace:
+    78→    78→    78→
+    79→    79→    79→* Shallow workflows
+    80→    80→    80→* Disconnected modules
+    81→    81→    81→* Inconsistent design
+    82→    82→    82→* Unsafe authorization
+    83→    83→    83→* Weak data models
+    84→    84→    84→* Obsolete implementations
+    85→    85→    85→* Dead code
+    86→    86→    86→* Placeholder functionality
+    87→    87→    87→* Demo-only behavior
+    88→    88→    88→
+    89→    89→    89→Before any destructive database operation:
+    90→    90→    90→
+    91→    91→    91→1. Verify that the target is development or pre-production.
+    92→    92→    92→2. Verify that there is no valuable real-user data.
+    93→    93→    93→3. Document the operation.
+    94→    94→    94→4. Ensure secrets are never exposed.
+    95→    95→    95→5. Create a deterministic replacement seed where appropriate.
+    96→    96→    96→
+    97→    97→    97→Do not destroy an unknown external database blindly.
+    98→    98→    98→
+    99→    99→    99→---
+   100→   100→   100→
+   101→   101→   101→# 2. SINGLE SOURCE OF TRUTH
+   102→   102→   102→
+   103→   103→   103→The extracted Laras ZIP in the current working directory is the **only authoritative source of truth** for:
+   104→   104→   104→
+   105→   105→   105→* Existing source code
+   106→   106→   106→* Existing architecture
+   107→   107→   107→* Existing product behavior
+   108→   108→   108→* Existing scope
+   109→   109→   109→* Existing database schema
+   110→   110→   110→* Existing design language
+   111→   111→   111→* Existing environment configuration
+   112→   112→   112→* Existing documentation
+   113→   113→   113→* Existing brief
+   114→   114→   114→* Existing worklog
+   115→   115→   115→* Existing QA findings
+   116→   116→   116→* Existing roadmap
+   117→   117→   117→* Existing scripts
+   118→   118→   118→* Existing tests
+   119→   119→   119→* Existing local skills
+   120→   120→   120→* Existing integrations
+   121→   121→   121→
+   122→   122→   122→The GitHub repository is only the delivery and version-history destination.
+   123→   123→   123→
+   124→   124→   124→Repository:
+   125→   125→   125→
+   126→   126→   126→```text
+   127→   127→   127→https://github.com/algojogacor/laras
+   128→   128→   128→```
+   129→   129→   129→
+   130→   130→   130→Rules:
+   131→   131→   131→
+   132→   132→   132→1. Never replace ZIP files with GitHub files.
+   133→   133→   133→2. Never assume the remote repository is newer than the ZIP.
+   134→   134→   134→3. Never run `git reset --hard origin/main`.
+   135→   135→   135→4. Never discard ZIP content because remote files differ.
+   136→   136→   136→5. Never rebuild Laras from a blank starter template.
+   137→   137→   137→6. Never reduce Laras into a demo application.
+   138→   138→   138→7. Reconcile documentation against actual code and runtime behavior.
+   139→   139→   139→8. Treat historical audits and roadmaps as leads, not unquestionable facts.
+   140→   140→   140→9. Use the actual ZIP code as the implementation baseline.
+   141→   141→   141→10. Do not silently reduce the scope defined in this prompt.
+   142→   142→   142→
+   143→   143→   143→Conflict precedence:
+   144→   144→   144→
+   145→   145→   145→1. The execution, safety, Git, product, and quality rules in this prompt
+   146→   146→   146→2. Actual ZIP source code, scripts, runtime behavior, and database schema
+   147→   147→   147→3. Current ZIP documentation
+   148→   148→   148→4. Relevant local `skills/`
+   149→   149→   149→5. Current external research
+   150→   150→   150→6. Generic assumptions
+   151→   151→   151→
+   152→   152→   152→---
+   153→   153→   153→
+   154→   154→   154→# 3. YOUR ROLE
+   155→   155→   155→
+   156→   156→   156→Act simultaneously as:
+   157→   157→   157→
+   158→   158→   158→* Co-founder
+   159→   159→   159→* Product owner
+   160→   160→   160→* Chief product officer
+   161→   161→   161→* Principal product designer
+   162→   162→   162→* UX researcher
+   163→   163→   163→* Staff-level full-stack engineer
+   164→   164→   164→* Platform architect
+   165→   165→   165→* AI product engineer
+   166→   166→   166→* Security engineer
+   167→   167→   167→* Privacy engineer
+   168→   168→   168→* Trust and safety lead
+   169→   169→   169→* Accessibility specialist
+   170→   170→   170→* Growth strategist
+   171→   171→   171→* Retention strategist
+   172→   172→   172→* Business-model architect
+   173→   173→   173→* Monetization and entitlement architect
+   174→   174→   174→* Site reliability engineer
+   175→   175→   175→* QA lead
+   176→   176→   176→* Adversarial reviewer
+   177→   177→   177→
+   178→   178→   178→Think like an owner whose reputation, business sustainability, user trust, and long-term growth depend on the final quality of Laras.
+   179→   179→   179→
+   180→   180→   180→Optimize for:
+   181→   181→   181→
+   182→   182→   182→* Real user outcomes
+   183→   183→   183→* Time to first value
+   184→   184→   184→* Product depth
+   185→   185→   185→* Cross-product compounding
+   186→   186→   186→* Trust
+   187→   187→   187→* Safety
+   188→   188→   188→* Accessibility
+   189→   189→   189→* Retention through usefulness
+   190→   190→   190→* Maintainability
+   191→   191→   191→* Operational reliability
+   192→   192→   192→* Sustainable costs
+   193→   193→   193→* Differentiation
+   194→   194→   194→* Production readiness
+   195→   195→   195→* Indonesian market relevance
+   196→   196→   196→
+   197→   197→   197→Do not optimize for:
+   198→   198→   198→
+   199→   199→   199→* Number of files changed
+   200→   200→   200→* Number of database tables
+   201→   201→   201→* Number of pages
+   202→   202→   202→* Number of features listed
+   203→   203→   203→* Artificial engagement
+   204→   204→   204→* Vanity metrics
+   205→   205→   205→* Visual novelty alone
+   206→   206→   206→* Large amounts of shallow code
+   207→   207→   207→
+   208→   208→   208→---
+   209→   209→   209→
+   210→   210→   210→# 4. GIT AND GITHUB RULES
+   211→   211→   211→
+   212→   212→   212→## 4.1 Use one branch only
+   213→   213→   213→
+   214→   214→   214→Use exactly one branch throughout the entire transformation:
+   215→   215→   215→
+   216→   216→   216→```text
+   217→   217→   217→upgrade/laras-100x
+   218→   218→   218→```
+   219→   219→   219→
+   220→   220→   220→Create it only once.
+   221→   221→   221→
+   222→   222→   222→Use the same branch from the first implementation until the final push.
+   223→   223→   223→
+   224→   224→   224→Never create:
+   225→   225→   225→
+   226→   226→   226→* Additional feature branches
+   227→   227→   227→* Temporary branches
+   228→   228→   228→* Round-specific branches
+   229→   229→   229→* A second final branch
+   230→   230→   230→* Pull requests
+   231→   231→   231→* Merge requests
+   232→   232→   232→
+   233→   233→   233→Never:
+   234→   234→   234→
+   235→   235→   235→* Push directly to `main`
+   236→   236→   236→* Merge into `main`
+   237→   237→   237→* Force-push
+   238→   238→   238→* Rewrite Git history
+   239→   239→   239→* Open a PR at the end
+   240→   240→   240→
+   241→   241→   241→Push completed green work directly to:
+   242→   242→   242→
+   243→   243→   243→```text
+   244→   244→   244→origin/upgrade/laras-100x
+   245→   245→   245→```
+   246→   246→   246→
+   247→   247→   247→## 4.2 Preserve the ZIP working tree
+   248→   248→   248→
+   249→   249→   249→If `.git` already exists:
+   250→   250→   250→
+   251→   251→   251→* Inspect the current branch.
+   252→   252→   252→* Inspect remotes.
+   253→   253→   253→* Preserve all current files.
+   254→   254→   254→* Set the correct remote when needed.
+   255→   255→   255→
+   256→   256→   256→If `.git` does not exist:
+   257→   257→   257→
+   258→   258→   258→1. Clone the GitHub repository into a temporary directory using `--no-checkout`.
+   259→   259→   259→2. Copy only its `.git` metadata into the ZIP working directory.
+   260→   260→   260→3. Delete the temporary clone.
+   261→   261→   261→4. Do not copy source files from the remote.
+   262→   262→   262→5. Do not checkout anything that overwrites ZIP content.
+   263→   263→   263→
+   264→   264→   264→Conceptual safe sequence:
+   265→   265→   265→
+   266→   266→   266→```bash
+   267→   267→   267→REPO_URL="https://github.com/algojogacor/laras"
+   268→   268→   268→BRANCH="upgrade/laras-100x"
+   269→   269→   269→
+   270→   270→   270→if [ ! -d ".git" ]; then
+   271→   271→   271→  TEMP_DIR="$(mktemp -d)"
+   272→   272→   272→  git clone --no-checkout "$REPO_URL" "$TEMP_DIR/repo"
+   273→   273→   273→  cp -a "$TEMP_DIR/repo/.git" ./.git
+   274→   274→   274→  rm -rf "$TEMP_DIR"
+   275→   275→   275→fi
+   276→   276→   276→
+   277→   277→   277→git remote set-url origin "$REPO_URL"
+   278→   278→   278→git fetch origin main
+   279→   279→   279→```
+   280→   280→   280→
+   281→   281→   281→Branch selection:
+   282→   282→   282→
+   283→   283→   283→```bash
+   284→   284→   284→if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
+   285→   285→   285→  git switch "$BRANCH"
+   286→   286→   286→elif git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+   287→   287→   287→  git switch --track -c "$BRANCH" "origin/$BRANCH"
+   288→   288→   288→else
+   289→   289→   289→  git switch -c "$BRANCH"
+   290→   290→   290→fi
+   291→   291→   291→```
+   292→   292→   292→
+   293→   293→   293→If Git warns that ZIP files will be overwritten, abort that operation and preserve the ZIP.
+   294→   294→   294→
+   295→   295→   295→## 4.3 Authentication
+   296→   296→   296→
+   297→   297→   297→Assume the environment provides:
+   298→   298→   298→
+   299→   299→   299→```text
+   300→   300→   300→GITHUB_TOKEN
+   301→   301→   301→```
+   302→   302→   302→
+   303→   303→   303→Use it only from the secret environment.
+   304→   304→   304→
+   305→   305→   305→Never:
+   306→   306→   306→
+   307→   307→   307→* Print the token
+   308→   308→   308→* Echo the token
+   309→   309→   309→* Log the token
+   310→   310→   310→* Commit the token
+   311→   311→   311→* Put it in `.env`
+   312→   312→   312→* Add it permanently to the Git remote URL
+   313→   313→   313→* Include it in reports
+   314→   314→   314→* Include it in errors
+   315→   315→   315→* Include it in screenshots
+   316→   316→   316→* Send it to analytics
+   317→   317→   317→
+   318→   318→   318→Use temporary, non-persistent Git authentication such as `GIT_ASKPASS`.
+   319→   319→   319→
+   320→   320→   320→## 4.4 Commit discipline
+   321→   321→   321→
+   322→   322→   322→After every green round:
+   323→   323→   323→
+   324→   324→   324→1. Inspect `git status`.
+   325→   325→   325→2. Inspect the full diff.
+   326→   326→   326→3. Inspect staged changes.
+   327→   327→   327→4. Search for leaked secrets.
+   328→   328→   328→5. Run applicable quality gates.
+   329→   329→   329→6. Commit one coherent unit of work.
+   330→   330→   330→7. Push to the same upgrade branch.
+   331→   331→   331→
+   332→   332→   332→Use descriptive conventional commits, for example:
+   333→   333→   333→
+   334→   334→   334→```text
+   335→   335→   335→chore(platform): establish Laras ecosystem foundation
+   336→   336→   336→refactor(core): rebuild career graph and shared primitives
+   337→   337→   337→feat(access): implement entitlement and license engine
+   338→   338→   338→feat(governance): add owner admin and moderator control plane
+   339→   339→   339→feat(network): introduce safe professional collaboration
+   340→   340→   340→feat(announcements): add targeted platform communications
+   341→   341→   341→feat(opportunities): deepen cross-product preparation workflows
+   342→   342→   342→fix(security): close scoped authorization gaps
+   343→   343→   343→test(e2e): cover ecosystem critical journeys
+   344→   344→   344→perf(app): reduce route and generation overhead
+   345→   345→   345→```
+   346→   346→   346→
+   347→   347→   347→Do not push a known broken build merely to show activity.
+   348→   348→   348→
+   349→   349→   349→---
+   350→   350→   350→
+   351→   351→   351→# 5. INITIAL REPOSITORY DISCOVERY
+   352→   352→   352→
+   353→   353→   353→Before making major product or architecture decisions, deeply inspect the ZIP.
+   354→   354→   354→
+   355→   355→   355→At minimum, inspect:
+   356→   356→   356→
+   357→   357→   357→```text
+   358→   358→   358→package.json
+   359→   359→   359→bun.lock
+   360→   360→   360→next.config.ts
+   361→   361→   361→tsconfig.json
+   362→   362→   362→tailwind.config.ts
+   363→   363→   363→components.json
+   364→   364→   364→.env.example
+   365→   365→   365→.gitignore
+   366→   366→   366→prisma/schema.prisma
+   367→   367→   367→PRODUCT_AUDIT.md
+   368→   368→   368→QA_REPORT.md
+   369→   369→   369→ROADMAP.md
+   370→   370→   370→worklog.md
+   371→   371→   371→brief/**
+   372→   372→   372→src/**
+   373→   373→   373→public/**
+   374→   374→   374→scripts/**
+   375→   375→   375→mini-services/**
+   376→   376→   376→skills/**
+   377→   377→   377→```
+   378→   378→   378→
+   379→   379→   379→Inspect every:
+   380→   380→   380→
+   381→   381→   381→* Application route
+   382→   382→   382→* API route
+   383→   383→   383→* Server action
+   384→   384→   384→* Database model
+   385→   385→   385→* Authentication path
+   386→   386→   386→* Authorization check
+   387→   387→   387→* Middleware
+   388→   388→   388→* AI generation path
+   389→   389→   389→* Prompt builder
+   390→   390→   390→* Structured-output validator
+   391→   391→   391→* File upload path
+   392→   392→   392→* Object-storage integration
+   393→   393→   393→* Document renderer
+   394→   394→   394→* Export path
+   395→   395→   395→* Public route
+   396→   396→   396→* Profile workflow
+   397→   397→   397→* Onboarding workflow
+   398→   398→   398→* Application workflow
+   399→   399→   399→* Opportunity workflow
+   400→   400→   400→* Interview workflow
+   401→   401→   401→* Voice workflow
+   402→   402→   402→* English and TOEFL workflow
+   403→   403→   403→* Certificate workflow
+   404→   404→   404→* Version-history workflow
+   405→   405→   405→* Admin-like workflow
+   406→   406→   406→* Theme implementation
+   407→   407→   407→* Localization path
+   408→   408→   408→* Mobile-navigation path
+   409→   409→   409→* Error boundary
+   410→   410→   410→* Loading state
+   411→   411→   411→* Empty state
+   412→   412→   412→* Feature flag
+   413→   413→   413→* Background process
+   414→   414→   414→* External integration
+   415→   415→   415→* TODO
+   416→   416→   416→* FIXME
+   417→   417→   417→* HACK
+   418→   418→   418→* placeholder
+   419→   419→   419→* mock
+   420→   420→   420→* demo-only behavior
+   421→   421→   421→* unused dependency
+   422→   422→   422→* dead component
+   423→   423→   423→* dead route
+   424→   424→   424→
+   425→   425→   425→Trace actual user journeys and data flows.
+   426→   426→   426→
+   427→   427→   427→Build a factual inventory:
+   428→   428→   428→
+   429→   429→   429→* Fully implemented and valuable
+   430→   430→   430→* Implemented but shallow
+   431→   431→   431→* Implemented but disconnected
+   432→   432→   432→* Implemented but difficult to discover
+   433→   433→   433→* Partially implemented
+   434→   434→   434→* Broken
+   435→   435→   435→* Unsafe
+   436→   436→   436→* Duplicated
+   437→   437→   437→* Dead
+   438→   438→   438→* Missing but essential
+   439→   439→   439→* Strategically irrelevant
+   440→   440→   440→* Suitable for replacement
+   441→   441→   441→
+   442→   442→   442→The first round must include:
+   443→   443→   443→
+   444→   444→   444→1. A rigorous current-state audit
+   445→   445→   445→2. A future-state architecture
+   446→   446→   446→3. A design-system audit
+   447→   447→   447→4. Real implementation of the highest-impact foundation
+   448→   448→   448→
+   449→   449→   449→Do not spend an entire round writing documents only.
+   450→   450→   450→
+   451→   451→   451→---
+   452→   452→   452→
+   453→   453→   453→# 6. USE THE LOCAL SKILLS
+   454→   454→   454→
+   455→   455→   455→The ZIP contains a `skills/` directory.
+   456→   456→   456→
+   457→   457→   457→Treat it as an internal expert team.
+   458→   458→   458→
+   459→   459→   459→Before applying any skill:
+   460→   460→   460→
+   461→   461→   461→1. Read its `SKILL.md`.
+   462→   462→   462→2. Read only the relevant supporting files, examples, scripts, and references.
+   463→   463→   463→3. Extract its process and quality criteria.
+   464→   464→   464→4. Adapt it to the actual Laras architecture.
+   465→   465→   465→5. Ignore generic instructions that conflict with this mature repository.
+   466→   466→   466→
+   467→   467→   467→Use relevant skills including, when available:
+   468→   468→   468→
+   469→   469→   469→## Engineering and execution
+   470→   470→   470→
+   471→   471→   471→```text
+   472→   472→   472→skills/coding-agent/
+   473→   473→   473→skills/fullstack-dev/
+   474→   474→   474→skills/task-review/
+   475→   475→   475→skills/version-management/
+   476→   476→   476→skills/agent-browser/
+   477→   477→   477→```
+   478→   478→   478→
+   479→   479→   479→Use for:
+   480→   480→   480→
+   481→   481→   481→* Planning
+   482→   482→   482→* Vertical implementation
+   483→   483→   483→* Browser QA
+   484→   484→   484→* Task verification
+   485→   485→   485→* State persistence
+   486→   486→   486→* Code review
+   487→   487→   487→* Git discipline
+   488→   488→   488→
+   489→   489→   489→If a generic skill assumes:
+   490→   490→   490→
+   491→   491→   491→* A new project
+   492→   492→   492→* A single route
+   493→   493→   493→* No production build
+   494→   494→   494→* A remote initialization script
+   495→   495→   495→* Replacing the existing architecture
+   496→   496→   496→
+   497→   497→   497→ignore those conflicting assumptions.
+   498→   498→   498→
+   499→   499→   499→Do not initialize a new application.
+   500→   500→   500→
+   501→   501→   501→Use the actual Laras scripts and stack.
+   502→   502→   502→
+   503→   503→   503→## Design and UX
+   504→   504→   504→
+   505→   505→   505→```text
+   506→   506→   506→skills/design/
+   507→   507→   507→skills/ui-ux-pro-max/
+   508→   508→   508→skills/visual-design-foundations/
+   509→   509→   509→skills/charts/
+   510→   510→   510→```
+   511→   511→   511→
+   512→   512→   512→Use deeply for:
+   513→   513→   513→
+   514→   514→   514→* Design audit
+   515→   515→   515→* Design tokens
+   516→   516→   516→* Typography
+   517→   517→   517→* Color
+   518→   518→   518→* Spacing
+   519→   519→   519→* Grid
+   520→   520→   520→* Layout
+   521→   521→   521→* Hierarchy
+   522→   522→   522→* Interaction design
+   523→   523→   523→* Responsive behavior
+   524→   524→   524→* Dark mode
+   525→   525→   525→* Accessibility
+   526→   526→   526→* Forms
+   527→   527→   527→* Tables
+   528→   528→   528→* Dashboards
+   529→   529→   529→* Data visualization
+   530→   530→   530→* Empty states
+   531→   531→   531→* Loading states
+   532→   532→   532→* Motion
+   533→   533→   533→* Content density
+   534→   534→   534→* Product navigation
+   535→   535→   535→
+   536→   536→   536→## Career-domain intelligence
+   537→   537→   537→
+   538→   538→   538→```text
+   539→   539→   539→skills/resume-builder/
+   540→   540→   540→skills/jd-resume-tailor/
+   541→   541→   541→skills/interview-prep/
+   542→   542→   542→skills/interview-designer/
+   543→   543→   543→skills/job-intent-tracker/
+   544→   544→   544→skills/ASR/
+   545→   545→   545→skills/TTS/
+   546→   546→   546→```
+   547→   547→   547→
+   548→   548→   548→Use to deepen:
+   549→   549→   549→
+   550→   550→   550→* ATS-safe CVs
+   551→   551→   551→* Visual CVs
+   552→   552→   552→* Opportunity tailoring
+   553→   553→   553→* Evidence mapping
+   554→   554→   554→* Interview questions
+   555→   555→   555→* Interview feedback
+   556→   556→   556→* STAR coaching
+   557→   557→   557→* Career goals
+   558→   558→   558→* Application strategy
+   559→   559→   559→* Voice-based practice
+   560→   560→   560→* Spoken-answer evaluation
+   561→   561→   561→
+   562→   562→   562→Do not paste generic skill output directly into Laras without adapting it to:
+   563→   563→   563→
+   564→   564→   564→* The Career Graph
+   565→   565→   565→* User evidence
+   566→   566→   566→* Product workflows
+   567→   567→   567→* Permissions
+   568→   568→   568→* Privacy
+   569→   569→   569→* Existing architecture
+   570→   570→   570→* Indonesian context
+   571→   571→   571→
+   572→   572→   572→## Research, positioning, and growth
+   573→   573→   573→
+   574→   574→   574→```text
+   575→   575→   575→skills/web-search/
+   576→   576→   576→skills/multi-search-engine/
+   577→   577→   577→skills/market-research-reports/
+   578→   578→   578→skills/marketing-mode/
+   579→   579→   579→skills/content-strategy/
+   580→   580→   580→skills/seo-content-writer/
+   581→   581→   581→```
+   582→   582→   582→
+   583→   583→   583→Use for:
+   584→   584→   584→
+   585→   585→   585→* Competitor research
+   586→   586→   586→* Current product patterns
+   587→   587→   587→* Indonesian user needs
+   588→   588→   588→* Market differentiation
+   589→   589→   589→* Activation
+   590→   590→   590→* Retention
+   591→   591→   591→* SEO
+   592→   592→   592→* Landing-page messaging
+   593→   593→   593→* Public product content
+   594→   594→   594→* Ethical growth loops
+   595→   595→   595→
+   596→   596→   596→## Artifact quality
+   597→   597→   597→
+   598→   598→   598→```text
+   599→   599→   599→skills/docx/
+   600→   600→   600→skills/pptx/
+   601→   601→   601→skills/pdf/
+   602→   602→   602→```
+   603→   603→   603→
+   604→   604→   604→Use to ensure generated artifacts are:
+   605→   605→   605→
+   606→   606→   606→* Professionally structured
+   607→   607→   607→* ATS-safe where applicable
+   608→   608→   608→* Print-safe
+   609→   609→   609→* Correctly paginated
+   610→   610→   610→* Free from clipping
+   611→   611→   611→* Free from overflow
+   612→   612→   612→* Visually consistent
+   613→   613→   613→* Compatible with common software
+   614→   614→   614→* Consistent with ID and EN locale
+   615→   615→   615→* Faithful to the in-app preview
+   616→   616→   616→
+   617→   617→   617→If additional relevant skills exist, discover and use them.
+   618→   618→   618→
+   619→   619→   619→---
+   620→   620→   620→
+   621→   621→   621→# 7. INTERNET RESEARCH AUTHORIZATION
+   622→   622→   622→
+   623→   623→   623→You are explicitly authorized and expected to use internet research whenever it materially improves the work.
+   624→   624→   624→
+   625→   625→   625→Research may include:
+   626→   626→   626→
+   627→   627→   627→* Modern product design
+   628→   628→   628→* Career-platform UX
+   629→   629→   629→* Professional-network UX
+   630→   630→   630→* Community safety
+   631→   631→   631→* Opportunity platforms
+   632→   632→   632→* AI career products
+   633→   633→   633→* Interview coaching
+   634→   634→   634→* English-learning systems
+   635→   635→   635→* Accessibility
+   636→   636→   636→* Security
+   637→   637→   637→* Authorization
+   638→   638→   638→* Trust and safety
+   639→   639→   639→* Entitlement systems
+   640→   640→   640→* License-code systems
+   641→   641→   641→* Admin control planes
+   642→   642→   642→* Notification systems
+   643→   643→   643→* Product analytics
+   644→   644→   644→* SEO
+   645→   645→   645→* Performance
+   646→   646→   646→* Current framework documentation
+   647→   647→   647→* Current dependency documentation
+   648→   648→   648→
+   649→   649→   649→Research relevant ecosystems and products such as:
+   650→   650→   650→
+   651→   651→   651→* Meta
+   652→   652→   652→* Google
+   653→   653→   653→* Microsoft
+   654→   654→   654→* LinkedIn
+   655→   655→   655→* Handshake
+   656→   656→   656→* Notion
+   657→   657→   657→* GitHub
+   658→   658→   658→* Canva
+   659→   659→   659→* Duolingo
+   660→   660→   660→* Coursera
+   661→   661→   661→* Salesforce
+   662→   662→   662→* Modern career platforms
+   663→   663→   663→* Modern learning platforms
+   664→   664→   664→* Modern community platforms
+   665→   665→   665→* Modern admin and moderation systems
+   666→   666→   666→
+   667→   667→   667→Do not copy:
+   668→   668→   668→
+   669→   669→   669→* Proprietary branding
+   670→   670→   670→* Proprietary source code
+   671→   671→   671→* Exact layouts
+   672→   672→   672→* Exact marketing copy
+   673→   673→   673→* Protected assets
+   674→   674→   674→* Unlicensed content
+   675→   675→   675→
+   676→   676→   676→Extract:
+   677→   677→   677→
+   678→   678→   678→* Strong interaction patterns
+   679→   679→   679→* Shared ecosystem primitives
+   680→   680→   680→* Trust patterns
+   681→   681→   681→* Information architecture
+   682→   682→   682→* User complaints
+   683→   683→   683→* Common missing workflows
+   684→   684→   684→* Accessibility expectations
+   685→   685→   685→* Safety expectations
+   686→   686→   686→* Product differentiation opportunities
+   687→   687→   687→
+   688→   688→   688→For technical, security, accessibility, legal, framework, and API decisions:
+   689→   689→   689→
+   690→   690→   690→* Prefer official documentation
+   691→   691→   691→* Prefer primary sources
+   692→   692→   692→* Prefer current sources
+   693→   693→   693→* Verify version compatibility
+   694→   694→   694→
+   695→   695→   695→Create or maintain:
+   696→   696→   696→
+   697→   697→   697→```text
+   698→   698→   698→RESEARCH_NOTES.md
+   699→   699→   699→```
+   700→   700→   700→
+   701→   701→   701→Record:
+   702→   702→   702→
+   703→   703→   703→* Research question
+   704→   704→   704→* Sources
+   705→   705→   705→* Key findings
+   706→   706→   706→* Relevance to Laras
+   707→   707→   707→* What was adopted
+   708→   708→   708→* What was rejected
+   709→   709→   709→* Why
+   710→   710→   710→
+   711→   711→   711→Research must lead to decisions or implementation.
+   712→   712→   712→
+   713→   713→   713→Do not spend entire rounds browsing without shipping improvements.
+   714→   714→   714→
+   715→   715→   715→---
+   716→   716→   716→
+   717→   717→   717→# 8. PRODUCT NORTH STAR
+   718→   718→   718→
+   719→   719→   719→Laras must evolve into:
+   720→   720→   720→
+   721→   721→   721→> **An Indonesia-first Career Operating System and Professional Growth Network.**
+   722→   722→   722→
+   723→   723→   723→It must support a user lifecycle such as:
+   724→   724→   724→
+   725→   725→   725→```text
+   726→   726→   726→Discover
+   727→   727→   727→→ Understand
+   728→   728→   728→→ Prepare
+   729→   729→   729→→ Prove
+   730→   730→   730→→ Connect
+   731→   731→   731→→ Apply
+   732→   732→   732→→ Interview
+   733→   733→   733→→ Succeed
+   734→   734→   734→→ Transition
+   735→   735→   735→→ Grow
+   736→   736→   736→→ Contribute
+   737→   737→   737→→ Mentor
+   738→   738→   738→```
+   739→   739→   739→
+   740→   740→   740→Laras should remain useful after users obtain:
+   741→   741→   741→
+   742→   742→   742→* Jobs
+   743→   743→   743→* Internships
+   744→   744→   744→* Scholarships
+   745→   745→   745→* ODP or management-trainee placements
+   746→   746→   746→* BUMN opportunities
+   747→   747→   747→* CPNS opportunities
+   748→   748→   748→* Fellowships
+   749→   749→   749→* Academic opportunities
+   750→   750→   750→* Professional transitions
+   751→   751→   751→
+   752→   752→   752→Potential post-success support:
+   753→   753→   753→
+   754→   754→   754→* First 30/60/90-day plan
+   755→   755→   755→* Career-transition checklist
+   756→   756→   756→* Achievement journal
+   757→   757→   757→* Skill-growth plan
+   758→   758→   758→* Professional portfolio updates
+   759→   759→   759→* Promotion preparation
+   760→   760→   760→* Role-transition preparation
+   761→   761→   761→* Alumni participation
+   762→   762→   762→* Mentorship
+   763→   763→   763→* Community contribution
+   764→   764→   764→
+   765→   765→   765→Laras must not become:
+   766→   766→   766→
+   767→   767→   767→* Payroll software
+   768→   768→   768→* A full HRIS
+   769→   769→   769→* General-purpose social media
+   770→   770→   770→* A marketplace
+   771→   771→   771→* An e-commerce platform
+   772→   772→   772→* A recruitment auction
+   773→   773→   773→* A pay-to-rank platform
+   774→   774→   774→
+   775→   775→   775→---
+   776→   776→   776→
+   777→   777→   777→# 9. PRODUCT ARCHITECTURE
+   778→   778→   778→
+   779→   779→   779→Do not place every capability inside one oversized sidebar.
+   780→   780→   780→
+   781→   781→   781→Create a coherent information architecture around these conceptual domains.
+   782→   782→   782→
+   783→   783→   783→Names may be refined through product and design research, but their responsibilities must remain clear.
+   784→   784→   784→
+   785→   785→   785→## 9.1 Laras Core
+   786→   786→   786→
+   787→   787→   787→Shared ecosystem primitives:
+   788→   788→   788→
+   789→   789→   789→* Laras ID
+   790→   790→   790→* Authentication
+   791→   791→   791→* Living Profile
+   792→   792→   792→* Career Graph
+   793→   793→   793→* Skill and Evidence Graph
+   794→   794→   794→* Opportunity Graph
+   795→   795→   795→* Relationship Graph
+   796→   796→   796→* Progress Graph
+   797→   797→   797→* Consent and Privacy Graph
+   798→   798→   798→* Trust and Verification Graph
+   799→   799→   799→* AI Context Layer
+   800→   800→   800→* Universal Search
+   801→   801→   801→* Unified Inbox
+   802→   802→   802→* Activity and Action Center
+   803→   803→   803→* Notification Layer
+   804→   804→   804→* Communication Layer
+   805→   805→   805→* Entitlement Engine
+   806→   806→   806→* Configuration Engine
+   807→   807→   807→* Audit Layer
+   808→   808→   808→* Analytics Event Layer
+   809→   809→   809→
+   810→   810→   810→## 9.2 Laras Prepare
+   811→   811→   811→
+   812→   812→   812→* CV ATS
+   813→   813→   813→* Visual CV
+   814→   814→   814→* Cover letter
+   815→   815→   815→* Professional bio
+   816→   816→   816→* Opportunity essay
+   817→   817→   817→* Presentation deck
+   818→   818→   818→* Readiness intelligence
+   819→   819→   819→* Interview preparation
+   820→   820→   820→* Voice interview
+   821→   821→   821→* English and TOEFL practice
+   822→   822→   822→* Learning pathways
+   823→   823→   823→* Evidence-building recommendations
+   824→   824→   824→* Cross-document consistency
+   825→   825→   825→
+   826→   826→   826→## 9.3 Laras Opportunities
+   827→   827→   827→
+   828→   828→   828→* Opportunity discovery
+   829→   829→   829→* Jobs
+   830→   830→   830→* Internships
+   831→   831→   831→* Scholarships
+   832→   832→   832→* ODP and management trainee
+   833→   833→   833→* BUMN
+   834→   834→   834→* CPNS
+   835→   835→   835→* Fellowships
+   836→   836→   836→* Competitions
+   837→   837→   837→* Volunteering
+   838→   838→   838→* Career events
+   839→   839→   839→* Requirement extraction
+   840→   840→   840→* Match explanation
+   841→   841→   841→* Gap analysis
+   842→   842→   842→* Preparation plans
+   843→   843→   843→* Deadline management
+   844→   844→   844→* Application tracking
+   845→   845→   845→* Outcome learning
+   846→   846→   846→
+   847→   847→   847→This is an **Opportunity Network**, not a marketplace.
+   848→   848→   848→
+   849→   849→   849→Never introduce:
+   850→   850→   850→
+   851→   851→   851→* Shopping cart
+   852→   852→   852→* Product checkout
+   853→   853→   853→* Seller dashboard
+   854→   854→   854→* E-commerce commission
+   855→   855→   855→* Marketplace bidding
+   856→   856→   856→* Product inventory
+   857→   857→   857→* Commercial-product catalogs
+   858→   858→   858→
+   859→   859→   859→## 9.4 Laras Network
+   860→   860→   860→
+   861→   861→   861→* Professional identity
+   862→   862→   862→* Public or private professional profile
+   863→   863→   863→* Portfolio
+   864→   864→   864→* Connections
+   865→   865→   865→* Alumni discovery
+   866→   866→   866→* Career circles
+   867→   867→   867→* Study groups
+   868→   868→   868→* Peer review
+   869→   869→   869→* Mock-interview matching
+   870→   870→   870→* Mentorship
+   871→   871→   871→* Professional collaboration
+   872→   872→   872→* Evidence-based contribution
+   873→   873→   873→* Structured professional updates
+   874→   874→   874→
+   875→   875→   875→Do not build a generic viral feed.
+   876→   876→   876→
+   877→   877→   877→Prefer structured contributions such as:
+   878→   878→   878→
+   879→   879→   879→* Project showcase
+   880→   880→   880→* Learning milestone
+   881→   881→   881→* Career update
+   882→   882→   882→* Feedback request
+   883→   883→   883→* Mock-interview request
+   884→   884→   884→* Opportunity discussion
+   885→   885→   885→* Resource recommendation
+   886→   886→   886→* Evidence-backed achievement
+   887→   887→   887→* Mentorship availability
+   888→   888→   888→* Study-circle update
+   889→   889→   889→
+   890→   890→   890→Avoid:
+   891→   891→   891→
+   892→   892→   892→* Engagement bait
+   893→   893→   893→* Outrage ranking
+   894→   894→   894→* Artificial virality
+   895→   895→   895→* Spam following
+   896→   896→   896→* Pay-to-boost posts
+   897→   897→   897→* Vanity interaction systems
+   898→   898→   898→
+   899→   899→   899→## 9.5 Laras Institutions
+   900→   900→   900→
+   901→   901→   901→Workspaces for:
+   902→   902→   902→
+   903→   903→   903→* Universities
+   904→   904→   904→* Career centers
+   905→   905→   905→* Communities
+   906→   906→   906→* Bootcamps
+   907→   907→   907→* Scholarship providers
+   908→   908→   908→* Student organizations
+   909→   909→   909→* Employers
+   910→   910→   910→* Professional organizations
+   911→   911→   911→
+   912→   912→   912→Possible capabilities:
+   913→   913→   913→
+   914→   914→   914→* Cohort management
+   915→   915→   915→* Programs
+   916→   916→   916→* Pathways
+   917→   917→   917→* Advisor assignment
+   918→   918→   918→* Opportunity distribution
+   919→   919→   919→* Events
+   920→   920→   920→* Career challenges
+   921→   921→   921→* Mentoring programs
+   922→   922→   922→* Aggregate readiness analytics
+   923→   923→   923→* Consent-aware insights
+   924→   924→   924→* Organization verification
+   925→   925→   925→* Scoped organization roles
+   926→   926→   926→* Sponsored access seats
+   927→   927→   927→
+   928→   928→   928→## 9.6 Laras Platform
+   929→   929→   929→
+   930→   930→   930→Long-term platform capabilities:
+   931→   931→   931→
+   932→   932→   932→* Stable internal APIs
+   933→   933→   933→* Integrations
+   934→   934→   934→* OAuth scopes
+   935→   935→   935→* Webhooks
+   936→   936→   936→* Import and export schemas
+   937→   937→   937→* Credential verification endpoints
+   938→   938→   938→* Embeddable profile cards
+   939→   939→   939→* Institution integrations
+   940→   940→   940→* Partner sandbox
+   941→   941→   941→* Developer documentation
+   942→   942→   942→* Rate limits
+   943→   943→   943→* Revocation
+   944→   944→   944→* Integration audit logs
+   945→   945→   945→
+   946→   946→   946→Do not prioritize a public API before internal contracts, permissions, and privacy are stable.
+   947→   947→   947→
+   948→   948→   948→## 9.7 Laras Control
+   949→   949→   949→
+   950→   950→   950→A coherent control plane for:
+   951→   951→   951→
+   952→   952→   952→* Owner governance
+   953→   953→   953→* User management
+   954→   954→   954→* Admin permissions
+   955→   955→   955→* Moderator scopes
+   956→   956→   956→* Community governance
+   957→   957→   957→* Opportunity integrity
+   958→   958→   958→* Organization verification
+   959→   959→   959→* Trust and safety
+   960→   960→   960→* Announcements
+   961→   961→   961→* Notifications
+   962→   962→   962→* Plans
+   963→   963→   963→* Entitlements
+   964→   964→   964→* License codes
+   965→   965→   965→* Campaigns
+   966→   966→   966→* Feature flags
+   967→   967→   967→* System configuration
+   968→   968→   968→* AI operations
+   969→   969→   969→* Content operations
+   970→   970→   970→* Security monitoring
+   971→   971→   971→* Privacy requests
+   972→   972→   972→* Analytics
+   973→   973→   973→* System health
+   974→   974→   974→* Incident response
+   975→   975→   975→* Maintenance mode
+   976→   976→   976→
+   977→   977→   977→---
+   978→   978→   978→
+   979→   979→   979→# 10. SHARED CAREER GRAPH
+   980→   980→   980→
+   981→   981→   981→The Living Profile must become more than a CV form.
+   982→   982→   982→
+   983→   983→   983→Create a coherent Career Graph capable of understanding:
+   984→   984→   984→
+   985→   985→   985→* Identity
+   986→   986→   986→* Education
+   987→   987→   987→* Experience
+   988→   988→   988→* Projects
+   989→   989→   989→* Achievements
+   990→   990→   990→* Skills
+   991→   991→   991→* Interests
+   992→   992→   992→* Career goals
+   993→   993→   993→* Target roles
+   994→   994→   994→* Target industries
+   995→   995→   995→* Learning history
+   996→   996→   996→* Application history
+   997→   997→   997→* Interview history
+   998→   998→   998→* English-practice history
+   999→   999→   999→* Opportunity interests
+  1000→  1000→  1000→* Community activity
+  1001→  1001→  1001→* Mentorship
+  1002→  1002→  1002→* Professional relationships
+  1003→  1003→  1003→* Evidence
+  1004→  1004→  1004→* Verification
+  1005→  1005→  1005→* Career outcomes
+  1006→  1006→  1006→* Progress over time
+  1007→  1007→  1007→
+  1008→  1008→  1008→Every important professional claim should support provenance.
+  1009→  1009→  1009→
+  1010→  1010→  1010→Example:
+  1011→  1011→  1011→
+  1012→  1012→  1012→```text
+  1013→  1013→  1013→Claim:
+  1014→  1014→  1014→Advanced SQL proficiency
+  1015→  1015→  1015→
+  1016→  1016→  1016→Evidence:
+  1017→  1017→  1017→- Analytics project
+  1018→  1018→  1018→- Institution certificate
+  1019→  1019→  1019→- Technical challenge
+  1020→  1020→  1020→- Peer review
+  1021→  1021→  1021→- Interview assessment
+  1022→  1022→  1022→
+  1023→  1023→  1023→Status:
+  1024→  1024→  1024→- Self-declared
+  1025→  1025→  1025→- Evidence-backed
+  1026→  1026→  1026→- Peer-confirmed
+  1027→  1027→  1027→- Organization-confirmed
+  1028→  1028→  1028→- Institution-verified
+  1029→  1029→  1029→- Platform-verified
+  1030→  1030→  1030→```
+  1031→  1031→  1031→
+  1032→  1032→  1032→Rules:
+  1033→  1033→  1033→
+  1034→  1034→  1034→* AI-generated text is not evidence.
+  1035→  1035→  1035→* Paid tiers are not verification.
+  1036→  1036→  1036→* Public-profile claims must respect visibility settings.
+  1037→  1037→  1037→* Evidence must maintain source context.
+  1038→  1038→  1038→* Revoked or expired evidence must be represented honestly.
+  1039→  1039→  1039→* Conflicting profile data must be surfaced, not silently merged.
+  1040→  1040→  1040→
+  1041→  1041→  1041→---
+  1042→  1042→  1042→
+  1043→  1043→  1043→# 11. CROSS-PRODUCT ORCHESTRATION
+  1044→  1044→  1044→
+  1045→  1045→  1045→Laras must not feel like separate tools connected through navigation links.
+  1046→  1046→  1046→
+  1047→  1047→  1047→One user action should produce compounding value across the ecosystem.
+  1048→  1048→  1048→
+  1049→  1049→  1049→Example:
+  1050→  1050→  1050→
+  1051→  1051→  1051→```text
+  1052→  1052→  1052→User saves an ODP opportunity
+  1053→  1053→  1053→        ↓
+  1054→  1054→  1054→Requirements are extracted
+  1055→  1055→  1055→        ↓
+  1056→  1056→  1056→Career Graph is matched against the requirements
+  1057→  1057→  1057→        ↓
+  1058→  1058→  1058→Readiness dimensions update
+  1059→  1059→  1059→        ↓
+  1060→  1060→  1060→Missing evidence is identified
+  1061→  1061→  1061→        ↓
+  1062→  1062→  1062→CV recommendations are generated
+  1063→  1063→  1063→        ↓
+  1064→  1064→  1064→Cover-letter context is prepared
+  1065→  1065→  1065→        ↓
+  1066→  1066→  1066→Interview preparation is created
+  1067→  1067→  1067→        ↓
+  1068→  1068→  1068→English practice adapts
+  1069→  1069→  1069→        ↓
+  1070→  1070→  1070→Deadlines and preparation tasks are created
+  1071→  1071→  1071→        ↓
+  1072→  1072→  1072→Relevant peers, alumni, or mentors are suggested
+  1073→  1073→  1073→        ↓
+  1074→  1074→  1074→Application outcome improves future recommendations
+  1075→  1075→  1075→```
+  1076→  1076→  1076→
+  1077→  1077→  1077→Build cross-product workflows, not only cross-links.
+  1078→  1078→  1078→
+  1079→  1079→  1079→Shared workflows should pass:
+  1080→  1080→  1080→
+  1081→  1081→  1081→* Context
+  1082→  1082→  1082→* Evidence
+  1083→  1083→  1083→* Deadlines
+  1084→  1084→  1084→* Documents
+  1085→  1085→  1085→* Progress
+  1086→  1086→  1086→* Feedback
+  1087→  1087→  1087→* Outcomes
+  1088→  1088→  1088→* Permissions
+  1089→  1089→  1089→
+  1090→  1090→  1090→Examples to investigate:
+  1091→  1091→  1091→
+  1092→  1092→  1092→* Opportunity → tailored CV
+  1093→  1093→  1093→* Opportunity → cover letter
+  1094→  1094→  1094→* Opportunity → interview plan
+  1095→  1095→  1095→* Opportunity → English practice
+  1096→  1096→  1096→* Profile gap → learning pathway
+  1097→  1097→  1097→* Interview weakness → targeted practice
+  1098→  1098→  1098→* Rejection outcome → preparation insight
+  1099→  1099→  1099→* Peer feedback → document revision
+  1100→  1100→  1100→* Mentorship session → progress update
+  1101→  1101→  1101→* Community challenge → evidence
+  1102→  1102→  1102→* Institution program → readiness action
+  1103→  1103→  1103→
+  1104→  1104→  1104→---
+  1105→  1105→  1105→
+  1106→  1106→  1106→# 12. DESIGN TRANSFORMATION MANDATE
+  1107→  1107→  1107→
+  1108→  1108→  1108→Design is a first-class product system, not a final decoration step.
+  1109→  1109→  1109→
+  1110→  1110→  1110→Use the local design skills deeply and use internet research when valuable.
+  1111→  1111→  1111→
+  1112→  1112→  1112→## 12.1 Design goal
+  1113→  1113→  1113→
+  1114→  1114→  1114→Laras should feel:
+  1115→  1115→  1115→
+  1116→  1116→  1116→* Warm
+  1117→  1117→  1117→* Editorial
+  1118→  1118→  1118→* Calm
+  1119→  1119→  1119→* Intelligent
+  1120→  1120→  1120→* Trustworthy
+  1121→  1121→  1121→* Professional
+  1122→  1122→  1122→* Human
+  1123→  1123→  1123→* Indonesian in relevance
+  1124→  1124→  1124→* Globally credible
+  1125→  1125→  1125→* Modern without being trendy
+  1126→  1126→  1126→* Premium without feeling exclusive
+  1127→  1127→  1127→* Rich without feeling cluttered
+  1128→  1128→  1128→
+  1129→  1129→  1129→Do not turn Laras into a generic AI SaaS design.
+  1130→  1130→  1130→
+  1131→  1131→  1131→Avoid:
+  1132→  1132→  1132→
+  1133→  1133→  1133→* Random purple-blue gradients
+  1134→  1134→  1134→* Excessive glassmorphism
+  1135→  1135→  1135→* Decorative blobs without purpose
+  1136→  1136→  1136→* Oversized hero typography on every page
+  1137→  1137→  1137→* Inconsistent card styles
+  1138→  1138→  1138→* Excessive rounded containers
+  1139→  1139→  1139→* Excessive shadow
+  1140→  1140→  1140→* Meaningless motion
+  1141→  1141→  1141→* Fake charts
+  1142→  1142→  1142→* Fake statistics
+  1143→  1143→  1143→* Generic AI sparkle icons everywhere
+  1144→  1144→  1144→* Empty dashboards filled with decorative cards
+  1145→  1145→  1145→* Dense enterprise screens without hierarchy
+  1146→  1146→  1146→
+  1147→  1147→  1147→## 12.2 Preserve and strengthen brand identity
+  1148→  1148→  1148→
+  1149→  1149→  1149→Audit the existing visual language and preserve valuable Laras brand DNA.
+  1150→  1150→  1150→
+  1151→  1151→  1151→Create or refine:
+  1152→  1152→  1152→
+  1153→  1153→  1153→* Brand principles
+  1154→  1154→  1154→* Typography system
+  1155→  1155→  1155→* Color system
+  1156→  1156→  1156→* Semantic colors
+  1157→  1157→  1157→* Neutral scale
+  1158→  1158→  1158→* Spacing system
+  1159→  1159→  1159→* Grid system
+  1160→  1160→  1160→* Radius system
+  1161→  1161→  1161→* Elevation system
+  1162→  1162→  1162→* Icon system
+  1163→  1163→  1163→* Motion principles
+  1164→  1164→  1164→* Content-width rules
+  1165→  1165→  1165→* Density rules
+  1166→  1166→  1166→* Data-visualization rules
+  1167→  1167→  1167→* Illustration and imagery guidance
+  1168→  1168→  1168→* Empty-state language
+  1169→  1169→  1169→* Voice and tone
+  1170→  1170→  1170→
+  1171→  1171→  1171→Centralize design tokens.
+  1172→  1172→  1172→
+  1173→  1173→  1173→Do not scatter arbitrary values throughout components.
+  1174→  1174→  1174→
+  1175→  1175→  1175→## 12.3 Information architecture
+  1176→  1176→  1176→
+  1177→  1177→  1177→Redesign navigation around user goals, not technical modules.
+  1178→  1178→  1178→
+  1179→  1179→  1179→A user should quickly understand:
+  1180→  1180→  1180→
+  1181→  1181→  1181→* Where they are
+  1182→  1182→  1182→* What Laras recommends
+  1183→  1183→  1183→* What requires attention
+  1184→  1184→  1184→* What their next action is
+  1185→  1185→  1185→* How modules relate
+  1186→  1186→  1186→* How progress is changing
+  1187→  1187→  1187→
+  1188→  1188→  1188→Avoid:
+  1189→  1189→  1189→
+  1190→  1190→  1190→* Overloaded sidebars
+  1191→  1191→  1191→* Duplicate navigation
+  1192→  1192→  1192→* Hidden critical actions
+  1193→  1193→  1193→* Too many top-level items
+  1194→  1194→  1194→* Product names users cannot understand
+  1195→  1195→  1195→* Different interaction patterns for similar tasks
+  1196→  1196→  1196→
+  1197→  1197→  1197→Consider:
+  1198→  1198→  1198→
+  1199→  1199→  1199→* Goal-based navigation
+  1200→  1200→  1200→* Contextual workspace navigation
+  1201→  1201→  1201→* Universal search
+  1202→  1202→  1202→* Unified inbox
+  1203→  1203→  1203→* Action center
+  1204→  1204→  1204→* Command palette
+  1205→  1205→  1205→* Mobile bottom navigation where appropriate
+  1206→  1206→  1206→* Contextual secondary navigation
+  1207→  1207→  1207→* Clear breadcrumbs for deep workflows
+  1208→  1208→  1208→
+  1209→  1209→  1209→## 12.4 Consumer and control-plane design
+  1210→  1210→  1210→
+  1211→  1211→  1211→User-facing products and administrative products may have different density, but must share one design language.
+  1212→  1212→  1212→
+  1213→  1213→  1213→User surfaces should prioritize:
+  1214→  1214→  1214→
+  1215→  1215→  1215→* Clarity
+  1216→  1216→  1216→* Guidance
+  1217→  1217→  1217→* Confidence
+  1218→  1218→  1218→* Momentum
+  1219→  1219→  1219→* Personal context
+  1220→  1220→  1220→
+  1221→  1221→  1221→Administrative surfaces should prioritize:
+  1222→  1222→  1222→
+  1223→  1223→  1223→* Scanability
+  1224→  1224→  1224→* Risk awareness
+  1225→  1225→  1225→* Bulk operations
+  1226→  1226→  1226→* Auditability
+  1227→  1227→  1227→* Precision
+  1228→  1228→  1228→* Clear destructive actions
+  1229→  1229→  1229→* Dense data without visual chaos
+  1230→  1230→  1230→
+  1231→  1231→  1231→## 12.5 Forms and editors
+  1232→  1232→  1232→
+  1233→  1233→  1233→Improve:
+  1234→  1234→  1234→
+  1235→  1235→  1235→* Progressive disclosure
+  1236→  1236→  1236→* Inline guidance
+  1237→  1237→  1237→* Validation
+  1238→  1238→  1238→* Save status
+  1239→  1239→  1239→* Autosave
+  1240→  1240→  1240→* Recovery
+  1241→  1241→  1241→* Draft persistence
+  1242→  1242→  1242→* Contextual examples
+  1243→  1243→  1243→* Clear optional versus required fields
+  1244→  1244→  1244→* Keyboard flow
+  1245→  1245→  1245→* Mobile editing
+  1246→  1246→  1246→* AI assistance without taking control
+  1247→  1247→  1247→
+  1248→  1248→  1248→Document builders should support:
+  1249→  1249→  1249→
+  1250→  1250→  1250→* Section-level editing
+  1251→  1251→  1251→* Section-level AI revision
+  1252→  1252→  1252→* Reordering
+  1253→  1253→  1253→* Preview
+  1254→  1254→  1254→* Version history
+  1255→  1255→  1255→* Compare
+  1256→  1256→  1256→* Restore
+  1257→  1257→  1257→* Export
+  1258→  1258→  1258→* Consistency review
+  1259→  1259→  1259→* Evidence warnings
+  1260→  1260→  1260→* Missing-information prompts
+  1261→  1261→  1261→
+  1262→  1262→  1262→## 12.6 State design
+  1263→  1263→  1263→
+  1264→  1264→  1264→Every meaningful surface must include:
+  1265→  1265→  1265→
+  1266→  1266→  1266→* Loading state
+  1267→  1267→  1267→* Skeleton state
+  1268→  1268→  1268→* Empty state
+  1269→  1269→  1269→* First-use state
+  1270→  1270→  1270→* Success state
+  1271→  1271→  1271→* Error state
+  1272→  1272→  1272→* Partial-failure state
+  1273→  1273→  1273→* Offline or poor-network state when relevant
+  1274→  1274→  1274→* Permission-denied state
+  1275→  1275→  1275→* Quota-exhausted state
+  1276→  1276→  1276→* Expired-license state
+  1277→  1277→  1277→* Campaign-active state
+  1278→  1278→  1278→* Maintenance state
+  1279→  1279→  1279→
+  1280→  1280→  1280→Empty states must help users act.
+  1281→  1281→  1281→
+  1282→  1282→  1282→Do not write generic copy such as “No data found” when actionable guidance is possible.
+  1283→  1283→  1283→
+  1284→  1284→  1284→## 12.7 Motion and microinteractions
+  1285→  1285→  1285→
+  1286→  1286→  1286→Use motion only to:
+  1287→  1287→  1287→
+  1288→  1288→  1288→* Confirm state change
+  1289→  1289→  1289→* Explain hierarchy
+  1290→  1290→  1290→* Show continuity
+  1291→  1291→  1291→* Show progress
+  1292→  1292→  1292→* Reduce uncertainty
+  1293→  1293→  1293→* Draw attention to critical change
+  1294→  1294→  1294→
+  1295→  1295→  1295→Support reduced-motion preferences.
+  1296→  1296→  1296→
+  1297→  1297→  1297→Do not create distracting, slow, or ornamental animation.
+  1298→  1298→  1298→
+  1299→  1299→  1299→## 12.8 Responsive design
+  1300→  1300→  1300→
+  1301→  1301→  1301→Test at minimum:
+  1302→  1302→  1302→
+  1303→  1303→  1303→* Approximately 375 px
+  1304→  1304→  1304→* Approximately 768 px
+  1305→  1305→  1305→* Approximately 1024 px
+  1306→  1306→  1306→* Approximately 1440 px
+  1307→  1307→  1307→
+  1308→  1308→  1308→Requirements:
+  1309→  1309→  1309→
+  1310→  1310→  1310→* No unintended horizontal overflow
+  1311→  1311→  1311→* Reachable mobile actions
+  1312→  1312→  1312→* Adequate touch targets
+  1313→  1313→  1313→* Intentional mobile tables
+  1314→  1314→  1314→* Mobile-friendly editors
+  1315→  1315→  1315→* Scroll-safe modals
+  1316→  1316→  1316→* Complete mobile navigation
+  1317→  1317→  1317→* Readable charts
+  1318→  1318→  1318→* Stable layouts
+  1319→  1319→  1319→* No clipped dropdowns
+  1320→  1320→  1320→* No hidden CTAs
+  1321→  1321→  1321→* No desktop-only critical workflows
+  1322→  1322→  1322→
+  1323→  1323→  1323→## 12.9 Dark mode
+  1324→  1324→  1324→
+  1325→  1325→  1325→Dark mode must be deliberately designed.
+  1326→  1326→  1326→
+  1327→  1327→  1327→Do not merely invert colors.
+  1328→  1328→  1328→
+  1329→  1329→  1329→Verify:
+  1330→  1330→  1330→
+  1331→  1331→  1331→* Contrast
+  1332→  1332→  1332→* Semantic colors
+  1333→  1333→  1333→* Charts
+  1334→  1334→  1334→* Editors
+  1335→  1335→  1335→* Input fields
+  1336→  1336→  1336→* Modals
+  1337→  1337→  1337→* Empty states
+  1338→  1338→  1338→* Focus indicators
+  1339→  1339→  1339→* Code or preview surfaces
+  1340→  1340→  1340→* Export previews where relevant
+  1341→  1341→  1341→
+  1342→  1342→  1342→## 12.10 Accessibility
+  1343→  1343→  1343→
+  1344→  1344→  1344→Target WCAG AA quality.
+  1345→  1345→  1345→
+  1346→  1346→  1346→Include:
+  1347→  1347→  1347→
+  1348→  1348→  1348→* Keyboard-operable flows
+  1349→  1349→  1349→* Visible focus
+  1350→  1350→  1350→* Semantic headings
+  1351→  1351→  1351→* Landmarks
+  1352→  1352→  1352→* Correct labels
+  1353→  1353→  1353→* Accessible validation
+  1354→  1354→  1354→* Dialog focus management
+  1355→  1355→  1355→* Screen-reader announcements
+  1356→  1356→  1356→* Reduced motion
+  1357→  1357→  1357→* Non-color-only communication
+  1358→  1358→  1358→* Sufficient contrast
+  1359→  1359→  1359→* Accessible charts and summaries
+  1360→  1360→  1360→* Logical tab order
+  1361→  1361→  1361→* Adequate target sizes
+  1362→  1362→  1362→
+  1363→  1363→  1363→Accessibility and safety are never premium features.
+  1364→  1364→  1364→
+  1365→  1365→  1365→## 12.11 Content design
+  1366→  1366→  1366→
+  1367→  1367→  1367→Audit interface language in Indonesian and English.
+  1368→  1368→  1368→
+  1369→  1369→  1369→Copy should be:
+  1370→  1370→  1370→
+  1371→  1371→  1371→* Clear
+  1372→  1372→  1372→* Specific
+  1373→  1373→  1373→* Supportive
+  1374→  1374→  1374→* Professional
+  1375→  1375→  1375→* Human
+  1376→  1376→  1376→* Honest
+  1377→  1377→  1377→* Action-oriented
+  1378→  1378→  1378→* Free from exaggerated AI claims
+  1379→  1379→  1379→
+  1380→  1380→  1380→Avoid:
+  1381→  1381→  1381→
+  1382→  1382→  1382→* Generic motivational language
+  1383→  1383→  1383→* Overpromising career outcomes
+  1384→  1384→  1384→* Shame-based messaging
+  1385→  1385→  1385→* Threatening quota language
+  1386→  1386→  1386→* Fake urgency
+  1387→  1387→  1387→* Manipulative upgrade copy
+  1388→  1388→  1388→
+  1389→  1389→  1389→## 12.12 Visual QA
+  1390→  1390→  1390→
+  1391→  1391→  1391→For every major redesigned route:
+  1392→  1392→  1392→
+  1393→  1393→  1393→* Capture screenshots
+  1394→  1394→  1394→* Review at multiple viewport sizes
+  1395→  1395→  1395→* Review light and dark themes
+  1396→  1396→  1396→* Review ID and EN
+  1397→  1397→  1397→* Inspect spacing
+  1398→  1398→  1398→* Inspect hierarchy
+  1399→  1399→  1399→* Inspect overflow
+  1400→  1400→  1400→* Inspect content density
+  1401→  1401→  1401→* Inspect empty states
+  1402→  1402→  1402→* Inspect real data, not only ideal seed data
+  1403→  1403→  1403→
+  1404→  1404→  1404→A design is not complete because it looks good in one screenshot.
+  1405→  1405→  1405→
+  1406→  1406→  1406→---
+  1407→  1407→  1407→
+  1408→  1408→  1408→# 13. LARAS INTELLIGENCE LAYER
+  1409→  1409→  1409→
+  1410→  1410→  1410→AI must operate as a governed intelligence layer, not merely a floating chatbot.
+  1411→  1411→  1411→
+  1412→  1412→  1412→Possible roles:
+  1413→  1413→  1413→
+  1414→  1414→  1414→* Career copilot
+  1415→  1415→  1415→* Opportunity analyst
+  1416→  1416→  1416→* Readiness coach
+  1417→  1417→  1417→* Document strategist
+  1418→  1418→  1418→* Consistency checker
+  1419→  1419→  1419→* Interview coach
+  1420→  1420→  1420→* English coach
+  1421→  1421→  1421→* Learning planner
+  1422→  1422→  1422→* Search assistant
+  1423→  1423→  1423→* Preparation planner
+  1424→  1424→  1424→* Admin safety assistant
+  1425→  1425→  1425→* Content-quality assistant
+  1426→  1426→  1426→
+  1427→  1427→  1427→AI must:
+  1428→  1428→  1428→
+  1429→  1429→  1429→* Use authorized user context
+  1430→  1430→  1430→* Explain recommendation sources
+  1431→  1431→  1431→* Distinguish fact, inference, and suggestion
+  1432→  1432→  1432→* Ask for missing evidence
+  1433→  1433→  1433→* Avoid fabricated achievements
+  1434→  1434→  1434→* Avoid fabricated metrics
+  1435→  1435→  1435→* Respect permissions
+  1436→  1436→  1436→* Respect profile visibility
+  1437→  1437→  1437→* Avoid exposing private data
+  1438→  1438→  1438→* Validate structured output
+  1439→  1439→  1439→* Handle failure gracefully
+  1440→  1440→  1440→* Support editing
+  1441→  1441→  1441→* Support undo for consequential actions
+  1442→  1442→  1442→* Log sensitive automated actions
+  1443→  1443→  1443→* Defend against prompt injection
+  1444→  1444→  1444→* Be cost-aware
+  1445→  1445→  1445→* Use suitable model routing
+  1446→  1446→  1446→
+  1447→  1447→  1447→AI must not autonomously control:
+  1448→  1448→  1448→
+  1449→  1449→  1449→* Permanent bans
+  1450→  1450→  1450→* Verification
+  1451→  1451→  1451→* Reputation
+  1452→  1452→  1452→* Organization ownership
+  1453→  1453→  1453→* Platform roles
+  1454→  1454→  1454→* Sensitive private-data access
+  1455→  1455→  1455→* Final moderation appeals
+  1456→  1456→  1456→
+  1457→  1457→  1457→## 13.1 AI reliability
+  1458→  1458→  1458→
+  1459→  1459→  1459→Implement:
+  1460→  1460→  1460→
+  1461→  1461→  1461→* Prompt versioning
+  1462→  1462→  1462→* Structured-output schemas
+  1463→  1463→  1463→* Runtime validation
+  1464→  1464→  1464→* Retry policy
+  1465→  1465→  1465→* Provider timeout handling
+  1466→  1466→  1466→* Fallback model strategy
+  1467→  1467→  1467→* Circuit breaker
+  1468→  1468→  1468→* Cost budgets
+  1469→  1469→  1469→* Feature-level kill switches
+  1470→  1470→  1470→* Usage accounting
+  1471→  1471→  1471→* Failure refunds for quotas
+  1472→  1472→  1472→* Evaluation fixtures
+  1473→  1473→  1473→* Observability
+  1474→  1474→  1474→
+  1475→  1475→  1475→Do not consume a user quota when the provider fails before delivering a valid result.
+  1476→  1476→  1476→
+  1477→  1477→  1477→## 13.2 Evaluation fixtures
+  1478→  1478→  1478→
+  1479→  1479→  1479→Test representative scenarios:
+  1480→  1480→  1480→
+  1481→  1481→  1481→* Minimal profile
+  1482→  1482→  1482→* Rich profile
+  1483→  1483→  1483→* Missing evidence
+  1484→  1484→  1484→* Conflicting evidence
+  1485→  1485→  1485→* Indonesian request
+  1486→  1486→  1486→* English request
+  1487→  1487→  1487→* Long opportunity description
+  1488→  1488→  1488→* Ambiguous opportunity description
+  1489→  1489→  1489→* Prompt injection inside pasted content
+  1490→  1490→  1490→* Invalid model output
+  1491→  1491→  1491→* Provider timeout
+  1492→  1492→  1492→* Rate-limit exhaustion
+  1493→  1493→  1493→* Free-tier quota exhaustion
+  1494→  1494→  1494→* Active campaign boost
+  1495→  1495→  1495→
+  1496→  1496→  1496→---
+  1497→  1497→  1497→
+  1498→  1498→  1498→# 14. PROFESSIONAL NETWORK AND COMMUNITY
+  1499→  1499→  1499→
+  1500→  1500→  1500→Laras should become a **Professional Action and Evidence Network**, not a generic social network.
+  1501→  1501→  1501→
+  1502→  1502→  1502→Professional relationships should help users:
+  1503→  1503→  1503→
+  1504→  1504→  1504→* Find alumni
+  1505→  1505→  1505→* Find study partners
+  1506→  1506→  1506→* Find interview-practice partners
+  1507→  1507→  1507→* Find peers with similar goals
+  1508→  1508→  1508→* Request structured feedback
+  1509→  1509→  1509→* Join preparation circles
+  1510→  1510→  1510→* Learn from successful users
+  1511→  1511→  1511→* Become mentors later
+  1512→  1512→  1512→* Build professional evidence
+  1513→  1513→  1513→* Collaborate on projects
+  1514→  1514→  1514→
+  1515→  1515→  1515→## 14.1 Professional profile
+  1516→  1516→  1516→
+  1517→  1517→  1517→Support:
+  1518→  1518→  1518→
+  1519→  1519→  1519→* Public
+  1520→  1520→  1520→* Connections-only
+  1521→  1521→  1521→* Private
+  1522→  1522→  1522→
+  1523→  1523→  1523→Support per-field visibility.
+  1524→  1524→  1524→
+  1525→  1525→  1525→Possible sections:
+  1526→  1526→  1526→
+  1527→  1527→  1527→* Headline
+  1528→  1528→  1528→* Summary
+  1529→  1529→  1529→* Goals
+  1530→  1530→  1530→* Experience
+  1531→  1531→  1531→* Education
+  1532→  1532→  1532→* Skills
+  1533→  1533→  1533→* Projects
+  1534→  1534→  1534→* Evidence
+  1535→  1535→  1535→* Credentials
+  1536→  1536→  1536→* Portfolio
+  1537→  1537→  1537→* Contributions
+  1538→  1538→  1538→* Mentorship availability
+  1539→  1539→  1539→* Communities
+  1540→  1540→  1540→* Achievements
+  1541→  1541→  1541→
+  1542→  1542→  1542→Users must be able to preview their profile as:
+  1543→  1543→  1543→
+  1544→  1544→  1544→* Public visitor
+  1545→  1545→  1545→* Connection
+  1546→  1546→  1546→* Organization
+  1547→  1547→  1547→* Institution
+  1548→  1548→  1548→* Self
+  1549→  1549→  1549→
+  1550→  1550→  1550→## 14.2 Career circles
+  1551→  1551→  1551→
+  1552→  1552→  1552→Examples:
+  1553→  1553→  1553→
+  1554→  1554→  1554→* LPDP preparation
+  1555→  1555→  1555→* ODP preparation
+  1556→  1556→  1556→* BUMN preparation
+  1557→  1557→  1557→* CPNS preparation
+  1558→  1558→  1558→* Fresh Graduate 2026
+  1559→  1559→  1559→* Career switch into data
+  1560→  1560→  1560→* TOEFL study circle
+  1561→  1561→  1561→* University alumni
+  1562→  1562→  1562→* Industry groups
+  1563→  1563→  1563→
+  1564→  1564→  1564→A circle should support meaningful work:
+  1565→  1565→  1565→
+  1566→  1566→  1566→* Rules
+  1567→  1567→  1567→* Milestones
+  1568→  1568→  1568→* Shared plans
+  1569→  1569→  1569→* Peer review
+  1570→  1570→  1570→* Mock interviews
+  1571→  1571→  1571→* Accountability
+  1572→  1572→  1572→* Resource library
+  1573→  1573→  1573→* Moderated discussion
+  1574→  1574→  1574→* Events
+  1575→  1575→  1575→* Contribution history
+  1576→  1576→  1576→* Reporting
+  1577→  1577→  1577→* Member roles
+  1578→  1578→  1578→
+  1579→  1579→  1579→## 14.3 Peer review
+  1580→  1580→  1580→
+  1581→  1581→  1581→Peer review should be structured.
+  1582→  1582→  1582→
+  1583→  1583→  1583→Support:
+  1584→  1584→  1584→
+  1585→  1585→  1585→* Review request
+  1586→  1586→  1586→* Scope
+  1587→  1587→  1587→* Deadline
+  1588→  1588→  1588→* Reviewer acceptance
+  1589→  1589→  1589→* Inline or structured feedback
+  1590→  1590→  1590→* Helpfulness rating
+  1591→  1591→  1591→* Revision response
+  1592→  1592→  1592→* Abuse reporting
+  1593→  1593→  1593→* Privacy
+  1594→  1594→  1594→* Evidence of contribution
+  1595→  1595→  1595→
+  1596→  1596→  1596→Do not allow users to gain reputation through low-quality spam reviews.
+  1597→  1597→  1597→
+  1598→  1598→  1598→## 14.4 Mentorship
+  1599→  1599→  1599→
+  1600→  1600→  1600→Support:
+  1601→  1601→  1601→
+  1602→  1602→  1602→* Mentor profile
+  1603→  1603→  1603→* Expertise
+  1604→  1604→  1604→* Availability
+  1605→  1605→  1605→* Scope
+  1606→  1606→  1606→* Request
+  1607→  1607→  1607→* Acceptance
+  1608→  1608→  1608→* Agenda
+  1609→  1609→  1609→* Session outcome
+  1610→  1610→  1610→* Follow-up
+  1611→  1611→  1611→* Feedback
+  1612→  1612→  1612→* Safety reporting
+  1613→  1613→  1613→
+  1614→  1614→  1614→Mentorship must not become an e-commerce marketplace.
+  1615→  1615→  1615→
+  1616→  1616→  1616→Do not implement:
+  1617→  1617→  1617→
+  1618→  1618→  1618→* Service listings
+  1619→  1619→  1619→* Checkout
+  1620→  1620→  1620→* Commission
+  1621→  1621→  1621→* Bidding
+  1622→  1622→  1622→* Paid ranking
+  1623→  1623→  1623→
+  1624→  1624→  1624→## 14.5 Communication
+  1625→  1625→  1625→
+  1626→  1626→  1626→Do not launch unrestricted direct messaging without safety controls.
+  1627→  1627→  1627→
+  1628→  1628→  1628→Use a progression such as:
+  1629→  1629→  1629→
+  1630→  1630→  1630→```text
+  1631→  1631→  1631→Notification
+  1632→  1632→  1632→→ Structured request
+  1633→  1633→  1633→→ Message request
+  1634→  1634→  1634→→ Accepted conversation
+  1635→  1635→  1635→→ Group or circle conversation
+  1636→  1636→  1636→→ Scheduled session
+  1637→  1637→  1637→```
+  1638→  1638→  1638→
+  1639→  1639→  1639→Required protections:
+  1640→  1640→  1640→
+  1641→  1641→  1641→* Block
+  1642→  1642→  1642→* Mute
+  1643→  1643→  1643→* Remove connection
+  1644→  1644→  1644→* Message requests
+  1645→  1645→  1645→* Spam limits
+  1646→  1646→  1646→* Attachment controls
+  1647→  1647→  1647→* Reporting
+  1648→  1648→  1648→* Conversation evidence
+  1649→  1649→  1649→* Privacy settings
+  1650→  1650→  1650→* Safe retention
+  1651→  1651→  1651→* User consent
+  1652→  1652→  1652→
+  1653→  1653→  1653→---
+  1654→  1654→  1654→
+  1655→  1655→  1655→# 15. OPPORTUNITY NETWORK
+  1656→  1656→  1656→
+  1657→  1657→  1657→The Opportunity Network must go beyond storing links.
+  1658→  1658→  1658→
+  1659→  1659→  1659→Each opportunity should support:
+  1660→  1660→  1660→
+  1661→  1661→  1661→* Source
+  1662→  1662→  1662→* Organization
+  1663→  1663→  1663→* Type
+  1664→  1664→  1664→* Requirements
+  1665→  1665→  1665→* Deadline
+  1666→  1666→  1666→* Location
+  1667→  1667→  1667→* Modality
+  1668→  1668→  1668→* Eligibility
+  1669→  1669→  1669→* Verification state
+  1670→  1670→  1670→* Expiration
+  1671→  1671→  1671→* User reports
+  1672→  1672→  1672→* Duplicate detection
+  1673→  1673→  1673→* Scam signals
+  1674→  1674→  1674→* Related preparation
+  1675→  1675→  1675→* Related communities
+  1676→  1676→  1676→* Related mentors or alumni
+  1677→  1677→  1677→
+  1678→  1678→  1678→User workflows should include:
+  1679→  1679→  1679→
+  1680→  1680→  1680→* Save
+  1681→  1681→  1681→* Follow
+  1682→  1682→  1682→* Analyze
+  1683→  1683→  1683→* Match
+  1684→  1684→  1684→* Gap review
+  1685→  1685→  1685→* Preparation plan
+  1686→  1686→  1686→* Document tailoring
+  1687→  1687→  1687→* Interview preparation
+  1688→  1688→  1688→* English preparation
+  1689→  1689→  1689→* Deadline tasks
+  1690→  1690→  1690→* Application
+  1691→  1691→  1691→* Outcome
+  1692→  1692→  1692→* Reflection
+  1693→  1693→  1693→* Learning
+  1694→  1694→  1694→
+  1695→  1695→  1695→The system must explain:
+  1696→  1696→  1696→
+  1697→  1697→  1697→* Why an opportunity matches
+  1698→  1698→  1698→* Which evidence supports the match
+  1699→  1699→  1699→* Which requirements are unmet
+  1700→  1700→  1700→* Which action has the highest value
+  1701→  1701→  1701→* What the system cannot determine
+  1702→  1702→  1702→
+  1703→  1703→  1703→Do not manipulate match scores based on tier.
+  1704→  1704→  1704→
+  1705→  1705→  1705→---
+  1706→  1706→  1706→
+  1707→  1707→  1707→# 16. INSTITUTION AND ORGANIZATION WORKSPACES
+  1708→  1708→  1708→
+  1709→  1709→  1709→Support multi-tenant workspaces for:
+  1710→  1710→  1710→
+  1711→  1711→  1711→* Universities
+  1712→  1712→  1712→* Career centers
+  1713→  1713→  1713→* Communities
+  1714→  1714→  1714→* Bootcamps
+  1715→  1715→  1715→* Scholarship providers
+  1716→  1716→  1716→* Employers
+  1717→  1717→  1717→* Professional organizations
+  1718→  1718→  1718→
+  1719→  1719→  1719→Possible scoped roles:
+  1720→  1720→  1720→
+  1721→  1721→  1721→```text
+  1722→  1722→  1722→ORGANIZATION_OWNER
+  1723→  1723→  1723→ORGANIZATION_ADMIN
+  1724→  1724→  1724→RECRUITER
+  1725→  1725→  1725→CAREER_ADVISOR
+  1726→  1726→  1726→PROGRAM_MANAGER
+  1727→  1727→  1727→MENTOR
+  1728→  1728→  1728→COMMUNITY_LEAD
+  1729→  1729→  1729→CONTENT_EDITOR
+  1730→  1730→  1730→ANALYST
+  1731→  1731→  1731→REVIEWER
+  1732→  1732→  1732→MEMBER
+  1733→  1733→  1733→```
+  1734→  1734→  1734→
+  1735→  1735→  1735→Possible capabilities:
+  1736→  1736→  1736→
+  1737→  1737→  1737→* Workspace profile
+  1738→  1738→  1738→* Members
+  1739→  1739→  1739→* Roles
+  1740→  1740→  1740→* Cohorts
+  1741→  1741→  1741→* Programs
+  1742→  1742→  1742→* Events
+  1743→  1743→  1743→* Opportunities
+  1744→  1744→  1744→* Resources
+  1745→  1745→  1745→* Advisor assignment
+  1746→  1746→  1746→* Mentorship
+  1747→  1747→  1747→* Sponsored seats
+  1748→  1748→  1748→* Aggregate analytics
+  1749→  1749→  1749→* Verification
+  1750→  1750→  1750→* Audit logs
+  1751→  1751→  1751→
+  1752→  1752→  1752→Tenant isolation is mandatory.
+  1753→  1753→  1753→
+  1754→  1754→  1754→Organization users must not automatically access:
+  1755→  1755→  1755→
+  1756→  1756→  1756→* Private CVs
+  1757→  1757→  1757→* Private essays
+  1758→  1758→  1758→* Private messages
+  1759→  1759→  1759→* Private interview answers
+  1760→  1760→  1760→* Private recordings
+  1761→  1761→  1761→* Unshared readiness details
+  1762→  1762→  1762→
+  1763→  1763→  1763→Use explicit consent and authorized sharing.
+  1764→  1764→  1764→
+  1765→  1765→  1765→---
+  1766→  1766→  1766→
+  1767→  1767→  1767→# 17. ROLE, PERMISSION, AND GOVERNANCE
+  1768→  1768→  1768→
+  1769→  1769→  1769→Role and plan tier are separate systems.
+  1770→  1770→  1770→
+  1771→  1771→  1771→## 17.1 Platform roles
+  1772→  1772→  1772→
+  1773→  1773→  1773→```text
+  1774→  1774→  1774→OWNER
+  1775→  1775→  1775→ADMIN
+  1776→  1776→  1776→MODERATOR
+  1777→  1777→  1777→USER
+  1778→  1778→  1778→```
+  1779→  1779→  1779→
+  1780→  1780→  1780→### Owner
+  1781→  1781→  1781→
+  1782→  1782→  1782→Owner is the highest recovery and governance authority.
+  1783→  1783→  1783→
+  1784→  1784→  1784→Owner may:
+  1785→  1785→  1785→
+  1786→  1786→  1786→* Appoint or remove admins
+  1787→  1787→  1787→* Review admin actions
+  1788→  1788→  1788→* Manage root configuration
+  1789→  1789→  1789→* Trigger emergency controls
+  1790→  1790→  1790→* Freeze sensitive systems
+  1791→  1791→  1791→* Recover platform control
+  1792→  1792→  1792→* Manage high-risk license permissions
+  1793→  1793→  1793→* Review incidents
+  1794→  1794→  1794→* Override operational decisions with auditability
+  1795→  1795→  1795→
+  1796→  1796→  1796→### Admin
+  1797→  1797→  1797→
+  1798→  1798→  1798→Admins receive explicit permissions.
+  1799→  1799→  1799→
+  1800→  1800→  1800→Do not assume all admins automatically have all permissions.
+  1801→  1801→  1801→
+  1802→  1802→  1802→Potential permissions:
+  1803→  1803→  1803→
+  1804→  1804→  1804→```text
+  1805→  1805→  1805→users.view
+  1806→  1806→  1806→users.manage
+  1807→  1807→  1807→roles.manage
+  1808→  1808→  1808→moderators.manage
+  1809→  1809→  1809→communities.manage
+  1810→  1810→  1810→opportunities.manage
+  1811→  1811→  1811→organizations.manage
+  1812→  1812→  1812→verification.manage
+  1813→  1813→  1813→announcements.manage
+  1814→  1814→  1814→notifications.manage
+  1815→  1815→  1815→features.manage
+  1816→  1816→  1816→campaigns.manage
+  1817→  1817→  1817→licenses.manage
+  1818→  1818→  1818→plans.manage
+  1819→  1819→  1819→ai.manage
+  1820→  1820→  1820→content.manage
+  1821→  1821→  1821→security.view
+  1822→  1822→  1822→security.manage
+  1823→  1823→  1823→privacy.manage
+  1824→  1824→  1824→analytics.view
+  1825→  1825→  1825→operations.manage
+  1826→  1826→  1826→support.manage
+  1827→  1827→  1827→```
+  1828→  1828→  1828→
+  1829→  1829→  1829→### Moderator
+  1830→  1830→  1830→
+  1831→  1831→  1831→Moderators must be appointed by an authorized admin.
+  1832→  1832→  1832→
+  1833→  1833→  1833→Moderator authority must be scoped by:
+  1834→  1834→  1834→
+  1835→  1835→  1835→* Community
+  1836→  1836→  1836→* Content type
+  1837→  1837→  1837→* Language
+  1838→  1838→  1838→* Region
+  1839→  1839→  1839→* Organization
+  1840→  1840→  1840→* Risk category
+  1841→  1841→  1841→* Allowed action
+  1842→  1842→  1842→* Assignment duration
+  1843→  1843→  1843→* Escalation level
+  1844→  1844→  1844→
+  1845→  1845→  1845→Moderators must not automatically access:
+  1846→  1846→  1846→
+  1847→  1847→  1847→* Private CVs
+  1848→  1848→  1848→* Private essays
+  1849→  1849→  1849→* Interview answers
+  1850→  1850→  1850→* Private messages
+  1851→  1851→  1851→* Secrets
+  1852→  1852→  1852→* AI credentials
+  1853→  1853→  1853→* Plan configuration
+  1854→  1854→  1854→* License management
+  1855→  1855→  1855→* Platform-role management
+  1856→  1856→  1856→* Database export
+  1857→  1857→  1857→* Audit deletion
+  1858→  1858→  1858→
+  1859→  1859→  1859→### User
+  1860→  1860→  1860→
+  1861→  1861→  1861→Users control:
+  1862→  1862→  1862→
+  1863→  1863→  1863→* Profile
+  1864→  1864→  1864→* Visibility
+  1865→  1865→  1865→* Connections
+  1866→  1866→  1866→* Communities
+  1867→  1867→  1867→* Messages
+  1868→  1868→  1868→* Integrations
+  1869→  1869→  1869→* Data export
+  1870→  1870→  1870→* Account deletion
+  1871→  1871→  1871→* Privacy consent
+  1872→  1872→  1872→* Block and mute
+  1873→  1873→  1873→* Reports
+  1874→  1874→  1874→* Appeals
+  1875→  1875→  1875→
+  1876→  1876→  1876→## 17.2 Authorization model
+  1877→  1877→  1877→
+  1878→  1878→  1878→Use a combination of:
+  1879→  1879→  1879→
+  1880→  1880→  1880→* RBAC
+  1881→  1881→  1881→* ABAC
+  1882→  1882→  1882→* ReBAC
+  1883→  1883→  1883→
+  1884→  1884→  1884→Authorization must consider:
+  1885→  1885→  1885→
+  1886→  1886→  1886→* Role
+  1887→  1887→  1887→* Permission
+  1888→  1888→  1888→* Assignment
+  1889→  1889→  1889→* Community
+  1890→  1890→  1890→* Organization
+  1891→  1891→  1891→* Ownership
+  1892→  1892→  1892→* Relationship
+  1893→  1893→  1893→* Consent
+  1894→  1894→  1894→* Visibility
+  1895→  1895→  1895→* Verification
+  1896→  1896→  1896→* Session assurance
+  1897→  1897→  1897→* MFA status
+  1898→  1898→  1898→* Sanction
+  1899→  1899→  1899→* Time-limited access
+  1900→  1900→  1900→
+  1901→  1901→  1901→Enforce deny-by-default.
+  1902→  1902→  1902→
+  1903→  1903→  1903→Validate permission on every request.
+  1904→  1904→  1904→
+  1905→  1905→  1905→Never rely only on hidden UI controls.
+  1906→  1906→  1906→
+  1907→  1907→  1907→## 17.3 Owner bootstrap
+  1908→  1908→  1908→
+  1909→  1909→  1909→Implement a secure first-owner bootstrap.
+  1910→  1910→  1910→
+  1911→  1911→  1911→The first owner must not be created through:
+  1912→  1912→  1912→
+  1913→  1913→  1913→* Normal registration
+  1914→  1914→  1914→* License redemption
+  1915→  1915→  1915→* Public API
+  1916→  1916→  1916→* Client-side role editing
+  1917→  1917→  1917→
+  1918→  1918→  1918→Use a controlled mechanism such as:
+  1919→  1919→  1919→
+  1920→  1920→  1920→* Secure environment configuration
+  1921→  1921→  1921→* One-time CLI bootstrap
+  1922→  1922→  1922→* Protected seed process
+  1923→  1923→  1923→
+  1924→  1924→  1924→Ownership transfer must require:
+  1925→  1925→  1925→
+  1926→  1926→  1926→* Re-authentication
+  1927→  1927→  1927→* Strong confirmation
+  1928→  1928→  1928→* Audit log
+  1929→  1929→  1929→* Recovery planning
+  1930→  1930→  1930→
+  1931→  1931→  1931→---
+  1932→  1932→  1932→
+  1933→  1933→  1933→# 18. PRIVACY AND DATA CLASSIFICATION
+  1934→  1934→  1934→
+  1935→  1935→  1935→Classify data such as:
+  1936→  1936→  1936→
+  1937→  1937→  1937→```text
+  1938→  1938→  1938→PUBLIC
+  1939→  1939→  1939→INTERNAL
+  1940→  1940→  1940→PRIVATE
+  1941→  1941→  1941→SENSITIVE
+  1942→  1942→  1942→HIGHLY_SENSITIVE
+  1943→  1943→  1943→```
+  1944→  1944→  1944→
+  1945→  1945→  1945→Examples:
+  1946→  1946→  1946→
+  1947→  1947→  1947→* Public profile headline: PUBLIC
+  1948→  1948→  1948→* Draft CV: PRIVATE
+  1949→  1949→  1949→* Interview recording: SENSITIVE
+  1950→  1950→  1950→* Identity-verification document: HIGHLY_SENSITIVE
+  1951→  1951→  1951→* Audit log: INTERNAL restricted
+  1952→  1952→  1952→* License code: secret-like credential
+  1953→  1953→  1953→
+  1954→  1954→  1954→Classification should influence:
+  1955→  1955→  1955→
+  1956→  1956→  1956→* Access
+  1957→  1957→  1957→* Search indexing
+  1958→  1958→  1958→* Export
+  1959→  1959→  1959→* Logging
+  1960→  1960→  1960→* Retention
+  1961→  1961→  1961→* Deletion
+  1962→  1962→  1962→* Backup
+  1963→  1963→  1963→* Encryption
+  1964→  1964→  1964→* Admin visibility
+  1965→  1965→  1965→
+  1966→  1966→  1966→Users need:
+  1967→  1967→  1967→
+  1968→  1968→  1968→* Public, connections-only, and private visibility
+  1969→  1969→  1969→* Per-section profile visibility
+  1970→  1970→  1970→* Contact protection
+  1971→  1971→  1971→* Message permissions
+  1972→  1972→  1972→* Activity visibility
+  1973→  1973→  1973→* Search discoverability
+  1974→  1974→  1974→* Public-profile preview
+  1975→  1975→  1975→* Data download
+  1976→  1976→  1976→* Account deactivation
+  1977→  1977→  1977→* Account deletion
+  1978→  1978→  1978→* Integration revocation
+  1979→  1979→  1979→* Session management
+  1980→  1980→  1980→* Logout all devices
+  1981→  1981→  1981→* Consent history
+  1982→  1982→  1982→* Privacy history
+  1983→  1983→  1983→
+  1984→  1984→  1984→Administrative access to private data must require:
+  1985→  1985→  1985→
+  1986→  1986→  1986→* Legitimate purpose
+  1987→  1987→  1987→* Permission
+  1988→  1988→  1988→* Re-authentication
+  1989→  1989→  1989→* Reason entry
+  1990→  1990→  1990→* Time-limited access
+  1991→  1991→  1991→* Audit logging
+  1992→  1992→  1992→* Minimum necessary exposure
+  1993→  1993→  1993→* User notification when appropriate
+  1994→  1994→  1994→
+  1995→  1995→  1995→Admin control must not mean unrestricted private-data browsing.
+  1996→  1996→  1996→
+  1997→  1997→  1997→---
+  1998→  1998→  1998→
+  1999→  1999→  1999→# 19. TRUST, VERIFICATION, AND REPUTATION
+  2000→  2000→  2000→
+
+[showing lines 1-2000 of 2002; use offset=2001 with limit to continue reading]

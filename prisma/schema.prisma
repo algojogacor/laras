@@ -1,0 +1,426 @@
+// Laras — Career & Opportunity Readiness Ecosystem
+// Data model: one UserProfile as the single source of truth (Brief Section 4).
+// Designed to mirror a future Supabase/Postgres migration (supabase/migrations/0001_init.sql).
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Auth (local dev). In production this maps to Supabase Auth (auth.users).
+// ---------------------------------------------------------------------------
+model Account {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  profile      UserProfile?
+}
+
+// ---------------------------------------------------------------------------
+// UserProfile — the single source of truth shared by all 5 verticals.
+// ---------------------------------------------------------------------------
+model UserProfile {
+  id        String   @id @default(cuid())
+  accountId String   @unique
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  // --- Profil dasar (Section 4) ---
+  fullName   String?
+  headline   String?
+  summary    String? // ringkasan profesional mentah dari user
+  email      String?
+  phone      String?
+  location   String?
+  photoUrl   String?
+  links      String? // JSON: { linkedin?, portfolio?, github?, website?, other? }
+
+  // --- Preferensi & locale (Section 9) ---
+  uiLocale        String  @default("id") // "id" | "en" — bahasa antarmuka
+  docLocale       String  @default("id") // bahasa dokumen (independen dari UI)
+  targetRegion    String  @default("domestic") // "domestic" | "international"
+  opportunityTypes String? // JSON array: ["work","org","scholarship","volunteer"]
+  preferredTone   String? // "formal" | "direct" | "warm" | "confident"
+
+  // --- Onboarding (Section 4.1) ---
+  onboardingComplete Boolean @default(false)
+  onboardingStep     Int     @default(0)
+  profileCompletion  Int     @default(0)
+  targetExamScore    String? // e.g. TOEFL target — module-specific field lives here
+  urgency            String? // "deadline-soon" | "exploring" | "active"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  experiences    Experience[]
+  educations     Education[]
+  skills         Skill[]
+  certifications Certification[]
+  languages      LanguageProficiency[]
+  applications   Application[]
+  documents      Document[]
+  interviewSets  InterviewSet[]
+  essays         Essay[]
+  englishSessions EnglishSession[]
+  certificates   EnglishCertificate[]
+  achievements   Achievement[]
+  auditLogs      AuditLog[]
+}
+
+// --- Riwayat pengalaman (Section 4) — contextNotes is the anti-generic foundation ---
+model Experience {
+  id            String      @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  type          String      @default("work") // work | org | project | volunteer
+  title         String
+  organization  String
+  startDate     String? // "2023-01"
+  endDate       String? // "2024-05" or "Present"
+  current       Boolean     @default(false)
+  location      String?
+  description   String?
+  achievements  String? // JSON string[] — bullet points
+  contextNotes  String? // CRITICAL: project names, clients, challenges, real numbers
+  order         Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([userProfileId])
+}
+
+model Education {
+  id            String      @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  institution   String
+  degree        String?
+  field         String?
+  startDate     String?
+  endDate       String?
+  current       Boolean     @default(false)
+  gpa           String?
+  description   String?
+  order         Int         @default(0)
+
+  @@index([userProfileId])
+}
+
+model Skill {
+  id            String      @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  name          String
+  category      String? // technical | soft | tool | language | domain
+  proficiency   String? // beginner | intermediate | advanced | expert
+  context       String? // WHERE used — anti-generic (Section 5)
+  order         Int         @default(0)
+
+  @@index([userProfileId])
+}
+
+model Certification {
+  id            String      @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  name          String
+  issuer        String?
+  issueDate     String?
+  expiryDate    String?
+  credentialId  String?
+  url           String?
+  order         Int         @default(0)
+
+  @@index([userProfileId])
+}
+
+model LanguageProficiency {
+  id            String      @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  language      String
+  level         String? // native | fluent | advanced | intermediate | beginner | CEFR A1-C2
+  order         Int         @default(0)
+
+  @@index([userProfileId])
+}
+
+// ---------------------------------------------------------------------------
+// Vertical 2.2 — Application Ops (job & opportunity tracker)
+// ---------------------------------------------------------------------------
+model Application {
+  id             String      @id @default(cuid())
+  userProfileId  String
+  userProfile    UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  type           String      @default("work") // work | org | scholarship | volunteer
+  position       String
+  organization   String?
+  status         String      @default("saved") // saved | applied | interview | offer | rejected | accepted
+  deadline       String?
+  location       String?
+  url            String?
+  jobDescription String? // pasted listing
+  summary        String? // AI-extracted: requirements, deadline, contacts
+  notes          String?
+  order          Int         @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  documents      ApplicationDocument[]
+
+  @@index([userProfileId])
+}
+
+model Document {
+  id            String      @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  type          String // cv-ats | cv-visual | cover-letter | bio | deck | essay
+  title         String
+  content       String? // JSON: document structure / generated text
+  config        String? // JSON: GenerationConfig snapshot
+  fileUrl       String? // exported file path/URL
+  version       Int         @default(1)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  applications  ApplicationDocument[]
+  versions      DocumentVersion[]
+  revisions     RevisionRequest[]
+
+  @@index([userProfileId])
+}
+
+// Document versioning — each revision creates a new version (Brief Task 2)
+model DocumentVersion {
+  id            String   @id @default(cuid())
+  documentId    String
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  content       String   // JSON: full content snapshot
+  configSnapshot String  // JSON: GenerationConfig used for this version
+  revisionInstruction String? // what the user asked for (null = initial generation)
+  parentVersionId String? // link to previous version
+  createdAt     DateTime @default(now())
+
+  @@index([documentId])
+}
+
+// Revision requests — user instructions for follow-up changes (Brief Task 2)
+model RevisionRequest {
+  id            String   @id @default(cuid())
+  documentId    String
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  instruction   String   // e.g. "shorten", "more formal", "add experience X"
+  status        String   @default("pending") // pending | completed | failed
+  resultVersionId String? // resulting DocumentVersion id
+  createdAt     DateTime @default(now())
+
+  @@index([documentId])
+}
+
+model ApplicationDocument {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  documentId    String
+  document      Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  sentAt        DateTime?
+  note          String?
+  createdAt     DateTime    @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Vertical 2.3 — Interview & Selection Prep
+// ---------------------------------------------------------------------------
+model InterviewSet {
+  id            String      @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  title         String
+  role          String? // target role/org/scholarship
+  context       String? // pasted job desc or org info
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  questions     InterviewQuestion[]
+
+  @@index([userProfileId])
+}
+
+model InterviewQuestion {
+  id             String       @id @default(cuid())
+  interviewSetId String
+  interviewSet   InterviewSet @relation(fields: [interviewSetId], references: [id], onDelete: Cascade)
+  question       String
+  category       String? // behavioral | technical | motivational | situational
+  suggestedAnswer String? // AI-suggested, grounded in real experiences
+  userAnswer     String? // user's drafted answer
+  feedback       String? // JSON: { structure, specificity, length, fillerWords }
+  order          Int          @default(0)
+
+  @@index([interviewSetId])
+}
+
+// ---------------------------------------------------------------------------
+// Vertical 2.5 — Opportunity Essays & Statements
+// ---------------------------------------------------------------------------
+model Essay {
+  id            String      @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  type          String // scholarship | org | volunteer | personal-statement | motivation-letter
+  title         String
+  prompt        String? // the essay question / requirements
+  targetOrg     String?
+  wordLimit     Int?
+  draft         String? // generated essay text
+  probingQA     String? // JSON: [{q,a}] — Section 5.4 strict verification Q&A
+  concretenessScore Int? // 0-100 (Section 5.5)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([userProfileId])
+}
+
+// ---------------------------------------------------------------------------
+// Vertical 2.4 — English & Communication Readiness (Reading/Structure on-the-go)
+// ---------------------------------------------------------------------------
+model EnglishSession {
+  id            String      @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  module        String // reading | structure | listening
+  passage       String? // text or script
+  questions     String? // JSON array of {q, options, answer, explanation}
+  audioUrl      String? // for listening — path to pre-generated audio file (Brief 10.3 play-time)
+  userAnswers   String? // JSON array of selected indices
+  score         Int?
+  createdAt     DateTime    @default(now())
+
+  @@index([userProfileId])
+}
+
+// Listening question bank — PRE-GENERATED during development (Brief Section 10.3).
+// Generation-time: script → TTS → audio file → row here with audioUrl filled.
+// Play-time: user gets a random row where audioUrl IS NOT NULL — never triggers TTS.
+// Questions without audioUrl are "drafts" not yet published to users.
+model ListeningQuestion {
+  id          String   @id @default(cuid())
+  title       String
+  script      String   // the listening script text
+  speaker     String   // description: "Conversation between two students" etc.
+  questions   String   // JSON array of {id, question, options, answer, explanation}
+  difficulty  String   @default("medium") // easy | medium | hard
+  topic       String   // scenario topic
+  audioUrl    String?  // path to pre-generated MP3 — NULL means not yet generated (draft, not published)
+  published   Boolean  @default(false) // only published=true questions are shown to users
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// English Practice Certificate (non-official) — Brief: Practice Certificate
+model EnglishCertificate {
+  id                String   @id @default(cuid())
+  userProfileId     String
+  userProfile       UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  sessionId         String?  // linked EnglishSession
+  certificateId     String   @unique // public verification ID
+  title             String   // "Laras Practice Score Certificate"
+  testMode          String   // reading | listening | structure
+  testSpec          String   // LARAS_TOEFL_STYLE | LARAS_IELTS_STYLE
+  rawScore          Int
+  percentage        Int
+  estimatedCEFR     String?
+  estimatedTOEFL    String?  // "4.5" (1-6 scale)
+  estimatedIELTS    String?  // "7.0" (0-9 band)
+  confidence        String   // low | medium | high
+  skillBreakdown    String   // JSON
+  questionCount     Int
+  disclaimerText    String
+  pdfStoragePath    String?  // Supabase Storage path
+  pdfUrl            String?  // signed URL or public URL
+  status            String   @default("active") // active | revoked
+  issuedAt          DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userProfileId])
+}
+
+// ---------------------------------------------------------------------------
+// Achievement — gamification badges earned by user (Brief: Achievement system)
+// ---------------------------------------------------------------------------
+model Achievement {
+  id            String   @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  code          String   // stable code: "first_cv", "first_cover_letter", "practice_streak_7", etc.
+  title         String
+  description   String
+  icon          String   // lucide icon name: "FileText", "Award", "Flame", etc.
+  tone          String   @default("primary") // primary | success | warning | info
+  earnedAt      DateTime @default(now())
+
+  @@unique([userProfileId, code]) // one badge per user per code
+  @@index([userProfileId])
+}
+
+// ---------------------------------------------------------------------------
+// AuditLog — security & action audit trail (Brief: Production Hardening)
+// ---------------------------------------------------------------------------
+model AuditLog {
+  id            String   @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  action        String   // "auth.login", "document.create", "profile.update", etc.
+  resourceType  String?  // "Account", "Document", "Application", etc.
+  resourceId    String?  // ID of the affected resource
+  metadata      String?  // JSON: additional context (email, ip, changes, etc.)
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  @@index([userProfileId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// ReadingQuestion — pre-generated reading practice bank (Brief §10.3)
+// Mirrors ListeningQuestion structure but for reading comprehension.
+// ---------------------------------------------------------------------------
+model ReadingQuestion {
+  id          String   @id @default(cuid())
+  title       String
+  passage     String   // the reading passage text
+  difficulty  String   @default("medium") // easy | medium | hard
+  topic       String?  // scenario topic: psychology, science, business, etc.
+  questions   String   // JSON array of {id, question, options, answer, explanation}
+  published   Boolean  @default(false) // only published=true questions are shown to users
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([difficulty, published])
+}
+
+// ---------------------------------------------------------------------------
+// StructureQuestion — pre-generated grammar/structure practice bank (Brief §10.3)
+// Mirrors ListeningQuestion/ReadingQuestion pattern for structure section.
+// ---------------------------------------------------------------------------
+model StructureQuestion {
+  id          String   @id @default(cuid())
+  difficulty  String   @default("medium") // easy | medium | hard
+  topic       String?  // grammar topic: grammar-mixed, tenses, conditionals, etc.
+  questions   String   // JSON array of {id, question, options, answer, explanation, type}
+  published   Boolean  @default(false) // only published=true questions are shown to users
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([difficulty, published])
+}
