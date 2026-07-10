@@ -3,7 +3,7 @@ import { jwtVerify } from "jose"
 
 const COOKIE_NAME = "laras_session"
 const PUBLIC_PATHS = ["/", "/login", "/signup"]
-const PUBLIC_PREFIXES = ["/api/auth", "/api/locale"]
+const PUBLIC_PREFIXES = ["/api/auth", "/api/locale", "/verify"]
 
 function getSecret(): Uint8Array {
   const secret = process.env.AUTH_SECRET
@@ -32,6 +32,7 @@ export async function proxy(req: NextRequest) {
   if (pathname.startsWith("/_next") || pathname.startsWith("/favicon")) return NextResponse.next()
 
   // Protect everything else (dashboard, onboarding, profile, api/profile, api/onboarding, api/export)
+  // Note: /verify/* is public (certificate verification) — see PUBLIC_PREFIXES.
   const authed = await isAuthenticated(req)
   if (!authed) {
     if (pathname.startsWith("/api/")) {

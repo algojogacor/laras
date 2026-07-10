@@ -17,8 +17,7 @@ async function main() {
   const probes = ["UserProfile", "Account", "Document", "DocumentVersion", "EnglishSet"]
   for (const model of probes) {
     try {
-      // @ts-expect-error dynamic model access
-      const count = await db[model].count()
+      const count = await (db as unknown as Record<string, { count: () => Promise<number> }>)[model].count()
       console.log(`  count ${model}: ${count}`)
     } catch (e) {
       console.log(`  count ${model}: skipped (${(e as Error).message.split("\n")[0]})`)
