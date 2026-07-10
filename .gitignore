@@ -22,7 +22,17 @@ node_modules
 
 # misc
 .DS_Store
+
+# secrets — NEVER commit
 *.pem
+*.key
+credentials.json
+service-account.json
+
+# env files (can opt-in for committing if needed)
+.env
+.env.*
+!.env.example
 
 # debug
 npm-debug.log*
@@ -30,12 +40,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
-
 # vercel
 .vercel
-
 
 # typescript
 *.tsbuildinfo
@@ -50,8 +56,16 @@ test
 prompt
 
 server.log
+
 # local sqlite db
 /db/*.db
 /db/*.db-journal
+
 # Skills directory
 /skills/.env.local
+
+# Master backup zip (large, contains secrets)
+upload/LARAS_MASTER_BACKUP.zip
+
+# Tool results / scratch
+tool-results/

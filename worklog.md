@@ -928,7 +928,7 @@ Turso/libSQL adalah production database (live, verified). Supabase Storage aktif
 ## Turso DB status: ✅ DONE
 - All 18 tables in Turso
 - Verified: signup, login, profile, onboarding, English practice, scoring, certificate
-- DATABASE_URL=libsql://TURSO_HOST_REDACTED
+- DATABASE_URL=libsql://<TURSO_HOST>
 
 ## Supabase Storage status: ✅ DONE
 - 6 buckets: listening-audio (public), generated-documents, user-exports, deck-exports, pdf-exports, profile-photos (private)
