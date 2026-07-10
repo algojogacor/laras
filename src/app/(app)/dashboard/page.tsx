@@ -18,7 +18,9 @@ import {
   ArrowRight,
   Sparkles,
   Clock,
+  Plus,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export default async function DashboardPage() {
   const session = await getSession()
@@ -42,6 +44,12 @@ export default async function DashboardPage() {
   const completion = computeCompletion(profile)
 
   const greetingName = profile.fullName?.split(" ")[0] ?? session.email.split("@")[0]
+
+  // Time-based greeting
+  const hour = new Date().getHours()
+  const timeGreeting = locale === "id"
+    ? (hour < 11 ? "Selamat pagi" : hour < 15 ? "Selamat siang" : hour < 18 ? "Selamat sore" : "Selamat malam")
+    : (hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : hour < 21 ? "Good evening" : "Good night")
 
   const verticals = [
     {
@@ -142,17 +150,36 @@ export default async function DashboardPage() {
       {/* Greeting */}
       <div>
         <h1 className="font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
-          {t.dashboard.greeting}, {greetingName}.
+          {timeGreeting}, {greetingName}.
         </h1>
         <p className="mt-1.5 text-muted-foreground">{t.dashboard.welcomeBack}</p>
       </div>
 
+      {/* Quick create shortcuts */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { href: "/documents/cv-ats/new", label: locale === "id" ? "CV ATS" : "ATS CV", icon: "bg-rose-500/10 text-rose-600 dark:text-rose-400" },
+          { href: "/documents/cover-letter/new", label: locale === "id" ? "Cover Letter" : "Cover Letter", icon: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
+          { href: "/documents/cv-visual/new", label: locale === "id" ? "CV Visual" : "Visual CV", icon: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
+          { href: "/documents/essay/new", label: locale === "id" ? "Esai" : "Essay", icon: "bg-violet-500/10 text-violet-600 dark:text-violet-400" },
+          { href: "/documents/bio/new", label: "Bio", icon: "bg-sky-500/10 text-sky-600 dark:text-sky-400" },
+          { href: "/documents/deck/new", label: locale === "id" ? "Deck" : "Deck", icon: "bg-orange-500/10 text-orange-600 dark:text-orange-400" },
+        ].map((q) => (
+          <Link key={q.href} href={q.href}>
+            <Button variant="outline" size="sm" className={cn("gap-1.5 border-border/60 transition-all hover:-translate-y-0.5 hover:shadow-soft", q.icon)}>
+              <Plus className="h-3.5 w-3.5" />
+              {q.label}
+            </Button>
+          </Link>
+        ))}
+      </div>
+
       {/* Stats strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label={t.documents.title} value={docCount} href="/documents" Icon={FileText} />
-        <StatCard label={t.applications.title} value={appCount} href="/applications" Icon={ClipboardList} />
-        <StatCard label={t.interview.title} value={interviewCount} href="/interview" Icon={MessageSquareText} />
-        <StatCard label={t.english.title} value={englishCount} href="/english" Icon={Headphones} />
+        <StatCard label={t.documents.title} value={docCount} href="/documents" Icon={FileText} accent={{ bar: "bg-rose-500/60", icon: "bg-rose-500/10 text-rose-600 group-hover:bg-rose-500 group-hover:text-white dark:text-rose-400" }} />
+        <StatCard label={t.applications.title} value={appCount} href="/applications" Icon={ClipboardList} accent={{ bar: "bg-amber-500/60", icon: "bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white dark:text-amber-400" }} />
+        <StatCard label={t.interview.title} value={interviewCount} href="/interview" Icon={MessageSquareText} accent={{ bar: "bg-emerald-500/60", icon: "bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white dark:text-emerald-400" }} />
+        <StatCard label={t.english.title} value={englishCount} href="/english" Icon={Headphones} accent={{ bar: "bg-violet-500/60", icon: "bg-violet-500/10 text-violet-600 group-hover:bg-violet-500 group-hover:text-white dark:text-violet-400" }} />
       </div>
 
       {/* Completion + quick action */}
@@ -316,16 +343,19 @@ export default async function DashboardPage() {
   )
 }
 
-function StatCard({ label, value, href, Icon }: { label: string; value: number; href: string; Icon: typeof FileText }) {
+function StatCard({ label, value, href, Icon, accent }: { label: string; value: number; href: string; Icon: typeof FileText; accent?: { bar: string; icon: string } }) {
+  const bar = accent?.bar || "bg-primary/60"
+  const iconBg = accent?.icon || "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
   return (
     <Link href={href} className="group">
-      <Card className="shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-lift">
-        <CardContent className="flex items-center gap-3 p-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+      <Card className="relative overflow-hidden shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-lift">
+        <div className={cn("absolute inset-x-0 top-0 h-1", bar)} />
+        <CardContent className="flex items-center gap-3 p-4 pt-5">
+          <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-all group-hover:scale-110", iconBg)}>
             <Icon className="h-4 w-4" />
           </div>
           <div className="min-w-0">
-            <p className="font-serif text-2xl font-semibold leading-none">{value}</p>
+            <p className="font-serif text-2xl font-semibold leading-none tabular-nums">{value}</p>
             <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{label}</p>
           </div>
         </CardContent>

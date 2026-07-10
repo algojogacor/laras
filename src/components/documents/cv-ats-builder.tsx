@@ -18,6 +18,7 @@ import type { SerializedProfile } from "@/lib/profile"
 import type { GeneratedCVATS } from "@/lib/content-engine"
 import { CVATSPreview } from "@/components/documents/cv-ats-preview"
 import { ConcretenessPanel } from "@/components/documents/concreteness-panel"
+import { GenerationOverlay } from "@/components/documents/generation-overlay"
 
 type Check = {
   score: number; totalBullets: number; withEvidence: number; buzzwordNoEvidence: number
@@ -42,6 +43,7 @@ export function CVATSBuilder({ initialProfile }: { initialProfile: SerializedPro
   const [region, setRegion] = useState(initialProfile.targetRegion || "domestic")
 
   const [loading, setLoading] = useState(false)
+  const [genError, setGenError] = useState<string | null>(null)
   const [cv, setCv] = useState<GeneratedCVATS | null>(null)
   const [check, setCheck] = useState<Check | null>(null)
   const [documentId, setDocumentId] = useState<string | null>(null)
@@ -51,6 +53,7 @@ export function CVATSBuilder({ initialProfile }: { initialProfile: SerializedPro
 
   async function generate() {
     setLoading(true)
+    setGenError(null)
     setCv(null)
     try {
       const res = await fetch("/api/documents/cv-ats/generate", {
@@ -66,7 +69,8 @@ export function CVATSBuilder({ initialProfile }: { initialProfile: SerializedPro
       })
       const data = await res.json()
       if (!res.ok) {
-        toast.error(t.documents.generateError)
+        const msg = data?.message || data?.error || t.documents.generateError
+        setGenError(typeof msg === "string" ? msg : t.documents.generateError)
         return
       }
       setCv(data.cv)
@@ -74,8 +78,8 @@ export function CVATSBuilder({ initialProfile }: { initialProfile: SerializedPro
       setDocumentId(data.documentId)
       setActiveTab("preview")
       toast.success(t.documents.preview)
-    } catch {
-      toast.error(t.documents.generateError)
+    } catch (e) {
+      setGenError(t.documents.generateError)
     } finally {
       setLoading(false)
     }
@@ -304,6 +308,14 @@ export function CVATSBuilder({ initialProfile }: { initialProfile: SerializedPro
           )}
         </TabsContent>
       </Tabs>
+
+      <GenerationOverlay
+        loading={loading}
+        error={genError}
+        onRetry={() => { setGenError(null); generate() }}
+        onCancel={() => { setGenError(null); setLoading(false) }}
+        locale={locale}
+      />
     </div>
   )
 }
