@@ -1048,3 +1048,76 @@ Verification results:
 - Working tree: clean after commit
 
 Next priority: merge restore/laras-20260710 into main (or rebase), then continue autonomous development loop — Baseline QA, Product Audit, Roadmap.
+
+---
+
+## Round 1 — Fix P1 bugs (verify proxy, error boundaries, mobile nav, getSession, ignoreBuildErrors)
+
+Tanggal: 2026-07-10
+Branch: main
+Commit awal: 508a616 (docs: baseline QA report + product audit + roadmap)
+Tujuan: Fix 5 P1 bugs identified in QA_REPORT.md — public verify proxy, missing error boundaries, broken mobile nav, missing getSession in summarize, ignoreBuildErrors masking type errors.
+
+Masalah yang ditemukan:
+- BUG-001 (P1): /verify/certificate/[code] public page blocked by proxy → redirect to /login (fitur verifikasi publik rusak)
+- BUG-002 (P1): No rate limiting on auth + LLM routes (deferred to Round 2)
+- BUG-003 (P1): Zero error.tsx/loading.tsx/not-found.tsx/global-error.tsx (white screen on error)
+- BUG-004 (P1): ignoreBuildErrors: true masks 372 type errors (already fixed by RESTORE-002, just need to remove flag)
+- BUG-005 (P2): /api/applications/summarize missing getSession (defense-in-depth violation)
+- BUG-007 (P2): AppHeader has no mobile menu (mobile nav broken)
+
+Keputusan:
+- Fix BUG-001, 003, 004, 005, 007 in this round (all quick UX/security wins)
+- Defer BUG-002 (rate limiting) to Round 2 (needs more design thought)
+- Defer BUG-006 (error message sanitization) to Round 2 (needs central error handler)
+
+Implementasi:
+1. src/proxy.ts: Added "/verify" to PUBLIC_PREFIXES → public certificate verification now works
+2. src/app/api/applications/summarize/route.ts: Added getSession() + profile check + sanitized error (no more (e as Error).message leak)
+3. src/components/site/app-header.tsx: Rewrote as client component with hamburger menu + mobile drawer + aria-current + aria-expanded + aria-controls. Nav links now show active state.
+4. src/app/global-error.tsx: New — root error boundary with branded UI + Try again + Go to Dashboard
+5. src/app/not-found.tsx: New — branded 404 with Compass icon + links
+6. src/app/(app)/error.tsx: New — app error boundary with retry
+7. src/app/(app)/loading.tsx: New — app loading skeleton with aria-busy + aria-live
+8. src/app/loading.tsx: New — root loading spinner
+9. next.config.ts: Removed typescript.ignoreBuildErrors (type errors now caught at build), enabled reactStrictMode: true
+
+File yang berubah:
+- src/proxy.ts
+- src/app/api/applications/summarize/route.ts
+- src/components/site/app-header.tsx
+- src/app/global-error.tsx (new)
+- src/app/not-found.tsx (new)
+- src/app/(app)/error.tsx (new)
+- src/app/(app)/loading.tsx (new)
+- src/app/loading.tsx (new)
+- next.config.ts
+
+Migration: None
+Test yang dijalankan:
+- bunx tsc --noEmit → 0 errors ✓
+- bunx eslint . → 0 errors ✓
+- bun run build → exit 0, 53 routes ✓ (with reactStrictMode + no ignoreBuildErrors)
+
+Hasil QA:
+- Public verify page: FIXED (proxy allows /verify without auth)
+- Error boundaries: ADDED (global-error, app error, not-found, loading)
+- Mobile nav: FIXED (hamburger menu + drawer, active state, aria attrs)
+- getSession in summarize: FIXED (defense-in-depth)
+- ignoreBuildErrors: REMOVED (type errors now fail build)
+
+Risiko tersisa:
+- Rate limiting still not implemented (BUG-002 → Round 2)
+- Error message sanitization only done in summarize route (BUG-006 → Round 2)
+- 6 other API routes still leak (e as Error).message
+- No browser E2E test run yet (deferred)
+- reactStrictMode: true may surface previously-hidden side effects (double-render in dev) — monitor
+
+Commit akhir: (pending push)
+Push status: (pending)
+Prioritas round berikutnya:
+1. BUG-002: Add rate limiting (auth + LLM routes) — P1 security
+2. BUG-006: Sanitize error messages in remaining 6 API routes — P2 security
+3. ROADMAP-008: Add getSession to any other routes missing it (audit all 32 routes)
+4. ROADMAP-011: Remove dead dependencies (next-auth, next-intl)
+5. ROADMAP-010: Scale listening bank (13 → 50+ sets)

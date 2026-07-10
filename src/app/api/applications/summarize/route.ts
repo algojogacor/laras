@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import ZAI from "z-ai-web-dev-sdk"
+import { getSession } from "@/lib/auth"
+import { db } from "@/lib/db"
 
 let _zai: Awaited<ReturnType<typeof ZAI.create>> | null = null
 async function getZai() {
@@ -14,7 +16,21 @@ const schema = z.object({
 })
 
 export async function POST(request: Request) {
-  // Note: auth is checked by proxy, but this route is public-API-prefixed; rely on caller session
+  // Defense-in-depth: verify session explicitly (not just rely on proxy)
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  }
+
+  // Verify user profile exists (ensures user is fully onboarded)
+  const profile = await db.userProfile.findUnique({
+    where: { accountId: session.userId },
+    select: { id: true },
+  })
+  if (!profile) {
+    return NextResponse.json({ error: "onboarding-required" }, { status: 403 })
+  }
+
   let body: z.infer<typeof schema>
   try { body = schema.parse(await request.json()) } catch { return NextResponse.json({ error: "invalid-body" }, { status: 400 }) }
 
@@ -47,6 +63,8 @@ export async function POST(request: Request) {
     const parsed = JSON.parse(s)
     return NextResponse.json({ ok: true, summary: parsed })
   } catch (e) {
-    return NextResponse.json({ error: "summarize-failed", message: (e as Error).message }, { status: 502 })
+    // Sanitized error: don't leak internal details to client
+    console.error("[applications/summarize] LLM failed:", (e as Error).message)
+    return NextResponse.json({ error: "summarize-failed" }, { status: 502 })
   }
 }

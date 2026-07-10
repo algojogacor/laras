@@ -3,7 +3,7 @@ import { jwtVerify } from "jose"
 
 const COOKIE_NAME = "laras_session"
 const PUBLIC_PATHS = ["/", "/login", "/signup"]
-const PUBLIC_PREFIXES = ["/api/auth", "/api/locale"]
+const PUBLIC_PREFIXES = ["/api/auth", "/api/locale", "/verify"]
 
 function getSecret(): Uint8Array {
   const secret = process.env.AUTH_SECRET
