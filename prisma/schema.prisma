@@ -77,6 +77,8 @@ model UserProfile {
   verificationBadges VerificationBadge[]
   licenses       License[]
   consentSettings ConsentSetting[]
+  connectionsOutgoing Connection[] @relation("ConnectionRequester")
+  connectionsIncoming Connection[] @relation("ConnectionAddressee")
 }
 
 // --- Riwayat pengalaman (Section 4) — contextNotes is the anti-generic foundation ---
@@ -502,4 +504,29 @@ model ConsentSetting {
 
   @@unique([userProfileId, field]) // one setting per field per user
   @@index([userProfileId])
+}
+
+// ---------------------------------------------------------------------------
+// Connection — Relationship / Network Graph (Brief §9.3)
+// Directed connection request between two UserProfile records.
+//   requester → addressee, status: pending | accepted | declined | blocked
+// One row per pair (unique on [requesterId, addresseeId]).
+// When status=accepted, the two users are "connected" and can see each
+// other's "connections"-level profile fields (per the Consent/Privacy Graph).
+// ---------------------------------------------------------------------------
+model Connection {
+  id          String   @id @default(cuid())
+  requesterId String
+  requester   UserProfile @relation("ConnectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addresseeId String
+  addressee   UserProfile @relation("ConnectionAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  status      String   @default("pending") // pending | accepted | declined | blocked
+  message     String?  // optional intro message from requester
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([requesterId, addresseeId]) // one request per directed pair
+  @@index([requesterId])
+  @@index([addresseeId])
+  @@index([status])
 }
