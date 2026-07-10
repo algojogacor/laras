@@ -2106,3 +2106,93 @@ All 5 product verticals now have entitlement gates:
 - Alternatively, add a client-side entitlement error handler so 402 responses
   from generate buttons show a friendly upgrade modal instead of a generic
   error toast.
+
+---
+
+## ROUND-7 — Consent & Privacy Graph: per-field visibility controls (Brief §9.1)
+
+Tanggal: 2026-07-10
+Branch: upgrade/laras-100x (pushed: e3747ba..b9b3a95)
+Commit: b9b3a95 (feat(privacy): Consent & Privacy Graph — per-field visibility controls)
+Agent: Z.ai Code (webDevReview cron, round 7)
+
+### QA assessment (start of round)
+- Dev server UP, all 8 pages return HTTP 200, no errors. Previous cron
+  commit (45b54da) only appended a worklog entry.
+- App stable → advanced ROUND-6's recommendation: build the Consent/Privacy
+  Graph (brief §9.1), the third Laras Core graph.
+
+### Decision: build the Consent & Privacy Graph
+Completes the third Laras Core graph primitive (after Trust/Verification in
+ROUND-2 and Entitlement in ROUND-4/5/6). Users can now control who sees each
+part of their profile — public / connections / private per field.
+
+### Work Log
+1. Schema + engine:
+   - `prisma/schema.prisma`: `ConsentSetting` model (field, visibility,
+     updatedAt) with `@@unique([userProfileId, field])` + relation on
+     UserProfile. `db:push` applied.
+   - `src/lib/privacy.ts`: `getConsentMap/Entries` (merges persisted settings
+     with conservative defaults: contact info=private, location/links=
+     connections, professional history=public), `setConsent` (upsert),
+     `isFieldVisible` (owner/connection/public logic), `filterProfileByConsent`
+     (omits private fields for non-owners). 10 trackable fields defined:
+     fullName, email, phone, location, links, experiences, education, skills,
+     certifications, languages.
+
+2. API (`src/app/api/profile/privacy/route.ts`):
+   - GET: returns all 10 consent entries (merged with defaults).
+   - PATCH: updates a single field's visibility. Validates field + visibility.
+     Writes an AuditLog entry (resourceType=ConsentSetting) on every change.
+
+3. UI:
+   - `src/components/profile/privacy-panel.tsx`: client component with a
+     per-field row (field label + current visibility) and a 3-button
+     segmented control (Public=Globe2/Connections=Users/Private=Lock icons,
+     colour-coded: chart-2/chart-1/muted-foreground). Visibility summary
+     pills (counts per level) in the header. Optimistic updates with
+     revert-on-error + toast feedback.
+   - `src/app/(app)/profile/page.tsx`: computes consent entries server-side
+     and renders the PrivacyPanel below the existing ProfileEditor.
+
+4. i18n: +22 privacy keys (ID + EN) — title/desc, 3 visibility labels+descs,
+   10 field labels, saved/error toasts, summary labels.
+
+### Verification (agent-browser + curl)
+- `GET /api/profile/privacy` → 200, returns all 10 fields with defaults
+  (fullName=public, email/phone=private, location/links=connections,
+  experiences/education/skills/certifications/languages=public).
+- `PATCH email→connections` → 200, DB persists override.
+- `PATCH phone→public` → 200, DB persists override.
+- Verified DB: `[{email:connections},{phone:public}]` overrides persisted.
+- Profile page renders the PrivacyPanel below the editor: "Privacy & consent"
+  title, visibility summary (Public/Connections/Private counts), 10 per-field
+  rows with 3-icon segmented controls.
+- ESLint clean. No console errors.
+- Screenshot: download/privacy-panel.png.
+
+### Laras Core graph coverage (after ROUND-7)
+Three of the brief §9.1 Laras Core graphs are now implemented:
+1. Trust and Verification Graph (ROUND-2) — VerificationBadge + admin issuance
+2. Entitlement / License Graph (ROUND-4/5/6) — License + feature gates
+3. Consent and Privacy Graph (this round) — ConsentSetting + per-field visibility
+
+### Unresolved / next-phase priorities
+1. The consent map is computed but `filterProfileByConsent` is not yet wired
+   into a public profile view (there's no public `/u/[handle]` route yet).
+   The helper exists; wiring awaits the public-profile surface.
+2. The "connections" visibility level has no network backing yet (no
+   Connection model). It currently treats connections same as private for
+   non-owners. The network graph (brief §9.3) would populate this.
+3. No bulk privacy action (e.g. "set all contact info to private").
+4. Brief §9 remaining: Relationship/Network Graph, Opportunity Graph,
+   Announcements, opportunities deepening.
+
+### Next-round recommendation
+- Begin the Relationship/Network Graph (brief §9.3): a Connection model
+  (request/accept/reject) so the "connections" visibility level becomes
+  meaningful. This would also unlock the public profile surface where
+  filterProfileByConsent is applied.
+- Alternatively, add a public profile route `/u/[id]` that uses
+  filterProfileByConsent to show only consented fields (treating all viewers
+  as non-connections until the network graph exists).
