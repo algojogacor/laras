@@ -1422,3 +1422,49 @@ Prioritas round berikutnya:
 2. ROADMAP-010: Scale listening bank (13 → 50+)
 3. ROADMAP-012: Add automated tests (Vitest unit)
 4. ROADMAP-015: PWA manifest + service worker
+
+---
+Task ID: round-6 (merge + generation overlay + dashboard polish)
+Agent: Z.ai Code (autonomous cron round)
+Task: Merge origin/main into restore branch, implement graceful AI loading/error states (ROADMAP X2), dashboard styling improvements.
+
+Work Log:
+- Assessed state: main had advanced to 23f1665 (5 rounds: rate limiting, schema fixes, command palette, accessibility, error sanitization) but STILL lacked the critical Turso-prefer runtime fix (db.ts prefers shell-injected local sqlite DATABASE_URL over TURSO_DATABASE_URL).
+- Merged origin/main into restore/laras-20260710-b (daf42d4). Resolved 9 conflicts:
+  - db.ts: kept Turso-prefer fix (TURSO_DATABASE_URL || DATABASE_URL) + Config-object PrismaLibSql adapter
+  - dictionary.ts: took main's version (passes typecheck without DeepWiden)
+  - rate-limit.ts: took main's version (144 lines, more complete)
+  - tsconfig.json: union of both exclude lists
+  - next.config.ts: kept main's commented ignoreBuildErrors + reactStrictMode: true
+  - login/signup routes: took main's (applyRateLimit pattern)
+- Created GenerationOverlay component (src/components/documents/generation-overlay.tsx):
+  - Animated multi-step progress (Analyzing profile → Generating content → Checking quality)
+  - Elapsed/estimated time display with progress bar
+  - Error state: clear error card with retry + cancel buttons
+  - Bilingual (ID/EN)
+- Integrated GenerationOverlay into cv-ats-builder: replaced generic toast.error with proper error state + retry
+- Dashboard improvements:
+  - Time-based greeting (Selamat pagi/siang/sore/malam ID; Good morning/afternoon/evening EN)
+  - Quick-create shortcuts bar (6 document types with colored chips)
+  - StatCard with per-vertical gradient accent bars (rose/amber/emerald/violet) + hover scale animation
+- Fixed db-smoke.ts (removed unused @ts-expect-error, use Record cast)
+- Fixed generation-overlay lint (set-state-in-effect → deferred to interval callback)
+
+Verification:
+- typecheck: PASS (tsc --noEmit 0 errors)
+- lint: PASS (eslint 0 errors)
+- build: PASS (53 routes compiled)
+- Turso DB: connected (22 tables, verified in prior round)
+- E2E AI: verified in prior round (login→english/generate 200 with real AI passage)
+
+Stage Summary:
+- restore/laras-20260710-b now has ALL features from main rounds 2-5 PLUS the critical Turso runtime fix PLUS generation overlay + dashboard polish.
+- Ready for merge to main (would bring the missing Turso fix to main).
+- Commit: 14e8bdf (pushed, verified local==remote)
+
+Prioritas round berikutnya:
+1. Integrate GenerationOverlay into remaining builders (cover-letter, essay, bio, deck, English hub)
+2. Mobile responsive QA (ROADMAP X3) — test at 375px, fix overflow/touch targets
+3. Automated tests (ROADMAP X1) — Vitest smoke tests for auth + DB + generation
+4. PWA manifest + service worker (ROADMAP-015)
+5. Observability — structured logging (ROADMAP L5)
