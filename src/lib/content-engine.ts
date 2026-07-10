@@ -850,7 +850,7 @@ Output STRICT JSON only: {"difficulty":"${opts.difficulty}","questions":[{"id":"
         options: Array.isArray(q.options) ? q.options.slice(0, 4) : [],
         answer: typeof q.answer === "number" ? q.answer : 0,
         explanation: q.explanation || "",
-        type: (q.type === "error-identification" ? "error-identification" : "sentence-completion") as "error-identification" | "sentence-completion",
+        type: (q.type === "error-identification" ? "error-identification" : "sentence-completion") as StructureQuestion["type"],
       })).filter((q) => q.question && q.options.length === 4),
     }
   } catch {

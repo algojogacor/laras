@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
+import { applyRateLimit } from "@/lib/rate-limit"
 import { serializeProfile, computeCompletion, type ProfileWithRelations } from "@/lib/profile"
 import { generateCVATS, concretenessCheck, type GeneratedCVATS } from "@/lib/content-engine"
 import { buildCVATSDocx } from "@/lib/docx-renderer"
@@ -8,6 +9,10 @@ import { buildCVATSDocx } from "@/lib/docx-renderer"
 export async function POST(request: Request) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+
+  // Rate limit: 20 generations per minute per user (LLM cost-abuse protection)
+  const limited = applyRateLimit(request, "generate", `user:${session.userId}:cv-ats`)
+  if (limited) return limited
 
   let body: { locale?: string; tone?: string; region?: string; title?: string; edits?: any; generationConfig?: Record<string, unknown> }
   try {
@@ -44,7 +49,7 @@ export async function POST(request: Request) {
   } catch (e) {
     console.error("[cv-ats/generate] LLM failed:", (e as Error).message)
     return NextResponse.json(
-      { error: "generation-failed", message: (e as Error).message },
+      { error: "generation-failed" },
       { status: 502 }
     )
   }

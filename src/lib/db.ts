@@ -13,6 +13,8 @@ function createPrismaClient(): PrismaClient {
   // If using Turso (libsql:// protocol), use the libsql adapter
   if (url && url.startsWith('libsql://')) {
     const authToken = process.env.TURSO_AUTH_TOKEN
+    // Pass a Config object ({ url, authToken }) directly to PrismaLibSql.
+    // This avoids the @libsql/client Client vs. Config type mismatch in v7.
     const adapter = new PrismaLibSql({ url, authToken })
     return new PrismaClient({ adapter } as any)
   }

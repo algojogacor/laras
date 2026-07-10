@@ -1,10 +1,9 @@
 "use client"
 
-import type { CSSProperties } from "react"
 import { cn } from "@/lib/utils"
 
 /** Reusable skeleton primitive — animated shimmer placeholder. */
-export function Skeleton({ className, style }: { className?: string; style?: CSSProperties }) {
+export function Skeleton({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
     <div
       className={cn("animate-pulse rounded-md bg-muted", className)}

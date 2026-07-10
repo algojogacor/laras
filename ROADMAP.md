@@ -1,116 +1,243 @@
 # Laras — Roadmap
 
-**Last updated:** 2026-07-10
-**Source of truth:** this file + `worklog.md` + `QA_REPORT.md` + `PRODUCT_AUDIT.md`
-
-Scoring: Impact (1-5), Confidence (1-5), Effort (1-5, higher=more), Risk (1-5, higher=more).
-
----
-
-## NOW (most urgent + highest leverage)
-
-### N1 — Merge restore branch to main & clean junk
-- **Problem:** `main` lacks the critical Turso runtime fix (db.ts prefers shell-injected local sqlite → app won't connect to Turso at runtime in this sandbox); main also tracks 24 junk `upload/`+`tool-results/` files.
-- **Users affected:** all runtime users in this environment.
-- **Solution:** merge `restore/laras-20260710-b` (`2818c98`) into `main` after review.
-- **Why now:** unblocks all runtime testing.
-- **Impact 5 | Confidence 5 | Effort 1 | Risk 1**
-- **Acceptance:** `main` HEAD connects to Turso at runtime; typecheck/lint/build pass; no junk tracked.
-- **Test:** `bun run scripts/db-smoke.ts`; `tsc --noEmit`; `next build`; browser signup→onboarding.
-
-### N2 — Provide ZAI_API_KEY + full E2E QA of generation
-- **Problem:** 4 of 5 verticals blocked at the LLM call; core value unverified.
-- **Users affected:** every user trying to generate a document/practice.
-- **Solution:** set `ZAI_API_KEY` in runtime env; run E2E QA on CV-ATS, cover-letter, essay, English practice, interview generation.
-- **Why now:** without this, the product is a shell.
-- **Impact 5 | Confidence 4 | Effort 2 | Risk 2** (needs key from operator)
-- **Acceptance:** each generation flow produces a valid document/practice set; errors are graceful.
-- **Test:** agent-browser through each builder; verify DB writes + export.
-
-### N3 — Remove `ignoreBuildErrors` + CI typecheck gate
-- **Problem:** `next.config.ts` `typescript.ignoreBuildErrors: true` masks type regressions.
-- **Users affected:** developers (regression risk → users).
-- **Solution:** remove the flag; add `tsc --noEmit` to a pre-commit/CI check.
-- **Impact 4 | Confidence 5 | Effort 1 | Risk 1**
-- **Acceptance:** `next build` fails on type errors; typecheck clean.
-- **Test:** introduce a type error → build fails; revert → passes.
-
-### N4 — Rate limiting on auth + generation endpoints
-- **Problem:** `/api/auth/signup`, `/api/auth/login`, `/api/documents/*/generate`, `/api/english/generate` have no rate limit → abuse risk.
-- **Users affected:** all (DoS/brute-force/abuse).
-- **Solution:** lightweight in-memory rate limiter (IP+endpoint) since stack specifies local-memory caching.
-- **Impact 4 | Confidence 4 | Effort 3 | Risk 2**
-- **Acceptance:** >N requests/min from same IP returns 429; legitimate use unaffected.
-- **Test:** burst requests → 429; normal flow → 200.
+**Dibuat:** 2026-07-10
+**Status:** Post-restore, baseline QA selesai
+**Prinsip prioritasi:** Impact tinggi + Confidence tinggi + Effort masuk akal + Risk terkendali
 
 ---
 
-## NEXT (after NOW stabilizes)
+## NOW (P0/P1 — mendesak & berdampak tinggi)
 
-### X1 — Smoke test suite (auth + DB + one generation)
-- **Problem:** zero automated tests.
-- **Solution:** add a small Vitest/Bun-test suite covering signup, session, profile, and one document generation (mocked LLM).
-- **Impact 4 | Confidence 4 | Effort 4 | Risk 2**
-- **Acceptance:** `bun test` passes; covers happy + one failure path per area.
+### ROADMAP-001: Fix public certificate verification proxy bug
+- **Masalah:** `/verify/certificate/[code]` didesain public tapi proxy redirect ke `/login` — fitur unggulan rusak.
+- **Pengguna terdampak:** Semua orang yang menerima link verifikasi sertifikat (HR, beasiswa committee, dosen).
+- **Solusi:** Tambah `/verify` ke `PUBLIC_PREFIXES` di `src/proxy.ts`.
+- **Alasan prioritas:** P1, 1 line fix, impact besar pada trust feature.
+- **Dampak:** 5/5
+- **Effort:** 1/5 (10 menit)
+- **Risiko:** Rendah (hanya menambah path ke whitelist)
+- **Acceptance criteria:**
+  - Buka `/verify/certificate/[code]` di incognito → halaman tampil tanpa redirect
+  - Halaman lain (dashboard, documents) tetap redirect ke login jika tidak auth
+- **Cara pengujian:** Browser incognito, akses URL verify, verifikasi tidak ada redirect
 
-### X2 — Graceful AI degradation + user-facing error states
-- **Problem:** if LLM fails, user sees a generic 502; no retry/guidance.
-- **Solution:** standardized error envelope with code+message+retry; UI shows actionable error + retry button.
-- **Impact 4 | Confidence 4 | Effort 3 | Risk 2**
-- **Acceptance:** LLM failure → UI shows clear message + retry; no white screen.
+### ROADMAP-002: Add error boundaries + loading + not-found
+- **Masalah:** Tidak ada `error.tsx`, `loading.tsx`, `not-found.tsx`, `global-error.tsx` — unhandled error = white screen.
+- **Pengguna terdampak:** Semua user saat terjadi DB/LLM/network error.
+- **Solusi:** Buat 4 file:
+  - `src/app/global-error.tsx` (root error boundary)
+  - `src/app/not-found.tsx` (branded 404)
+  - `src/app/(app)/loading.tsx` (app loading skeleton)
+  - `src/app/(app)/error.tsx` (app error boundary dengan retry)
+- **Alasan prioritas:** P1, UX baseline, mencegah "white screen of death".
+- **Dampak:** 4/5
+- **Effort:** 2/5 (1-2 jam)
+- **Risiko:** Rendah
+- **Acceptance criteria:**
+  - DB error di server component → branded error page dengan "Coba lagi" button
+  - Halaman loading → skeleton bukan blank
+  - URL tidak ada → branded 404 dengan link ke dashboard
+- **Cara pengujian:** Putuskan DB, refresh halaman → error boundary. Akses URL random → 404.
 
-### X3 — Mobile responsive QA pass
-- **Problem:** mobile not verified; Indonesian users are mobile-first.
-- **Solution:** agent-browser at 375px width across all verticals; fix layout/overflow/touch targets.
-- **Impact 4 | Confidence 4 | Effort 3 | Risk 1**
-- **Acceptance:** all pages usable at 375px; no horizontal scroll; 44px touch targets.
+### ROADMAP-003: Add rate limiting (auth + LLM routes)
+- **Masalah:** Tidak ada rate limiter — brute-force password possible, LLM cost-abuse possible.
+- **Pengguna terdampak:** Semua (security + cost protection).
+- **Solusi:** Implementasi in-memory rate limiter (Map-based, per-IP + per-user). Untuk production multi-instance, bisa upgrade ke Upstash Redis.
+  - `/api/auth/login`: 10 req/menit per IP
+  - `/api/auth/signup`: 5 req/menit per IP
+  - `/api/documents/*/generate`, `/api/english/generate`, `/api/interview-sets`, `/api/applications/summarize`: 20 req/menit per user
+- **Alasan prioritas:** P1, security + cost.
+- **Dampak:** 5/5
+- **Effort:** 3/5 (2-3 jam)
+- **Risiko:** Sedang (perlu test agar tidak block legitimate user)
+- **Acceptance criteria:**
+  - 11th login attempt dalam 1 menit → 429 Too Many Requests
+  - 21st LLM generate dalam 1 menit → 429
+  - Normal usage tidak terpengaruh
+- **Cara pengujian:** Script yang hit endpoint 15x cepat → verifikasi 429 setelah threshold
 
-### X4 — High-entropy AUTH_SECRET + env validation
-- **Problem:** AUTH_SECRET is a static dev string; no env validation at boot.
-- **Solution:** generate random AUTH_SECRET in production; validate required env vars at startup with a clear error.
-- **Impact 3 | Confidence 5 | Effort 2 | Risk 1**
-- **Acceptance:** missing required env → app fails fast with a clear message.
+### ROADMAP-004: Fix mobile navigation (AppHeader hamburger menu)
+- **Masalah:** AppHeader nav links `hidden lg:flex` — mobile user tidak bisa navigasi.
+- **Pengguna terdampak:** ~60%+ user mobile.
+- **Solusi:** Tambah hamburger menu + Sheet/Drawer di AppHeader untuk `lg:hidden`.
+- **Alasan prioritas:** P1/P2, user journey broken di mobile.
+- **Dampak:** 4/5
+- **Effort:** 2/5 (1-2 jam)
+- **Risiko:** Rendah
+- **Acceptance criteria:**
+  - Di viewport < 1024px, hamburger menu muncul
+  - Klik hamburger → sheet/drawer dengan nav links
+  - Klik link → navigasi + tutup sheet
+- **Cara pengujian:** Browser dev tools, viewport mobile, verifikasi menu
 
-### X5 — Onboarding completion optimization
-- **Problem:** 5-step onboarding risks drop-off.
-- **Solution:** progress indicator (exists), allow skip-with-later-completion, show value preview per step, measure completion.
-- **Impact 3 | Confidence 3 | Effort 4 | Risk 2**
-- **Acceptance:** skip works; dashboard prompts to complete missing profile sections.
+### ROADMAP-005: Remove `ignoreBuildErrors: true` after fixing type errors
+- **Masalah:** 372 type errors di-mask oleh `ignoreBuildErrors: true` — bug TS bisa masuk production.
+- **Pengguna terdampak:** Developer (regression risk), user (bug potensial).
+- **Solusi:** 
+  1. Fix 364 errors di `dictionary.ts` (relax type atau fix missing keys)
+  2. Fix 8 errors di app code (db.ts, content-engine.ts, dll.)
+  3. Hapus `typescript.ignoreBuildErrors` dari next.config.ts
+  4. Verifikasi build masih lulus
+- **Alasan prioritas:** P1, technical debt blocking.
+- **Dampak:** 4/5
+- **Effort:** 4/5 (3-4 jam — dictionary fix complex)
+- **Risiko:** Sedang (perlu test regression)
+- **Acceptance criteria:**
+  - `tsc --noEmit` → 0 errors
+  - `next build` → exit 0 tanpa `ignoreBuildErrors`
+- **Cara pengujian:** Jalankan tsc + build
 
 ---
 
-## LATER (valuable but not urgent)
+## NEXT (P2 — setelah NOW stabil)
 
-### L1 — Public certificate verification polish
-- `/verify/certificate/[code]` exists; make it shareable, printable, with QR code.
-- **Impact 3 | Confidence 4 | Effort 3 | Risk 1**
+### ROADMAP-006: Wire ConfigPanel to all document builders
+- **Masalah:** ConfigPanel ada tapi tidak terhubung. User tidak bisa kontrol tone/length/target.
+- **Pengguna terdampak:** Semua user yang generate dokumen.
+- **Solusi:** Replace old config sidebars di 6 builder UI dengan ConfigPanel.
+- **Dampak:** 3/5
+- **Effort:** 3/5
+- **Risiko:** Sedang
+- **Acceptance criteria:** Semua 6 builder (CV ATS, CV Visual, Cover Letter, Bio, Essay, Deck) pakai ConfigPanel.
 
-### L2 — One-click multi-output
-- From profile, generate CV + cover letter + deck in a single action.
-- **Impact 4 | Confidence 3 | Effort 4 | Risk 2**
+### ROADMAP-007: Sanitize error messages in API routes
+- **Masalah:** 7 route leak `(e as Error).message` ke client.
+- **Solusi:** Central error handler, generic error codes.
+- **Dampak:** 3/5 (security)
+- **Effort:** 2/5
+- **Risiko:** Rendah
 
-### L3 — Audit trail of AI vs. user-provided content
-- Log which document lines came from the LLM vs. the profile (trust feature).
-- **Impact 3 | Confidence 3 | Effort 5 | Risk 2**
+### ROADMAP-008: Add getSession() to /api/applications/summarize
+- **Masalah:** Defense-in-depth violation.
+- **Solusi:** Tambah `getSession()` + ownership check.
+- **Dampak:** 2/5
+- **Effort:** 1/5
+- **Risiko:** Rendah
 
-### L4 — Command palette + notification center
-- Referenced in original task list but not implemented; add cmdk-based palette + a notification center.
-- **Impact 3 | Confidence 4 | Effort 4 | Risk 1**
+### ROADMAP-009: Render CommandDialog or remove
+- **Masalah:** Command palette built tapi tidak render.
+- **Solusi:** Wire `Cmd+K` shortcut di root layout, render CommandDialog dengan nav actions.
+- **Dampak:** 3/5 (power-user feature)
+- **Effort:** 2/5
+- **Risiko:** Rendah
 
-### L5 — Observability
-- Structured logging (pino), request IDs, basic metrics.
-- **Impact 3 | Confidence 4 | Effort 3 | Risk 1**
+### ROADMAP-010: Scale listening bank (13 → 100+)
+- **Masalah:** Bank listening hanya 13 set, user cepat habis.
+- **Solusi:** Run `bun run toefl:generate 50 medium` bertahap.
+- **Dampak:** 4/5 (retention)
+- **Effort:** 2/5 (script sudah ada)
+- **Risiko:** Rendah (LLM cost per set)
 
-### L6 — Backup & recovery docs
-- Document Turso backup strategy + restore procedure.
-- **Impact 3 | Confidence 5 | Effort 1 | Risk 1**
+### ROADMAP-011: Remove dead dependencies (next-auth, next-intl)
+- **Masalah:** Terinstall tapi tidak dipakai, bunyi package size.
+- **Solusi:** `bun remove next-auth next-intl`
+- **Dampak:** 1/5
+- **Effort:** 1/5
+- **Risiko:** Rendah
+
+### ROADMAP-012: Add automated tests (Vitest unit + Playwright E2E)
+- **Masalah:** Zero tests, regression risk tinggi.
+- **Solusi:** Setup Vitest untuk pure functions (scoring, suggestions, profile), Playwright untuk happy path (signup → onboarding → generate CV).
+- **Dampak:** 4/5 (long-term maintainability)
+- **Effort:** 4/5
+- **Risiko:** Rendah
+
+### ROADMAP-013: Internationalize certificate pages
+- **Masalah:** Hardcoded English di `/verify/certificate/[code]` dan `certificate-list.tsx`.
+- **Solusi:** Pindahkan ke dictionary.
+- **Dampak:** 2/5
+- **Effort:** 2/5
+- **Risiko:** Rendah
 
 ---
 
-## NOT PLANNED (intentionally out of scope to stay focused)
+## LATER (P3 — penting tapi tidak sekarang)
 
-- **Supabase Postgres DB migration** — Turso/libSQL works well; migration adds risk without clear benefit. Keep Supabase for Storage only.
-- **Auto-apply bot** — explicitly against positioning ("Bukan auto-apply bot").
-- **Paid pricing / payments** — not now; focus on product fit first.
-- **Collaboration / multi-user editing** — referenced in task list but diverges from single-user-profile model; deferred unless clear demand.
-- **Changing authentication provider** — current JWT+cookie works; no need to swap to NextAuth/Supabase Auth now.
+### ROADMAP-014: Add "Opportunity Readiness Score"
+- **Masalah:** Tidak ada composite metric untuk "seberapa siap melamar".
+- **Solusi:** Score dari profile completion + document freshness + English practice + interview prep. Tampil di dashboard.
+- **Dampak:** 5/5 (diferensiasi)
+- **Effort:** 4/5
+- **Risiko:** Sedang
+
+### ROADMAP-015: PWA manifest + service worker
+- **Masalah:** Tidak installable, tidak ada offline mode.
+- **Solusi:** next-pwa atau manual manifest + Workbox.
+- **Dampak:** 3/5
+- **Effort:** 3/5
+- **Risiko:** Sedang
+
+### ROADMAP-016: Notification center
+- **Masalah:** Deadline alerts hanya di page Applications.
+- **Solusi:** NotificationCenter component + SSE/polling + Prisma Notification model.
+- **Dampak:** 3/5
+- **Effort:** 4/5
+- **Risiko:** Sedang
+
+### ROADMAP-017: JD → Tailored document pipeline
+- **Masalah:** Generate dokumen fragmented, tidak ada "paste JD → generate all".
+- **Solusi:** Wizard: paste JD → pilih dokumen (CV + cover letter + interview) → generate semua tailored.
+- **Dampak:** 5/5 (killer feature)
+- **Effort:** 5/5
+- **Risiko:** Tinggi (LLM cost, UX complexity)
+
+### ROADMAP-018: Voice-to-voice mock interview
+- **Masalah:** Interview prep hanya text.
+- **Solusi:** TTS + STT → voice interview real-time.
+- **Dampak:** 4/5
+- **Effort:** 5/5
+- **Risiko:** Tinggi
+
+### ROADMAP-019: Schema drift fix (add 4 missing models to Prisma)
+- **Masalah:** 4 tabel di Turso (Achievement, AuditLog, ReadingQuestion, StructureQuestion) tidak ada di Prisma.
+- **Solusi:** Tambahkan 4 model ke schema.prisma, run `prisma db pull` untuk sync.
+- **Dampak:** 3/5 (data integrity)
+- **Effort:** 2/5
+- **Risiko:** Sedang (perlu verify tidak break existing query)
+
+### ROADMAP-020: Accessibility improvements
+- **Masalah:** Tidak ada skip-link, aria-current, prefers-reduced-motion, live regions.
+- **Solusi:** Audit + fix per component.
+- **Dampak:** 3/5
+- **Effort:** 3/5
+- **Risiko:** Rendah
+
+---
+
+## NOT PLANNED (sengaja tidak dikerjakan untuk fokus)
+
+- **Supabase Auth migration** — custom JWT works, migration cost > benefit sekarang.
+- **Postgres migration** — Turso/libSQL cukup untuk scale saat ini. Supabase Postgres blocked oleh IPv6.
+- **Multi-tenant / B2B** — fokus B2C dulu.
+- **Mobile native app** — PWA cukup, native terlalu mahal.
+- **Real-time collaboration** — solo user product, tidak butuh.
+- **Payment integration** — belum ada pricing model, bukan prioritas.
+- **Email sending** — tidak ada email verification/reset flow sekarang; butuh SMTP service dulu.
+- **AI image generation** — di luar scope (CV photo upload sudah cukup).
+
+---
+
+## Progress Tracking
+
+| ID | Status | Round | Commit |
+|---|---|---|---|
+| ROADMAP-001 | 🔴 TODO | - | - |
+| ROADMAP-002 | 🔴 TODO | - | - |
+| ROADMAP-003 | 🔴 TODO | - | - |
+| ROADMAP-004 | 🔴 TODO | - | - |
+| ROADMAP-005 | 🔴 TODO | - | - |
+| ROADMAP-006 | 🔴 TODO | - | - |
+| ROADMAP-007 | 🔴 TODO | - | - |
+| ROADMAP-008 | 🔴 TODO | - | - |
+| ROADMAP-009 | 🔴 TODO | - | - |
+| ROADMAP-010 | 🔴 TODO | - | - |
+| ROADMAP-011 | 🔴 TODO | - | - |
+| ROADMAP-012 | 🔴 TODO | - | - |
+| ROADMAP-013 | 🔴 TODO | - | - |
+| ROADMAP-014 | 🔴 LATER | - | - |
+| ROADMAP-015 | 🔴 LATER | - | - |
+| ROADMAP-016 | 🔴 LATER | - | - |
+| ROADMAP-017 | 🔴 LATER | - | - |
+| ROADMAP-018 | 🔴 LATER | - | - |
+| ROADMAP-019 | 🔴 LATER | - | - |
+| ROADMAP-020 | 🔴 LATER | - | - |

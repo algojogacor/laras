@@ -1,0 +1,455 @@
+# BRIEF.md — Career & Opportunity Readiness Ecosystem
+### Super-App untuk Job Seeker, Pelamar Organisasi, dan Pencari Kesempatan — Production-Grade, Bukan Prototipe
+
+---
+
+## 0. Cara Membaca Brief Ini
+
+Ini adalah brief kerja untuk AI coding agent yang bekerja mandiri, iteratif, dan dalam waktu lama tanpa pengawasan terus-menerus. Brief ini sengaja ditulis mendalam dan eksplisit karena kamu (agent) akan bekerja berjam-jam tanpa bisa selalu bertanya balik. Kalau ada bagian yang ambigu, pilih interpretasi yang paling masuk akal secara produk dan paling aman secara teknis, lalu catat asumsimu — jangan berhenti bekerja hanya karena satu detail tidak sempurna jelas.
+
+Bacalah brief ini secara menyeluruh sebelum menulis baris kode pertama. Lalu ikuti bagian **Build Phases** di dekat akhir dokumen sebagai urutan kerja.
+
+**Catatan soal gaya instruksi di brief ini:** brief ini sengaja ditulis eksplisit dan detail, bukan cuma garis besar — setiap keputusan teknis, kuota, dan pembagian tanggung jawab platform ditulis apa adanya supaya tidak ada ruang tafsir yang keliru. Kalau kamu (agent) punya kemampuan mengakses internet/pencarian web, gunakan itu secara aktif untuk memvalidasi atau mencari alternatif lebih baik dari rekomendasi teknis di brief ini (terutama untuk hal yang cepat berubah seperti pilihan model AI open-source atau sumber konten gratis) — brief ini memberi rekomendasi default yang aman, bukan larangan untuk mencari yang lebih baik. Kalau kamu menemukan opsi yang lebih baik, pakai itu, dan catat alasannya di `worklog.md`.
+
+---
+
+## 1. Visi Produk
+
+Ini bukan sekadar "resume builder". Ini adalah ekosistem yang menjawab satu kebutuhan manusia yang sama, muncul dalam banyak bentuk: **"Aku sedang mempersiapkan diri untuk diterima/diseleksi oleh sesuatu."** Bentuknya bisa macam-macam — melamar kerja, join organisasi kampus, mendaftar beasiswa, ikut program volunteer, atau daftar asosiasi profesional. Semuanya butuh hal yang sama: dokumen yang meyakinkan, kesiapan wawancara, dan kadang kemampuan bahasa Inggris yang teruji.
+
+Produk ini menyatukan semua kebutuhan itu dalam satu ekosistem, dengan satu data diri sebagai sumber kebenaran, dan beberapa produk/modul yang saling terhubung di atasnya.
+
+**Filosofi inti yang harus dipegang di setiap keputusan desain maupun teknis:**
+1. **Satu data, banyak output.** User isi profil sekali, semua modul menariknya.
+2. **Verifikasi sebelum generate, bukan generate lalu berharap user mengedit.** Jangan pernah membiarkan sistem mengarang detail personal yang tidak pernah diberikan user (lihat Section 5).
+3. **Kualitas di atas kecepatan generate.** Lebih baik sistem bertanya dulu daripada menghasilkan sesuatu yang generik atau salah.
+4. **Ini produk global-ready sejak hari pertama** — mendukung Bahasa Indonesia dan Inggris secara penuh, bukan cuma terjemahan UI, tapi juga konvensi dokumen yang berbeda antar negara (lihat Section 9).
+5. **Data user selalu hidup, tidak pernah statis.** Profil, pengalaman, skill seseorang berubah terus. Sistem harus proaktif menggali data sebanyak mungkin di awal (Section 4.1), DAN selalu memberi kesempatan mengedit data itu tepat sebelum dipakai generate apa pun (Section 4.2) — jangan pernah diam-diam pakai data lama yang mungkin sudah usang.
+
+---
+
+## 2. Peta Ekosistem — Lima Vertikal Produk
+
+Semua vertikal berikut berbagi satu data diri (`UserProfile`) dan beberapa "engine" bersama (dijelaskan di Section 3). Anggap masing-masing vertikal sebagai "aplikasi" di dalam satu ekosistem, bukan fitur kecil yang ditempel.
+
+### 2.1 Document Suite
+CV ATS-friendly, CV visual, cover letter, personal deck (PPT), bio singkat. Ini fondasi yang sudah pernah dibahas mendalam — detail lengkap tetap berlaku dan ada di Section 6, 7, 8.
+
+### 2.2 Application Ops (job & opportunity tracker)
+Tempat user melacak semua lamaran/pendaftaran yang sedang berjalan — baik itu lamaran kerja, pendaftaran organisasi, atau aplikasi beasiswa. Fitur inti:
+- Papan status ala kanban (tersimpan → dilamar → interview → hasil) yang bisa dipakai untuk jenis aplikasi apa pun, bukan cuma kerja.
+- Setiap kartu aplikasi terhubung ke dokumen spesifik yang dipakai untuk aplikasi itu (versi CV mana, cover letter mana) — jadi user tahu persis apa yang sudah dikirim ke mana.
+- Reminder/deadline per aplikasi.
+- Ringkasan otomatis dari lowongan/pengumuman yang di-paste user (ekstrak requirement, deadline, kontak) supaya user tidak perlu baca ulang manual.
+- **Bukan** auto-apply bot. Sistem membantu menyiapkan dan melacak, tapi keputusan submit selalu di tangan user — ini pilihan sadar untuk menjaga kualitas dan menghindari masalah etika yang dialami kompetitor auto-apply.
+
+### 2.3 Interview & Selection Prep
+Latihan wawancara kerja, wawancara organisasi, atau sesi tanya-jawab beasiswa. Dua sisi yang harus digabung dalam satu modul (riset menunjukkan kompetitor besar cuma kuat di salah satu sisi ini, jarang dua-duanya):
+- **Sisi konten** — AI menyusun kemungkinan pertanyaan berdasarkan role/organisasi/beasiswa target, lalu bantu user menyusun jawaban dari pengalaman ASLI di `UserProfile` (bukan jawaban template generik).
+- **Sisi delivery** — rekam jawaban user (teks atau suara), beri feedback soal kejelasan struktur, panjang jawaban, filler words (kalau berbasis suara), dan seberapa spesifik/konkret jawabannya.
+
+### 2.4 English & Communication Readiness (TOEFL/IELTS-oriented)
+Modul latihan bahasa Inggris yang fokus ke kebutuhan riil: melamar kerja/sekolah/beasiswa yang mensyaratkan skor TOEFL/IELTS atau sekadar kemampuan komunikasi profesional. Detail lengkap ada di Section 10 karena modul ini punya arsitektur teknis yang beda sendiri (butuh audio).
+
+### 2.5 Opportunity Essays & Statements
+Personal statement, motivation letter, essay beasiswa, essay pendaftaran organisasi/volunteer. Beda dari cover letter kerja (yang lebih pendek dan langsung ke poin), essay jenis ini butuh narasi yang lebih personal dan mendalam. Modul ini WAJIB pakai prinsip verifikasi-sebelum-generate paling ketat dari semua modul (lihat Section 5.4), karena taruhannya (beasiswa, penerimaan organisasi) sangat personal dan berisiko tinggi kalau sampai ada detail yang dikarang AI.
+
+---
+
+## 3. Arsitektur Sistem — Tiga Lapisan Bersama
+
+Supaya lima vertikal di atas tidak jadi lima aplikasi terpisah yang kebetulan berbagi login, bangun tiga "engine" bersama yang dipakai ulang oleh semua vertikal:
+
+### 3.1 Content Engine
+Menangani semua yang berbasis teks: draft CV, cover letter, essay, bio, ringkasan lowongan, saran jawaban interview, serta soal Reading & Structure untuk English Readiness (Section 10.1, 10.2). Semua modul teks WAJIB lewat sini, termasuk lapisan anti-generic-writing dan verifikasi-sebelum-generate (Section 5). Engine ini juga yang menghasilkan draft dokumen yang lalu dirender jadi file oleh modul export (DOCX/PDF/PPTX).
+
+**Catatan kontras penting soal strategi generate**: khusus untuk soal Reading & Structure (Section 10.1, 10.2), Content Engine boleh dan sebaiknya generate **on-the-go langsung saat production** setiap kali user meminta latihan baru — ini murni teks, murah, cepat, cukup dijalankan di Vercel. Ini BERBEDA dengan audio Listening (Section 10.3, diproses Heavy & Background Generation Engine) yang wajib di-generate tuntas selama development sebelum publish. Jangan menyamaratakan kedua kebutuhan ini jadi satu pola pre-generate yang sama — teks dan audio punya karakteristik biaya/beban yang jauh berbeda.
+
+### 3.2 Workflow & Tracking Engine
+Menangani status aplikasi, deadline, kanban board, notifikasi, dan riwayat versi dokumen per aplikasi. Ini lapisan data terstruktur, relatif ringan secara komputasi, cocok untuk hosting serverless standar.
+
+### 3.3 Heavy & Background Generation Engine
+Menangani semua proses yang **berat secara komputasi tapi tidak butuh interaksi real-time** — user tidak menunggu di depan layar sambil sistem memproses langsung, melainkan submit permintaan lalu hasilnya siap beberapa saat kemudian (atau sudah di-cache dari permintaan sebelumnya). Dua kebutuhan utama masuk ke sini:
+- **Text-to-speech untuk audio listening** (Section 10.3) — skrip listening diproses jadi file audio secara batch, disimpan/di-cache, lalu diputar ulang kapan saja oleh user tanpa perlu generate ulang tiap kali.
+- **Generate dokumen berat/kompleks** yang berpotensi melebihi batas waktu eksekusi serverless (misalnya PPTX dengan banyak elemen visual kompleks).
+
+**Catatan arsitektur penting: modul ini TIDAK perlu mendukung audio real-time/dua-arah.** Tidak ada kebutuhan speech-to-text langsung, tidak ada percakapan suara interaktif, tidak ada streaming audio live. Semua audio yang diproses sistem sifatnya asinkron (submit teks → tunggu → dapat file audio jadi), sama seperti generate dokumen. Ini menyederhanakan kebutuhan infrastruktur secara signifikan — cukup proses background/queue biasa, bukan koneksi persisten/WebSocket real-time.
+
+**Aturan arsitektur:** ketiga engine ini berkomunikasi lewat API internal yang jelas, bukan saling akses database langsung. Ini penting supaya ke depan salah satu engine bisa di-scale atau dipindah hosting tanpa mengganggu yang lain.
+
+---
+
+## 4. Data Model — Satu Sumber Kebenaran
+
+Struktur data inti (dijelaskan secara konsep, bukan skema kode literal — silakan pilih representasi teknis yang paling sesuai stack yang kamu pilih):
+
+- **Profil dasar**: nama, kontak, lokasi, tautan (LinkedIn, portofolio), foto (opsional, ditandai jelas kapan boleh/tidak boleh dipakai per Section 9).
+- **Ringkasan diri**: headline dan ringkasan profesional mentah dari user.
+- **Riwayat pengalaman**: setiap entri organisasi/pekerjaan/proyek, lengkap dengan poin-poin pencapaian DAN sebuah kolom "catatan konteks" (`context_notes`) yang menyimpan detail spesifik yang cuma diketahui pemilik pengalaman — nama proyek, klien, tantangan nyata, angka hasil. Kolom ini adalah fondasi dari seluruh sistem anti-generic dan anti-hallucination.
+- **Pendidikan**, **skill**, **sertifikasi**, **bahasa yang dikuasai** (termasuk level, karena ini relevan untuk modul English Readiness).
+- **Preferensi**: bahasa target dokumen (ID/EN — lihat Section 9), target negara/wilayah lamaran, jenis peluang yang sedang dikejar (kerja/organisasi/beasiswa/volunteer), tone yang disukai.
+- **Riwayat aplikasi**: terhubung ke Workflow Engine, tiap aplikasi menyimpan dokumen versi mana yang dipakai.
+
+Semua modul WAJIB menarik data dari sini. Tidak ada modul yang boleh punya form input data diri sendiri yang terpisah — kalau ada kebutuhan data baru yang spesifik ke satu modul (misal target skor TOEFL), tambahkan sebagai field baru di struktur ini, bukan bikin database baru yang terisolasi.
+
+### 4.1 Onboarding Proaktif — Instruksi Eksplisit (WAJIB)
+
+Ini instruksi eksplisit, bukan saran opsional: **saat user pertama kali login/mendaftar, sistem WAJIB menjalankan alur onboarding yang aktif menggali data sebanyak mungkin**, bukan cuma form kosong yang menunggu diisi seadanya oleh user.
+
+Alasan: pengalaman kompetitor menunjukkan pola gagal yang konsisten — user cuma isi 2-3 baris pengalaman kerja seadanya di awal karena malas, lalu semua dokumen yang di-generate jadi tipis dan generik karena data sumbernya sendiri tipis. Onboarding yang proaktif memperbaiki masalah di akar (kualitas data), bukan cuma di hilir (kualitas tulisan).
+
+**Bentuk implementasi yang wajib ada:**
+- Onboarding berbentuk wizard bertahap (step-by-step), BUKAN satu form panjang sekaligus — pecah jadi beberapa layar pendek supaya tidak terasa berat.
+- Di setiap tahap, sistem mengajukan **pertanyaan proaktif dan spesifik**, bukan cuma field kosong generik. Contoh pola pertanyaan yang harus dipakai sebagai model (sesuaikan/perluas sesuai konteks user):
+  - Untuk tiap pengalaman kerja/organisasi yang diinput: bukan cuma "jabatan & deskripsi", tapi sistem bertanya susulan seperti "Ada pencapaian yang bisa diukur dari peran ini? (angka, persentase, skala tim/anggaran)" dan "Tantangan spesifik apa yang pernah kamu hadapi dan bagaimana kamu menyelesaikannya?" — jawaban ini yang mengisi `context_notes` (Section 4).
+  - Untuk skill: bukan cuma daftar nama skill, tapi tanyakan konteks pemakaian ("Kamu pakai skill ini di proyek/situasi apa?").
+  - Untuk tujuan: tanyakan jenis peluang yang sedang dikejar (kerja/organisasi/beasiswa/volunteer), target wilayah lamaran, dan urgensi (ada deadline dekat atau masih eksplorasi) — ini menentukan modul mana yang perlu ditonjolkan ke user begitu onboarding selesai.
+- Onboarding harus terasa seperti **wawancara singkat yang membantu user berpikir**, bukan interogasi birokratis. Kalau user belum tahu jawabannya di satu pertanyaan, beri opsi "lewati dulu, isi nanti" — jangan memblokir progres, tapi tetap tandai bagian yang belum lengkap supaya sistem bisa mengingatkan lagi nanti (misalnya saat user pertama kali mau generate dokumen yang butuh data itu).
+- Setelah onboarding selesai, tampilkan ringkasan singkat "profil kamu sudah terisi X%" sebagai indikator, dan dorong halus (bukan memaksa) untuk melengkapi bagian yang masih kosong sebelum generate dokumen pertama.
+
+### 4.2 Edit-Before-Generate — Instruksi Eksplisit (WAJIB di SEMUA modul generate)
+
+Ini aturan wajib yang berlaku di **setiap titik generate di seluruh ekosistem** — CV ATS, CV Visual, Cover Letter, Bio, PPT Deck, Opportunity Essay, ringkasan interview prep, dan modul apa pun yang ditambahkan di masa depan (Section 17):
+
+**Sebelum sistem benar-benar menghasilkan dokumen, WAJIB tampilkan layar konfirmasi/edit yang menunjukkan data yang akan dipakai**, dengan kemampuan mengedit langsung di layar itu tanpa harus keluar dan masuk ke halaman profil terpisah. Alasan: pengalaman dan situasi user berubah terus-menerus (pindah kerja, dapat pencapaian baru, skill baru, ganti nomor telepon) — kalau sistem langsung generate dari data lama tanpa memberi kesempatan cek/edit, dokumen yang keluar bisa memuat info usang tanpa user sadar sampai sudah terlambat (misal sudah dikirim ke perekrut).
+
+**Pola wajib di setiap alur generate:**
+1. User memilih jenis dokumen yang mau dibuat (CV ATS, cover letter, dsb).
+2. Sistem menampilkan ringkasan data yang akan dipakai (bukan seluruh profil mentah, tapi bagian relevan untuk jenis dokumen itu — misal cover letter tidak perlu menampilkan seluruh riwayat sertifikasi kalau tidak relevan).
+3. Setiap bagian data itu **bisa diedit inline di layar yang sama** — user bisa menambah pengalaman baru, mengubah highlight pencapaian, memperbarui kontak, dll — sebelum menekan tombol generate.
+4. Perubahan yang dibuat di layar edit-before-generate ini **disimpan balik ke `UserProfile`** (Section 4), bukan cuma dipakai sekali untuk dokumen itu saja — supaya generate berikutnya juga sudah dapat data terbaru, dan user tidak perlu mengulang edit yang sama.
+5. Untuk dokumen yang sifatnya spesifik-per-aplikasi (misal cover letter untuk lowongan tertentu, atau essay untuk beasiswa tertentu), tambahkan juga field khusus di layar ini untuk info yang cuma relevan ke aplikasi itu (nama posisi, nama organisasi tujuan) — tapi field ini terhubung ke `Riwayat aplikasi` di Section 4, bukan field lepas yang hilang begitu dokumen selesai dibuat.
+
+Ini bukan langkah tambahan yang memperlambat — justru ini titik yang mengubah kualitas output paling signifikan tanpa user perlu memahami detail teknis apa pun. Jangan pernah membuat tombol "Generate langsung" yang skip layar ini.
+
+---
+
+## 5. Prinsip Anti-Generic & Anti-Hallucination (berlaku di semua modul teks)
+
+Ini bukan fitur tambahan — ini adalah cara Content Engine bekerja secara default, di semua tempat yang menghasilkan teks tentang diri user.
+
+### 5.1 Kenapa ini penting
+Riset menunjukkan pola yang konsisten di semua platform sejenis: dokumen hasil AI gampang ketahuan karena (a) memakai buzzword generik tanpa bukti, (b) menjelaskan tugas tanpa hasil terukur, (c) struktur kalimat terlalu seragam, dan yang paling berisiko — (d) **AI mengarang detail yang kedengaran meyakinkan tapi tidak pernah benar terjadi**, terutama di essay beasiswa/organisasi di mana ini bisa berakibat serius kalau sampai bertentangan dengan dokumen resmi user.
+
+### 5.2 Aturan wajib: verifikasi sebelum generate
+Sebelum sistem menulis paragraf apa pun yang mengklaim sesuatu tentang pengalaman user, sistem harus memastikan detail itu berasal dari data yang benar-benar diisi user (`context_notes`, riwayat pengalaman, dsb) — bukan diasumsikan atau ditebak dari pola umum. Kalau data pendukung untuk suatu klaim tidak ada, sistem harus **berhenti dan bertanya ke user** ("Ada bukti/detail konkret soal ini? Nama proyek, angka, atau situasi spesifik apa yang bisa dipakai?") daripada diam-diam mengisi dengan kalimat generik sebagai fallback.
+
+Ini berlaku ekstra ketat di modul Opportunity Essays (Section 2.5), karena taruhannya paling personal dan paling berisiko kalau ada detail yang salah.
+
+### 5.3 Daftar pola yang harus dihindari/ditandai
+- Kata/frasa buzzword tanpa bukti pendukung: "results-driven", "detail-oriented", "proven track record", "dynamic", "passionate about", "hardworking", "seasoned professional", dan padanan Indonesianya ("berorientasi hasil", "pekerja keras", "bersemangat tinggi") — semua ini boleh dipakai HANYA jika kalimat yang sama juga memuat angka/bukti konkret.
+- Kalimat yang menjelaskan tugas tanpa hasil ("Mengelola beberapa proyek") — dorong ke format Aksi + Konteks + Hasil terukur ("Memimpin tiga peluncuran produk di Q2, menaikkan penjualan 20% dalam enam bulan").
+- Keseragaman struktur kalimat (semua kalimat panjangnya mirip) — variasikan secara sengaja.
+- Pola "rule of three" yang berulang di setiap section — jangan dipaksa selalu tiga poin.
+- Transisi formal yang diulang-ulang di setiap paragraf ("Selain itu", "Selanjutnya", "Furthermore").
+
+### 5.4 Level ketat per modul
+- **Cover letter, bio, CV bullet**: terapkan penuh Section 5.2 dan 5.3.
+- **Opportunity Essay (beasiswa/organisasi)**: tambahan di atas itu — WAJIB ada sesi tanya-jawab eksplisit dengan user sebelum draft pertama ditulis (bukan cuma form isian), mirip pola wawancara singkat. Sistem menyusun 3-5 pertanyaan probing spesifik ke jenis essay itu (motivasi, tantangan yang pernah dihadapi, kontribusi konkret) sebelum menulis apa pun.
+- **Jawaban interview prep**: sistem membantu MENYUSUN jawaban dari pengalaman asli user, bukan menciptakan skenario yang tidak pernah dialami user.
+
+### 5.5 Self-check sebelum menampilkan hasil
+Sebelum output ditampilkan ke user, jalankan pengecekan: berapa persen kalimat yang punya bukti/angka konkret, apakah ada buzzword tanpa dukungan, apakah ada detail yang tidak bisa ditelusuri balik ke data yang diisi user. Tampilkan ke user sebagai skor "kekonkretan konten" (framing-nya adalah kualitas, bukan "lolos deteksi AI").
+
+---
+
+## 6. Document Suite — Detail Modul
+
+*(Bagian ini melanjutkan dan menyempurnakan brief sebelumnya — tetap berlaku penuh. Ingat: setiap modul di bawah ini WAJIB tunduk pada alur edit-before-generate di Section 4.2.)*
+
+### 6.1 CV ATS
+Output DOCX (utama) + PDF text-selectable (sekunder). Section order: Kontak → Ringkasan → Skill → Pengalaman → Pendidikan → Sertifikasi. Semua aturan format ada di Section 7 — ini hard constraint, bukan saran.
+
+### 6.2 CV Visual
+Output PDF, minimal 4 gaya template berbeda (modern-minimal, korporat, kreatif, teknis). Live preview. Foto profil opsional dengan peringatan konteks negara (lihat Section 9).
+
+### 6.3 Cover Letter
+Ditulis dari `context_notes` dan pengalaman spesifik, 250-350 kata, 3-4 paragraf, mengikuti Section 5 penuh.
+
+### 6.4 Personal Deck (PPT)
+Output `.pptx` yang harus terbuka bersih di PowerPoint/Impress asli (bukan cuma bagus di preview web — ini titik lemah nyata kompetitor besar seperti Gamma). Struktur: Cover → About Me → Timeline Karier → Skill (visual) → Highlight Proyek → Kontak. Detail desain dan sumber template ada di Section 8.
+
+### 6.5 Bio
+Versi 1 kalimat (headline), 1 paragraf (about), 3 paragraf (halaman personal). Sama-sama tunduk pada Section 5.
+
+### 6.6 Opportunity Essay / Personal Statement
+Modul baru — untuk beasiswa, pendaftaran organisasi kampus, program volunteer, aplikasi asosiasi profesional. Struktur umum: pembuka yang personal (bukan generik "Saya menulis untuk menyatakan minat saya..."), 1-2 bukti konkret dari pengalaman nyata, penutup yang menghubungkan ke tujuan/organisasi spesifik yang dituju. Panjang menyesuaikan format yang diminta (beberapa beasiswa punya batas kata ketat — sistem harus menghormati batas ini dengan presisi, bukan mendekati).
+
+---
+
+## 7. Aturan Format ATS (Hard Constraint)
+
+Berlaku wajib untuk semua output mode "CV ATS". Cek ulang satu per satu setiap kali membuat/mengubah template ATS:
+
+| Aturan | Spesifikasi |
+|---|---|
+| Layout | Satu kolom saja. Tidak ada tabel, text box, sidebar, atau multi-kolom untuk menyusun konten. |
+| Font | Arial, Calibri, Helvetica, Georgia, atau Times New Roman saja. |
+| Ukuran | Body 10-12pt, heading section 14-16pt, nama 18-22pt. |
+| Margin | 0.5"-1" di semua sisi. |
+| Bullet | Bullet bulat (•) atau dash (-) saja. Tanpa ikon, checkmark, arrow, emoji, skill bar. |
+| Kontak | Wajib di body dokumen, bukan header/footer. |
+| Heading | Nama standar: "Work Experience"/"Pengalaman Kerja", "Education"/"Pendidikan", "Skills"/"Keahlian" — bukan judul kreatif. |
+| Grafik | Tidak ada foto/ikon/chart di versi ATS. |
+| Tanggal | Format konsisten (MM/YYYY) di seluruh dokumen. |
+| File | DOCX sebagai default utama; PDF text-selectable sebagai opsi kedua — wajib bisa di-select-drag semua teksnya, bukan hasil gambar. |
+| Panjang | 1-2 halaman, jangan dipaksa satu halaman kalau riwayat kerja panjang. |
+| Urutan section | Kontak → Ringkasan → Skill → Pengalaman → Pendidikan → Sertifikasi. |
+
+**Uji wajib**: buka file hasil generate, coba select-drag semua teksnya (harus ter-select sebagai teks, bukan gambar). Jalankan ekstraksi section sederhana untuk pastikan heading terbaca sesuai urutan.
+
+---
+
+## 8. Aturan Desain PPT (Personal Deck)
+
+- File `.pptx` yang dibuka di PowerPoint/Impress asli tidak boleh ada elemen overflow, font fallback salah, atau teks terpotong.
+- Smart layout: tambah 1 bullet atau ganti foto → elemen lain re-adjust otomatis, tanpa tabrakan.
+- Satu font family per tema, palet warna terbatas (maks 3-4 warna) konsisten di semua slide.
+- Kontrol densitas: user pilih seberapa padat teks per slide sebelum generate.
+- Tidak ada slide yang terasa kosong atau terlalu padat.
+- Data ditarik langsung dari `UserProfile`, tidak input ulang manual (dan tetap lewat layar edit-before-generate, Section 4.2).
+
+### 8.1 Sumber Template PPT — Instruksi Eksplisit dengan Link Repo Konkret
+
+User meminta banyak pilihan template PPT yang benar-benar bagus, bukan asal jadi, dan minta link GitHub eksplisit supaya agent tahu persis lokasi install-nya — bukan cuma nama proyek. Berikut daftar konkret hasil pengecekan lisensi satu per satu. **Install/clone langsung dari link berikut, jangan menebak nama package dari ingatan.**
+
+**Jangan copy-paste mentah template yang bersifat institusional/branded.** Contoh: [`github.com/gbif/ppt-template`](https://github.com/gbif/ppt-template) adalah template resmi milik organisasi GBIF (ada logo dan identitas visual mereka) — ini bukan untuk dipakai ulang sebagai template produk komersial pihak lain, meskipun repo-nya publik. Setiap repo yang ditemukan di topic GitHub seperti [presentation-template](https://github.com/topics/presentation-template), [powerpoint](https://github.com/topics/powerpoint), [presentation-slides](https://github.com/topics/presentation-slides), atau [ppt-templates](https://github.com/topics/ppt-templates) HARUS dicek file `LICENSE` di root repo-nya sebelum dipakai — repo publik tidak otomatis berarti bebas dipakai ulang komersial.
+
+**Library inti untuk generate file `.pptx` terprogram (WAJIB dipakai sebagai dependency, bukan cuma referensi):**
+- **`python-pptx`** — `pip install python-pptx --break-system-packages`, repo: [`github.com/scanny/python-pptx`](https://github.com/scanny/python-pptx), lisensi MIT. Ini fondasi backend paling matang untuk generate/manipulasi `.pptx` terprogram dari Python — pakai ini sebagai engine render utama untuk Personal Deck.
+- **`PptxGenJS`** — `npm install pptxgenjs`, repo: [`github.com/gitbrent/PptxGenJS`](https://github.com/gitbrent/PptxGenJS), lisensi MIT. Alternatif kalau stack backend-mu Node.js/JavaScript, bukan Python — pilih salah satu (python-pptx atau PptxGenJS) sesuai bahasa backend yang kamu putuskan di Phase 0, jangan pakai dua-duanya sekaligus.
+
+**Referensi arsitektur (dipelajari cara kerjanya, bukan di-fork mentah jadi produk ini):**
+- **Presenton** — repo: [`github.com/presenton/presenton`](https://github.com/presenton/presenton), lisensi Apache 2.0. AI presentation generator open-source yang benar-benar menghasilkan file `.pptx` asli yang bisa diedit (bukan gambar slide). Pelajari bagaimana ia memisahkan struktur konten dari layout/tema — pola pikir ini (tema sebagai layer config terpisah dari konten) yang harus ditiru di Section 8, bukan kode/brand-nya.
+- **reveal.js** — repo: [`github.com/hakimel/reveal.js`](https://github.com/hakimel/reveal.js), lisensi MIT. Framework presentasi HTML, relevan kalau kamu ingin menawarkan mode preview interaktif di browser sebelum export ke `.pptx`.
+- **Slidev** — proyek presentasi berbasis Markdown+Vue, lisensi MIT (cari repo resminya di GitHub org `slidevjs/slidev` sebelum dipakai, cek ulang lisensi saat kamu benar-benar mengaksesnya karena repo bisa berubah struktur). Relevan sebagai inspirasi mode "tulis sebagai markdown, style otomatis rapi" — opsi cepat di luar mode PPT visual utama, mirip juga dengan alur **Marp** (markdown-to-slide dengan tema CSS custom) yang disebut user.
+
+**Rekomendasi kerja konkret:**
+1. Install `python-pptx` atau `PptxGenJS` (lihat di atas) sebagai fondasi rendering di Phase 3.
+2. Bangun **minimal 8-10 desain template in-house** (config tema — bukan hasil fork template GitHub manapun) yang terinspirasi dari prinsip desain di proyek-proyek di atas (palet warna terbatas, tipografi jelas, grid konsisten — sama seperti prinsip Section 13), dikelompokkan per gaya: modern-minimal, korporat, kreatif/warna berani, teknis/data-heavy, akademik (untuk beasiswa/organisasi kampus).
+3. Simpan tiap template sebagai definisi tema terpisah dari logic generate (warna, font, layout grid sebagai config/JSON, bukan hardcoded per template) — supaya menambah template baru ke depan tidak perlu menulis ulang seluruh generator.
+4. Kalau agent menemukan repo GitHub lain dengan lisensi permisif (MIT/Apache/CC0) yang benar-benar bebas dipakai ulang desainnya secara komersial, boleh dijadikan salah satu tema tambahan — tapi WAJIB catat link repo persis dan lisensinya di `worklog.md`, dan tetap hindari yang mengandung logo/identitas institusi tertentu (pola yang sama seperti kasus `gbif/ppt-template` di atas).
+5. Uji SEMUA template dengan cara yang sama seperti Section 8 di atas: buka di PowerPoint/Impress asli, cek tidak ada overflow, dan pastikan smart-layout re-adjust bekerja di tiap template — bukan cuma di template default.
+
+---
+
+## 9. Language & Locale Settings (EN/ID)
+
+Ini bukan sekadar toggle terjemahan UI — ini mempengaruhi konvensi dokumen yang sebenarnya berbeda antar target lamaran.
+
+### 9.1 Pengaturan yang perlu ada
+- **Bahasa antarmuka**: ID atau EN, disimpan sebagai preferensi user.
+- **Bahasa dokumen**: independen dari bahasa antarmuka — user yang berantarmuka Indonesia tetap bisa generate CV dalam bahasa Inggris untuk lamar ke luar negeri, dan sebaliknya.
+- **Target wilayah lamaran**: ini yang menentukan konvensi dokumen, bukan cuma bahasa. Minimal bedakan antara "domestik (Indonesia)" dan "internasional (umumnya AS/UK/global)".
+
+### 9.2 Perbedaan konvensi yang perlu diperhatikan sistem
+- **Foto profil di CV**: umum ada di banyak lowongan Indonesia dan sebagian Eropa/Asia, tapi umumnya dihindari untuk lamaran ke AS/UK/Kanada (berpotensi memicu bias rekrutmen dan bahkan dianggap tidak profesional oleh sebagian perekrut di sana). Sistem harus memberi peringatan kontekstual, bukan melarang keras — beri tahu user konsekuensinya, biarkan mereka putuskan.
+- **Format tanggal & alamat**: sesuaikan konvensi lokal.
+- **Panjang & gaya CV**: sebagian pasar internasional (terutama AS) cenderung CV 1 halaman untuk early-career; kultur lain lebih longgar.
+- **Istilah**: "CV" vs "Resume" dipakai secara berbeda tergantung negara (di banyak negara non-AS, "CV" dan "Resume" berarti hal sama; di AS, CV biasanya berarti dokumen akademik yang lebih panjang, resume yang dipakai untuk lamaran kerja standar). Sistem sebaiknya menyesuaikan istilah berdasarkan target wilayah, dan boleh menjelaskan singkat ke user kalau ada potensi kebingungan istilah.
+- **Cover letter/essay tone**: dokumen internasional (terutama AS) cenderung lebih langsung dan berbasis pencapaian; sebagian budaya lain (termasuk sebagian konteks Indonesia formal) lebih menghargai kesopanan dan struktur formal di pembuka surat. Sistem tidak perlu jadi otoritas budaya mutlak di sini, tapi paling tidak jangan menyamakan template gaya AS untuk semua target.
+
+### 9.3 Implementasi
+- Simpan preferensi bahasa & wilayah target sebagai bagian dari `UserProfile`, bisa berbeda per dokumen/per aplikasi (karena satu user bisa melamar ke domestik dan luar negeri sekaligus).
+- Semua modul teks (CV, cover letter, essay, bio) WAJIB baca preferensi ini sebelum generate, dan menyesuaikan aturan format serta gaya bahasa sesuai Section 9.2.
+
+---
+
+## 10. English & Communication Readiness — Detail Teknis
+
+Modul ini secara arsitektur beda dari modul lain karena butuh audio. Fokus tiga kemampuan sesuai kebutuhan tes seperti TOEFL:
+
+### 10.1 Reading
+Latihan berbasis teks — passage + soal pemahaman. Ini murni Content Engine, tidak butuh audio, relatif mudah diimplementasi dengan pola bank soal + AI-generated passage yang bervariasi tingkat kesulitan.
+
+**Riset: tidak ada database soal reading TOEFL/IELTS gratis yang legal dipakai ulang** — sama seperti temuan di Section 10.3.1, situs-situs "gratis" (ETS Interactive Sampler, Magoosh, BestMyTest, Mometrix, dsb) tetap berisi konten berlisensi milik ETS/IDP atau penerbit prep lain, bukan untuk diambil dan disajikan ulang di produk lain. Jangan scrape passage/soal dari situs manapun.
+
+**Karena modul ini murni teks (bukan audio), karakteristiknya beda total dari Listening — dan ini yang menentukan strategi generate-nya:**
+- **Generate on-the-go saat production ITU JUSTRU PENDEKATAN YANG BENAR untuk modul ini**, kebalikan dari Listening (Section 10.3.1) yang wajib pre-generate tuntas sebelum publish. Alasannya: satu panggilan LLM untuk generate satu passage + soal pemahaman itu murah dan cepat (hitungan detik), jauh di bawah batas waktu eksekusi serverless Vercel — tidak ada kebutuhan infrastruktur berat seperti TTS/audio yang butuh Koyeb dan caching storage. Setiap kali user minta latihan reading baru, Content Engine di Vercel boleh generate passage on-demand secara langsung.
+- Ini juga sejalan dengan prinsip anti-hafalan: passage yang selalu baru (bukan dari bank statis) membuat user benar-benar berlatih membaca, bukan menghafal jawaban soal yang itu-itu saja.
+- **Opsional untuk efisiensi biaya**: boleh tetap menyimpan/cache hasil generate ke database supaya passage yang sama tidak di-generate ulang berkali-kali dalam waktu berdekatan (mirip pola cache umum), tapi ini optimisasi tambahan, BUKAN keharusan arsitektur seperti audio Listening — sistem tetap harus berfungsi baik meski tanpa cache ini sama sekali, karena biaya generate teks jauh lebih murah daripada generate audio.
+- Pelengkap opsional (bukan pengganti): kalau ingin variasi passage berbasis teks nyata (bukan cuma AI-generated), boleh eksplorasi cuplikan dari Wikipedia (lisensi CC BY-SA — boleh dipakai dengan syarat atribusi dan ketentuan share-alike, cek ulang implikasinya terhadap lisensi konten produk sendiri sebelum dipakai luas) sebagai bahan dasar yang lalu diadaptasi/disusun ulang jadi soal, bukan disalin mentah.
+
+### 10.2 Structure / Writing (grammar & language use)
+Latihan tata bahasa dan struktur kalimat formal ala bagian "Structure and Written Expression" di TOEFL — juga murni berbasis teks. Sistem bisa generate soal baru secara variatif, bukan mengulang bank soal statis, supaya user tidak sekadar menghafal jawaban.
+
+Berlaku prinsip yang sama seperti Section 10.1 di atas: **modul ini juga cocok di-generate on-the-go saat production**, karena murni teks dan ringan secara komputasi — tidak perlu proses pre-generate tuntas seperti audio Listening. Kalau butuh percepatan tambahan di kemudian hari, boleh cache soal yang sudah pernah digenerate untuk dipakai ulang sebagai variasi, tapi generate real-time saat user meminta latihan baru tetap valid sebagai pendekatan utama.
+
+### 10.3 Listening — audio wajib gratis/tanpa biaya lisensi per pemakaian
+
+Untuk soal listening, sistem butuh mengubah teks (skrip percakapan/monolog) jadi audio yang terdengar natural, idealnya dengan variasi suara (beberapa "pembicara" berbeda, aksen AS dan Inggris British) supaya latihan terasa realistis.
+
+**Instruksi eksplisit — WAJIB dilakukan sebelum memutuskan komponen suara:**
+1. **Cari dulu di internet (pakai kemampuan browsing/pencarian webmu) untuk opsi text-to-speech gratis atau open-source terbaik yang tersedia SAAT KAMU MENGERJAKAN INI** — jangan asumsikan Kokoro otomatis pilihan terbaik hanya karena disebut di brief ini. Dunia TTS open-source bergerak sangat cepat; brief ini ditulis di suatu titik waktu dan mungkin sudah ada model yang lebih baik saat kamu membaca ini. Evaluasi kandidat berdasarkan: (a) lisensi yang benar-benar mengizinkan pemakaian komersial tanpa biaya per-karakter/per-request (bukan yang cuma gratis untuk riset/non-komersial), (b) kualitas suara natural untuk konteks pembelajaran bahasa, (c) ketersediaan variasi suara/aksen (minimal Inggris Amerika dan Inggris British), (d) bisa dijalankan sendiri (self-hosted) tanpa bergantung pada kuota API pihak ketiga yang bisa berubah kebijakan sewaktu-waktu.
+2. **Kalau setelah pencarian tidak ditemukan opsi yang jelas lebih unggul dan tetap gratis untuk pemakaian komersial, gunakan Kokoro** — repo: [`github.com/hexgrad/kokoro`](https://github.com/hexgrad/kokoro) (model open-source, lisensi Apache 2.0, tersedia 54 suara termasuk English Amerika dan Inggris British, ringan dan bisa jalan di CPU tanpa GPU mahal) sebagai pilihan default yang aman dan self-hosted penuh.
+3. **Fallback urutan terakhir kalau Kokoro/alternatif self-hosted bermasalah secara teknis (kualitas kurang, susah deploy di Koyeb, dsb): `edge-tts`** — repo: [`github.com/rany2/edge-tts`](https://github.com/rany2/edge-tts), `pip install edge-tts --break-system-packages`. Ini wrapper Python tidak resmi yang memanggil layanan cloud text-to-speech milik Microsoft Edge tanpa perlu API key, gratis, banyak pilihan suara/aksen (termasuk EN-US dan EN-GB). **Catatan risiko yang harus dipahami sebelum dipakai** — ini BUKAN API resmi Microsoft untuk pihak ketiga, jadi: (a) statusnya tidak resmi/unofficial, bisa berhenti berfungsi kapan saja kalau Microsoft mengubah endpoint internal mereka, (b) karena bukan self-hosted, ini juga menciptakan ketergantungan ke layanan pihak ketiga yang sebenarnya ingin dihindari brief ini (lihat larangan di bawah), (c) bukan untuk dipakai sebagai fondasi utama produksi jangka panjang. Karena itu posisinya HARUS sebagai fallback darurat/eksperimen awal, bukan pilihan pertama — utamakan tetap Kokoro atau model self-hosted lain yang ditemukan lewat riset di poin 1.
+4. Catat di `worklog.md` model/layanan TTS mana yang akhirnya dipilih dan alasannya (Section 15.1) — ini keputusan arsitektur penting yang harus terdokumentasi.
+
+**Larangan eksplisit:** jangan pakai API text-to-speech berbayar (seperti ElevenLabs, atau API TTS cloud premium lainnya) sebagai komponen inti produk, karena itu akan membuat biaya operasional produk bertumbuh linear mengikuti jumlah user dan jumlah pemakaian — bertentangan dengan prinsip produk ini yang harus bisa berjalan dengan biaya operasional serendah mungkin di fase awal.
+
+**Alur teknis yang disarankan:**
+1. Content Engine generate skrip percakapan/monolog listening (teks biasa, dengan tag pembicara kalau dialognya multi-orang).
+2. Heavy & Background Generation Engine memproses skrip itu lewat model TTS yang dipilih (lihat instruksi di atas) untuk menghasilkan file audio.
+3. Audio disimpan (cache) supaya tidak perlu re-generate setiap kali soal yang sama diputar ulang — satu file audio per skrip, dipakai ulang oleh semua user yang mengerjakan soal itu.
+4. Soal listening ditampilkan bersama player audio + pertanyaan pemahaman setelahnya, sesuai format khas tes semacam ini.
+
+**Pemisahan tegas antara "generation-time" dan "play-time" — ini WAJIB dipahami sebagai dua alur yang sepenuhnya terpisah, bukan satu alur yang sama, dan generation-time harus TUNTAS SEBELUM produk dipublikasikan/dipakai user sungguhan:**
+- **Generation-time** (fase development, Phase 8 — dikerjakan sekali di awal sampai seluruh bank soal selesai, SELESAI SEBELUM produk go-live, bukan proses yang menyusul setelah publish): skrip → dikirim ke endpoint TTS di Koyeb → audio dihasilkan → file disimpan ke Supabase Storage → path/URL file itu disimpan di tabel database bersama metadata soal (misalnya `listening_questions.audio_url`). Ini kerja satu kali tuntas selama development untuk mengisi seluruh bank soal (target ~850 MB, Section 12.1.1) — begitu produk dipublikasikan, seharusnya TIDAK ADA lagi soal yang audionya belum jadi. Kalau nanti mau menambah soal baru pasca-launch, itu tetap lewat proses yang sama (generate dulu di admin/development, baru dipublikasikan ke user setelah filenya benar-benar ada), bukan dibiarkan ter-generate sambil jalan di production.
+- **Play-time** (terjadi setiap kali ada user membuka soal listening manapun setelah produk live, jadi harus seringan mungkin): frontend cukup **membaca `audio_url` yang sudah tersimpan di database — audio-nya sudah selalu siap (`always ready`) sejak soal itu ditampilkan ke user** — lalu memutar file itu langsung dari Supabase Storage (via CDN/public URL bawaan Supabase) — **TIDAK ADA pemanggilan ke endpoint TTS di Koyeb sama sekali di jalur ini, dan tidak ada state "menunggu audio selesai dibuat" yang dialami user sungguhan.** Endpoint generate audio di Koyeb hanya dipanggil selama proses development/penambahan konten, tidak pernah dipicu oleh aksi user di produk yang sudah live.
+- Implikasi langsung: soal yang audionya belum di-generate **tidak boleh dipublikasikan/ditampilkan ke user sama sekali** — bukan ditampilkan lalu "digenerate belakangan sambil user menunggu". Urutan kerjanya selalu: generate tuntas dulu di development → baru soal itu masuk ke bank soal yang bisa diakses user.
+
+**Kalau butuh variasi konten listening yang lebih otentik** (bukan cuma skrip buatan AI), boleh juga eksplorasi menggunakan sumber audio domain publik / berlisensi bebas yang bisa diunduh legal (misalnya rekaman ceramah/podcast berlisensi Creative Commons yang mengizinkan pemakaian komersial) sebagai variasi tambahan di luar skrip yang di-generate sendiri — tapi ini sifatnya pelengkap opsional, bukan kebutuhan inti, dan harus dicek lisensinya satu per satu sebelum dipakai supaya tidak melanggar hak cipta.
+
+**Kalau memilih jalur ini dan butuh alat untuk mengunduh audio dari sumber yang sudah dipastikan berlisensi bebas** (misalnya video YouTube yang creator-nya secara eksplisit menandai lisensi Creative Commons di halaman video, atau podcast dengan feed CC yang mengizinkan unduhan), boleh pakai **`yt-dlp`** — repo: [`github.com/yt-dlp/yt-dlp`](https://github.com/yt-dlp/yt-dlp), lisensi Unlicense (bebas dipakai apa saja termasuk komersial). `yt-dlp` sendiri sebagai *tool* legal dan bebas dipakai — **tapi legalitas hasil unduhannya ditentukan sepenuhnya oleh lisensi konten sumbernya, bukan oleh tool-nya.** Aturan wajib kalau dipakai:
+- HANYA unduh dari video/audio yang lisensinya sudah eksplisit dicek dan mengizinkan pemakaian komersial ulang (misalnya video YouTube dengan label "Creative Commons" yang terlihat jelas di halaman video, atau sumber yang memang menyatakan CC BY secara eksplisit) — JANGAN mengunduh video/lecture/materi TOEFL-IELTS berlisensi standar (default YouTube "Standard License") untuk dipakai ulang di bank soal, karena itu tetap pelanggaran hak cipta meski secara teknis bisa diunduh.
+- Catat sumber persis + lisensi tiap file yang diunduh lewat cara ini di `worklog.md`, sama seperti aturan pencatatan sumber TTS/lisensi lain di brief ini.
+- Ini tetap sifatnya pelengkap kecil untuk variasi, BUKAN cara utama membangun bank soal listening (Section 10.3.1) — jalur utama tetap generate sendiri lewat TTS.
+
+### 10.3.1 Hasil Riset: Tidak Ada Database Listening TOEFL/IELTS Gratis yang Legal untuk Dipakai Ulang
+
+Ini temuan penting yang harus dipegang sebagai fakta arsitektur, bukan cuma catatan sampingan: **sudah dicari secara eksplisit, dan tidak ditemukan database audio listening bergaya TOEFL/IELTS yang gratis DAN legal untuk diambil lalu disajikan ulang di produk komersial pihak lain.**
+
+- Situs-situs seperti British Council (`takeielts.britishcouncil.org`), BestMyTest, TOEFL Mock, IELTS Leader, dan sejenisnya memang menyediakan tes latihan gratis dengan audio — **tapi ini konten berlisensi milik ETS (pembuat TOEFL) dan IELTS Partners (British Council/IDP/Cambridge)**, disediakan untuk dipakai langsung oleh individu di situs mereka, bukan untuk diambil/di-scrape dan disajikan ulang di aplikasi lain. Menyalin materi ini ke dalam bank soal produk sendiri adalah pelanggaran hak cipta, terlepas dari niatnya (pendidikan/non-komersial atau tidak) — **jangan lakukan ini**, termasuk jangan scrape lewat otomatisasi.
+- **Kesimpulan praktis: generate sendiri lewat TTS (alur Section 10.3 di atas) tetap harus jadi jalur UTAMA dan wajib**, bukan cadangan kalau tidak ketemu database gratis. Ini bukan kompromi, ini satu-satunya cara yang aman secara hukum untuk punya bank soal listening bergaya ujian dalam skala besar.
+
+**Sumber pelengkap yang sudah dicek lisensinya dan aman dipakai (bukan pengganti, sekadar variasi tambahan opsional):**
+- **LibriSpeech / LibriVox** — berbasis rekaman audiobook domain publik dari proyek LibriVox, korpus LibriSpeech-nya sendiri berlisensi CC BY 4.0 (boleh dipakai komersial dengan atribusi). **Catatan penting**: ini rekaman narasi buku satu-pembicara, gaya audiobook — BUKAN dialog kampus atau kuliah akademik dua-tiga-pembicara seperti format asli TOEFL/IELTS. Jadi ini cuma cocok jadi variasi tambahan untuk latihan "general listening comprehension" dengan skrip/pertanyaan yang tetap kamu susun sendiri di atasnya, bukan pengganti skrip TTS bergaya ujian.
+- **TED-LIUM** — sempat jadi kandidat menarik karena isinya rekaman ceramah/kuliah TED yang lebih dekat ke gaya "academic talk" TOEFL, TAPI lisensinya **CC BY-NC-ND** (NonCommercial, NoDerivatives) — artinya **tidak boleh dipakai di produk dengan model bisnis komersial apa pun**, bahkan versi gratis/freemium sekalipun kalau produk secara keseluruhan berorientasi komersial. **Coret dari daftar opsi.**
+- **VoxPopuli** — sebagian subset CC0 (bebas pakai), tapi sebagian lain CC BY-NC. Kalaupun dipakai, harus dipilih subset CC0 saja dan dicek ulang per rilis. Isinya rekaman parlemen Eropa — konteksnya jauh dari kampus/akademik, jadi secara konten kurang relevan meskipun secara lisensi sebagian aman.
+
+**Keputusan arsitektur final untuk Section 10.3**: bangun bank soal listening 100% dari skrip yang kamu tulis/generate sendiri lalu diproses lewat TTS (Kokoro atau alternatif yang ditemukan lewat riset di poin 1 atas). Boleh menambahkan LibriVox/LibriSpeech sebagai variasi opsional untuk latihan listening non-ujian (santai/umum), dengan atribusi CC BY 4.0 yang benar, TAPI JANGAN jadikan ini sebagai pengganti bank soal utama bergaya TOEFL/IELTS. Catat keputusan ini di `worklog.md` sesuai Section 15.1.
+
+### 10.4 Speaking (opsional, tahap lanjut)
+Kalau ecosystem berkembang sampai ke speaking practice (bukan cuma listening), ini butuh speech-to-text untuk menilai jawaban lisan user. **Catatan penting: ini pun TIDAK perlu real-time** — pola yang sesuai kebutuhan produk ini adalah user merekam jawaban (mirip pola di Section 11), lalu file audio diunggah dan diproses secara asinkron oleh Heavy & Background Generation Engine (Section 3.3) untuk transkripsi + feedback, hasilnya muncul beberapa saat kemudian — bukan analisis langsung selagi user berbicara. Ini tetap kompleksitas tambahan yang cukup signifikan dibanding modul lain (butuh model speech-to-text terpisah dari TTS), jadi sengaja tidak dimasukkan sebagai kebutuhan MVP modul ini; taruh sebagai kandidat pengembangan lanjutan kalau tiga sub-modul di atas sudah solid.
+
+---
+
+## 11. Interview Prep — Detail Tambahan
+
+- Sistem menyusun kemungkinan pertanyaan berdasarkan role/organisasi/beasiswa target yang di-input user (bisa dari deskripsi lowongan/pengumuman yang di-paste).
+- Jawaban yang disusun user (via teks dulu untuk versi awal; audio sebagai pengembangan lanjut — user merekam jawaban lalu mengunggahnya, diproses secara asinkron oleh Heavy & Background Generation Engine yang sama dengan modul 10, BUKAN dianalisis secara real-time selagi user bicara) dinilai dari dua sisi: substansi (apakah menjawab pertanyaan dengan konkret, berbasis pengalaman asli dari `UserProfile`) dan struktur (apakah terorganisir, misalnya mengikuti pola situasi-aksi-hasil untuk pertanyaan perilaku).
+- Sesuai prinsip Section 5 — sistem membantu MENYUSUN dari pengalaman nyata user, bukan mengarang skenario yang tidak pernah dialami.
+
+---
+
+## 12. Rekomendasi Arsitektur Deployment (Vercel + Koyeb, dua platform, bukan satu)
+
+Karena ekosistem ini menggabungkan modul ringan (dokumen, teks) dan modul berat (audio/voice), **produk ini dijalankan di dua platform hosting sekaligus, bukan satu.** Ini keputusan final, bukan pilihan salah satu — pembagiannya eksplisit sebagai berikut:
+
+**Yang WAJIB dijalankan di Vercel:**
+- Seluruh frontend (antarmuka web yang dilihat user).
+- API routes ringan yang selesai dalam hitungan detik: generate CV, cover letter, essay, bio (Content Engine untuk teks), operasi Workflow/Tracking Engine (kanban board, status aplikasi, reminder).
+- Alasan: Vercel unggul untuk frontend (CDN edge cepat) dan cocok untuk operasi singkat, tapi punya batas waktu eksekusi keras dan tidak cocok untuk proses panjang atau koneksi persisten.
+
+**Yang WAJIB dijalankan di Koyeb (bukan Vercel):**
+- **Heavy & Background Generation Engine** secara keseluruhan (Section 3.3): proses text-to-speech untuk audio listening (Section 10.3) — ini proses batch/asinkron, BUKAN real-time, jadi tidak butuh koneksi persisten/WebSocket, cukup job/queue biasa yang jalan di background lalu hasilnya disimpan.
+- Proses generate dokumen yang berat/kompleks kalau di tengah jalan ternyata sering melebihi batas waktu Vercel (misalnya generate PPTX dengan banyak elemen visual) — pindahkan ke Koyeb sebagai background worker, jangan dipaksakan tetap di Vercel demi kesederhanaan.
+- Alasan: Koyeb mendukung proses jangka panjang dan container yang jalan terus, yang dibutuhkan untuk model TTS (seperti Kokoro atau alternatif yang kamu temukan lewat Section 10.3) yang butuh waktu proses lebih lama dari batas eksekusi serverless, dan untuk generate dokumen berat yang sama alasannya. **Ini bukan karena butuh real-time — semata karena butuh waktu eksekusi lebih panjang dari yang diizinkan serverless.** Tidak ada kebutuhan speech-to-text atau audio dua-arah di scope produk ini (lihat catatan di Section 3.3 dan 10.4).
+
+**Cara kedua layanan berkomunikasi:**
+Frontend/API di Vercel memanggil endpoint di Koyeb lewat API internal (HTTP request biasa ke URL layanan Koyeb) setiap kali butuh audio di-generate. Kedua layanan TIDAK saling akses database secara langsung — satu-satunya jalur komunikasi adalah lewat API yang jelas kontraknya, supaya masing-masing platform bisa di-scale, di-debug, atau diganti secara independen di kemudian hari tanpa mengganggu yang lain.
+
+**Ringkasnya kalau ditanya "pakai Koyeb atau Vercel?" — jawabannya DUA-DUANYA, dengan pembagian tugas seperti di atas, bukan pilih salah satu.**
+
+---
+
+## 12.1 Database & Penyimpanan File (termasuk Audio)
+
+**Jangan pakai layanan penyimpanan dokumen personal (seperti Google Drive) sebagai database atau storage inti produk.** Layanan semacam itu dirancang untuk penyimpanan file personal, bukan infrastruktur aplikasi — rate limit-nya tidak cocok untuk trafik produk, kontrol aksesnya tidak granular per-user, dan tidak dirancang untuk menyajikan file (termasuk audio) langsung ke banyak pengguna sekaligus. Boleh dipertimbangkan sebagai fitur "export/backup manual" di kemudian hari, tapi bukan sebagai tulang punggung penyimpanan.
+
+**Rekomendasi untuk fondasi awal:** gunakan **Supabase** (tingkat gratis) sebagai database dan storage utama di fase awal. Satu layanan ini sudah mencakup database relasional, autentikasi user, DAN penyimpanan file (termasuk audio mp3) sekaligus — jadi tidak perlu menyambungkan banyak layanan terpisah di awal proyek. Ini cukup untuk kebutuhan `UserProfile`, riwayat aplikasi, dokumen yang di-generate, dan file audio listening.
+
+**Strategi khusus untuk file audio (modul Listening, Section 10.3):** karena teks-ke-suara menghasilkan audio yang identik untuk skrip yang sama, sistem HARUS men-generate audio sekali lalu menyimpannya untuk dipakai ulang oleh semua pengguna yang mengerjakan soal yang sama — bukan generate ulang setiap kali soal diputar. Dengan pola ini, kebutuhan storage untuk audio jauh lebih kecil dari perkiraan awal, karena satu file audio dipakai berulang kali, bukan satu file per pengguna. **Ini bukan sekadar optimisasi opsional — ini aturan wajib untuk menjaga produk tetap ringan**: setiap kali user membuka soal listening, yang terjadi HANYA `GET` file audio dari Supabase Storage (baca/load), sama sekali tidak ada proses generate baru yang terpicu dari aksi user tersebut. Generate audio hanya boleh terjadi satu kali per skrip, di proses terpisah saat bank soal sedang dibangun (lihat pemisahan generation-time vs play-time di Section 10.3).
+
+**Jika di kemudian hari biaya bandwidth (egress) untuk streaming audio mulai terasa** seiring pertumbuhan pengguna, pertimbangkan memindahkan khusus penyimpanan file audio ke **Cloudflare R2** (tidak mengenakan biaya egress sama sekali, hanya biaya penyimpanan), sambil tetap mempertahankan Supabase untuk database utama dan data terstruktur lainnya. Ini adalah optimisasi untuk fase pertumbuhan, bukan kebutuhan yang harus dipenuhi sejak hari pertama — jangan over-engineer di awal untuk skala yang belum ada.
+
+### 12.1.1 Target Kapasitas Bank Soal Listening — Instruksi Eksplisit
+
+Kuota file storage gratis di Supabase adalah 1 GB (bukan 500 MB — 500 MB itu kuota database, beda alokasi). **Instruksi eksplisit: bangun bank soal listening (Section 10.3) sampai total ukuran file audio yang tersimpan mendekati 850 MB, dan sengaja sisakan sekitar 150 MB dari kuota 1 GB sebagai buffer kosong** — buffer ini dicadangkan untuk kebutuhan file lain di masa depan (foto profil user, cache file dokumen, dll.), bukan untuk dihabiskan juga oleh audio.
+
+Panduan praktis untuk mencapai target ini:
+- Generate audio dengan bitrate 64-96kbps (cukup jernih untuk suara manusia, jangan gunakan bitrate musik seperti 128-320kbps yang boros tanpa manfaat tambahan untuk speech).
+- Pada bitrate ~96kbps, 850 MB setara kurang lebih 19-20 jam total audio — ini artinya kamu perlu membangun bank soal listening yang cukup besar dan bervariasi (ratusan passage/skrip berbeda, bukan hanya belasan) supaya kuota storage benar-benar terisi mendekati target, bukan cuma nyisa jauh dari target karena kontennya terlalu sedikit.
+- Sebelum menulis skrip listening dalam jumlah besar, hitung dulu perkiraan total menit yang dibutuhkan berdasarkan jumlah soal dan variasi tingkat kesulitan yang masuk akal untuk sebuah bank soal TOEFL/IELTS-style yang layak dipakai serius (bukan asal generate sampai penuh tanpa mempertimbangkan kualitas dan keberagaman topik/level kesulitan).
+- Pantau penggunaan storage aktual secara berkala (lewat dashboard Supabase) selama proses membangun bank soal ini, dan berhenti menambah audio baru begitu mendekati target 850 MB — jangan sampai tanpa sadar melewati 1 GB dan kena batasan/generate gagal di tengah proses.
+- Catat progres pembangunan bank soal ini di `worklog.md` (Section 15.1) — termasuk berapa banyak soal/menit audio yang sudah ter-generate dan berapa sisa kuota storage setiap kali ada penambahan signifikan.
+
+---
+
+## 13. Desain & Pengalaman Produk
+
+Ini poin yang sengaja ditekankan: **jangan membangun tampilan generik yang terasa seperti template SaaS yang sudah sering dilihat orang** (layout hero-section-fitur-pricing-footer yang itu-itu saja, palet warna biru-ungu gradient generik, kartu-kartu dengan shadow lembut yang seragam di semua produk sejenis). Ekosistem ini menyentuh momen penting dalam hidup orang — melamar kerja, daftar beasiswa, ikut organisasi — desainnya harus terasa dipikirkan dengan sengaja, bukan hasil pilihan default.
+
+Beberapa arahan (bukan resep kaku, tapi prinsip):
+- Punya identitas visual yang jelas: pilih palet warna, tipografi, dan bahasa visual yang konsisten dan punya karakter — bukan sekadar warna default framework/library UI yang dipakai.
+- Perhatikan detail micro-interaction (transisi, hover state, feedback saat generate dokumen sedang berjalan) — ini produk yang dipakai orang saat mereka sedang dalam kondisi cemas/berharap (melamar kerja, daftar beasiswa), pengalaman yang halus dan menenangkan itu penting.
+- Prioritaskan kejelasan dan kepercayaan visual di atas efek dekoratif berlebihan — ini alat kerja serius, bukan produk hiburan, tapi itu tidak berarti harus membosankan.
+- Pastikan aksesibilitas dasar terpenuhi (kontras warna, navigasi keyboard) — banyak calon pengguna sedang dalam tekanan waktu/emosional, jangan tambah friksi.
+- Uji tampilan di ukuran layar mobile dan desktop — banyak pencari kerja/beasiswa mengerjakan aplikasi lewat HP di sela waktu.
+
+---
+
+## 14. Non-Functional Requirements
+
+- **Privasi**: data pribadi (riwayat kerja, kontak, potensi info sensitif di essay beasiswa yang menyangkut kondisi ekonomi keluarga) adalah data sensitif. Enkripsi at rest. User bisa hapus akun & semua datanya kapan saja secara permanen.
+- **Portabilitas data**: user bisa export seluruh profilnya (format terbuka seperti JSON) untuk dibawa keluar platform kapan saja.
+- **Performa**: generate CV ATS di bawah 5 detik; generate PPT deck di bawah 15 detik; generate audio listening cukup cepat untuk tidak mengganggu alur latihan (idealnya di-cache setelah generate pertama, lihat Section 10.3).
+- **Aksesibilitas**: navigasi penuh via keyboard di form-form penting, kontras warna sesuai standar WCAG AA minimal.
+
+---
+
+## 15. Git, DevOps, dan Disiplin Kerja (WAJIB, bukan opsional)
+
+Perlakukan proyek ini sebagai proyek produksi sejak commit pertama — bukan eksperimen yang "dirapikan belakangan".
+
+- **Gunakan git sejak awal.** Commit message harus jelas dan deskriptif, menjelaskan APA yang berubah dan MENGAPA — bukan generik seperti "update" atau "fix". Commit secara granular per unit perubahan yang bermakna, bukan satu commit raksasa di akhir sesi kerja.
+- **Pisahkan environment variable dari kode.** File `.env` (atau sejenisnya) TIDAK BOLEH ikut ter-commit. Pastikan `.gitignore` yang benar sudah ada sejak commit pertama, sebelum ada file sensitif yang sempat tersimpan.
+- **Struktur folder rapi dan konsisten** — pisahkan jelas antara frontend, backend/API, dan (kalau relevan) worker service untuk Voice Engine.
+- **Dependency terdokumentasi dengan baik** — file manifest dependency (`package.json` atau setara) dan lockfile harus konsisten dan ter-commit, supaya proyek bisa di-build ulang secara deterministik oleh siapa pun (termasuk sesi kerjamu sendiri di kemudian hari).
+
+### 15.1 worklog.md — WAJIB
+Buat dan pelihara file `worklog.md` di root project sebagai catatan progres berkelanjutan. Setiap kali kamu menyelesaikan atau mengubah sesuatu yang berarti, tulis entri baru di `worklog.md` dengan format yang konsisten, minimal memuat:
+- Tanggal/waktu pengerjaan
+- Apa yang dikerjakan/diubah
+- Keputusan penting yang diambil (terutama kalau brief ini ambigu di titik tertentu dan kamu memilih satu interpretasi)
+- Status saat ini dan langkah berikutnya yang direncanakan
+
+Ini penting supaya siapa pun — termasuk sesi kerja berikutnya, yang mungkin tidak punya akses ke riwayat percakapan ini — bisa memahami progres dan konteks proyek hanya dengan membaca `worklog.md` dan riwayat git, tanpa harus membaca ulang seluruh percakapan dari awal. Cek juga riwayat git secara berkala untuk memastikan `worklog.md` selaras dengan histori commit yang sebenarnya — kalau ada perbedaan, perbaiki `worklog.md` supaya tetap jadi sumber kebenaran yang akurat.
+
+---
+
+## 16. Build Phases
+
+Kerjakan berurutan. Sebuah phase dianggap selesai hanya kalau acceptance criteria di section terkait brief ini terpenuhi — bukan "kelihatannya sudah jadi".
+
+**Phase 0 — Fondasi.** Struktur data `UserProfile` (Section 4), autentikasi dasar, alur onboarding proaktif (Section 4.1), pengaturan bahasa/wilayah (Section 9). Setup git, `.gitignore`, `worklog.md` dari commit pertama.
+
+**Phase 1 — Document Suite: CV ATS.** Modul paling kritis dan paling banyak hard constraint (Section 7). Termasuk layar edit-before-generate (Section 4.2) sebagai bagian wajib alurnya. Jangan lanjut sebelum semua aturan format teruji dengan file nyata.
+
+**Phase 2 — Anti-generic & verifikasi engine (Section 5).** Bangun sebagai layer bersama yang dipakai ulang semua modul teks berikutnya.
+
+**Phase 3 — Document Suite lengkap.** Cover letter, bio, CV visual, personal deck PPT dengan template library (Section 6, 8, 8.1).
+
+**Phase 4 — Application Ops.** Tracker, status board, ringkasan lowongan otomatis (Section 2.2).
+
+**Phase 5 — Opportunity Essays.** Modul beasiswa/organisasi dengan verifikasi paling ketat (Section 5.4, 6.6).
+
+**Phase 6 — Interview Prep (versi teks dulu).** Sisi konten dulu, delivery coaching berbasis suara bisa menyusul di phase lanjutan.
+
+**Phase 7 — English Readiness: Reading & Structure.** Dua sub-modul berbasis teks murni dulu (Section 10.1, 10.2) — tidak butuh Voice Engine. Karena murni teks, ini boleh langsung pakai pola generate on-the-go di production (bukan pre-build bank soal statis) — beda pendekatan dari Listening di Phase 8.
+
+**Phase 8 — Heavy & Background Generation Engine + Listening.** Setup deployment terpisah (Section 12), integrasi Kokoro TTS (atau alternatif hasil riset, Section 10.3), bangun bank soal listening sesuai target storage (Section 12.1.1) **sampai benar-benar tuntas di fase development ini** — setiap soal yang masuk bank soal harus sudah punya file audio siap pakai sebelum lanjut ke Phase 9. Ingat: proses generate audio ini semua batch/asinkron dan selesai sebelum produk live (Section 3.3, Section 10.3) — bukan proses yang dibiarkan menyusul setelah publish.
+
+**Phase 9 — Polish & QA menyeluruh.** Uji end-to-end sebagai user baru, uji semua file export di aplikasi native (bukan cuma preview internal), review ulang semua checklist hard constraint, cek performa di kondisi data besar.
+
+Setiap phase selesai → tulis ringkasan di `worklog.md` sesuai format Section 15.1.
+
+---
+
+## 17. Kebebasan Eksplorasi
+
+Brief ini adalah fondasi yang detail, tapi bukan batas akhir. Setelah semua yang tertulis di atas benar-benar diterapkan dan solid, kamu bebas menambahkan fitur, halaman, modul, atau kemampuan lain yang menurutmu akan membuat produk ini lebih berguna atau lebih baik bagi job seeker, pelamar organisasi, atau siapa pun yang sedang mempersiapkan diri untuk sebuah kesempatan.
+
+Anggap dirimu punya kepemilikan penuh atas kualitas akhir produk ini — bukan cuma menjalankan checklist dari brief ini sampai selesai lalu berhenti. Kamu bagian dari tim yang membangun produk ini: bagian yang memikirkan fitur baru yang belum terpikirkan, bagian yang mengoptimalkan apa yang sudah ada, bagian yang mempertanyakan apakah ada cara yang lebih baik dari yang tertulis di brief ini kalau kamu menemukan satu di tengah jalan.
+
+Kalau kamu menambahkan sesuatu di luar brief ini, catat di `worklog.md` seperti biasa — apa yang ditambahkan dan kenapa kamu pikir itu berharga. Itu bagian dari kerja seorang pemilik produk, bukan penyimpangan dari instruksi.

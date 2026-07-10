@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
+import { applyRateLimit } from "@/lib/rate-limit"
 import { serializeProfile, type ProfileWithRelations } from "@/lib/profile"
 import { generateAnswerFeedback } from "@/lib/content-engine"
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+
+  // Rate limit: 20 feedback requests per minute per user (LLM cost-abuse protection)
+  const limited = applyRateLimit(request, "generate", `user:${session.userId}:interview-feedback`)
+  if (limited) return limited
+
   const { id } = await params // interview set id
   let body: { questionId?: string; answer?: string; locale?: string }
   try { body = await request.json() } catch { return NextResponse.json({ error: "invalid-body" }, { status: 400 }) }
@@ -31,12 +37,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   await db.interviewQuestion.update({ where: { id: question.id }, data: { userAnswer } })
 
   // Generate feedback
-  const feedback = await generateAnswerFeedback({
-    locale,
-    question: question.question,
-    userAnswer,
-    profile: serializeProfile(profile),
-  })
+  let feedback
+  try {
+    feedback = await generateAnswerFeedback({
+      locale,
+      question: question.question,
+      userAnswer,
+      profile: serializeProfile(profile),
+    })
+  } catch (e) {
+    console.error("[interview-feedback] LLM failed:", (e as Error).message)
+    return NextResponse.json({ error: "feedback-failed" }, { status: 502 })
+  }
 
   // Save feedback
   await db.interviewQuestion.update({
@@ -46,3 +58,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   return NextResponse.json({ ok: true, feedback })
 }
+

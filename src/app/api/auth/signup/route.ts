@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { db } from "@/lib/db"
 import { hashPassword, createSessionToken, setSessionCookie } from "@/lib/auth"
-import { rateLimitResponse } from "@/lib/rate-limit"
+import { applyRateLimit, getClientIP } from "@/lib/rate-limit"
 
 const schema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -12,8 +12,9 @@ const schema = z.object({
 })
 
 export async function POST(request: Request) {
-  // Rate limit: 10 signups per IP per 10 minutes
-  const limited = rateLimitResponse(request, "signup", 10, 10 * 60 * 1000)
+  // Rate limit: 5 signups per minute per IP (stricter than login — account creation abuse)
+  const ip = getClientIP(request)
+  const limited = applyRateLimit(request, "signup", `ip:${ip}:signup`)
   if (limited) return limited
 
   let body: unknown

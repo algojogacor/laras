@@ -2,9 +2,13 @@ import { db } from "@/lib/db"
 import { notFound } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Award, CheckCircle2, XCircle } from "lucide-react"
+import { getLocale } from "@/lib/i18n"
 
 export default async function VerifyCertificatePage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
+  const locale = await getLocale()
+  const isID = locale === "id"
+
   const cert = await db.englishCertificate.findUnique({
     where: { certificateId: code },
     include: { userProfile: { select: { fullName: true } } },
@@ -12,7 +16,42 @@ export default async function VerifyCertificatePage({ params }: { params: Promis
 
   if (!cert) notFound()
 
-  const issuedDate = new Date(cert.issuedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+  const issuedDate = new Date(cert.issuedAt).toLocaleDateString(
+    isID ? "id-ID" : "en-US",
+    { year: "numeric", month: "long", day: "numeric" },
+  )
+
+  const t = isID
+    ? {
+        verified: "Sertifikat Terverifikasi",
+        revoked: "Sertifikat Dicabut",
+        valid: "Sertifikat ini valid.",
+        revokedDesc: "Sertifikat ini telah dicabut.",
+        certId: "ID Sertifikat",
+        recipient: "Penerima",
+        testMode: "Mode Tes",
+        score: "Skor",
+        practiceEstimate: "(estimasi latihan)",
+        estCEFR: "Est. CEFR",
+        estTOEFL: "Est. TOEFL (1-6)",
+        issued: "Diterbitkan",
+        footer: "Sertifikat Skor Latihan Laras — Non-Resmi",
+      }
+    : {
+        verified: "Certificate Verified",
+        revoked: "Certificate Revoked",
+        valid: "This certificate is valid.",
+        revokedDesc: "This certificate has been revoked.",
+        certId: "Certificate ID",
+        recipient: "Recipient",
+        testMode: "Test Mode",
+        score: "Score",
+        practiceEstimate: "(practice estimate)",
+        estCEFR: "Est. CEFR",
+        estTOEFL: "Est. TOEFL (1-6)",
+        issued: "Issued",
+        footer: "Laras Practice Score Certificate — Non-Official",
+      }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
@@ -26,43 +65,45 @@ export default async function VerifyCertificatePage({ params }: { params: Promis
             )}
           </div>
           <h1 className="mt-4 text-center font-serif text-2xl font-bold">
-            {cert.status === "active" ? "Certificate Verified" : "Certificate Revoked"}
+            {cert.status === "active" ? t.verified : t.revoked}
           </h1>
           <p className="mt-1 text-center text-sm text-muted-foreground">
-            {cert.status === "active" ? "This certificate is valid." : "This certificate has been revoked."}
+            {cert.status === "active" ? t.valid : t.revokedDesc}
           </p>
 
           <div className="mt-6 space-y-3 rounded-lg border border-border p-4">
             <div className="flex justify-between">
-              <span className="text-xs text-muted-foreground">Certificate ID</span>
+              <span className="text-xs text-muted-foreground">{t.certId}</span>
               <span className="font-mono text-xs font-semibold">{cert.certificateId}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-xs text-muted-foreground">Recipient</span>
+              <span className="text-xs text-muted-foreground">{t.recipient}</span>
               <span className="text-sm font-medium">{cert.userProfile.fullName || "—"}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-xs text-muted-foreground">Test Mode</span>
+              <span className="text-xs text-muted-foreground">{t.testMode}</span>
               <span className="text-sm font-medium capitalize">{cert.testMode}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-xs text-muted-foreground">Score</span>
-              <span className="text-sm font-semibold">{cert.percentage}% (practice estimate)</span>
+              <span className="text-xs text-muted-foreground">{t.score}</span>
+              <span className="text-sm font-semibold">
+                {cert.percentage}% {t.practiceEstimate}
+              </span>
             </div>
             {cert.estimatedCEFR && (
               <div className="flex justify-between">
-                <span className="text-xs text-muted-foreground">Est. CEFR</span>
+                <span className="text-xs text-muted-foreground">{t.estCEFR}</span>
                 <span className="text-sm font-medium">{cert.estimatedCEFR}</span>
               </div>
             )}
             {cert.estimatedTOEFL && (
               <div className="flex justify-between">
-                <span className="text-xs text-muted-foreground">Est. TOEFL (1-6)</span>
+                <span className="text-xs text-muted-foreground">{t.estTOEFL}</span>
                 <span className="text-sm font-medium">{cert.estimatedTOEFL}</span>
               </div>
             )}
             <div className="flex justify-between">
-              <span className="text-xs text-muted-foreground">Issued</span>
+              <span className="text-xs text-muted-foreground">{t.issued}</span>
               <span className="text-sm font-medium">{issuedDate}</span>
             </div>
           </div>
@@ -76,7 +117,7 @@ export default async function VerifyCertificatePage({ params }: { params: Promis
 
           <div className="mt-4 flex items-center justify-center gap-2">
             <Award className="h-4 w-4 text-accent" />
-            <span className="text-xs text-muted-foreground">Laras Practice Score Certificate — Non-Official</span>
+            <span className="text-xs text-muted-foreground">{t.footer}</span>
           </div>
         </CardContent>
       </Card>

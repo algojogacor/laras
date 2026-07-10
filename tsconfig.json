@@ -38,9 +38,14 @@
   ],
   "exclude": [
     "node_modules",
+    ".next",
     "examples",
     "mini-services",
     "skills",
+    "scripts",
+    "brief",
+    "tool-results",
+    "upload",
     "supabase"
   ]
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
+import { applyRateLimit } from "@/lib/rate-limit"
 import { generateInterviewQuestions } from "@/lib/content-engine"
 
 export async function GET() {
@@ -19,6 +20,11 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+
+  // Rate limit: 20 interview set generations per minute per user (LLM cost-abuse protection)
+  const limited = applyRateLimit(request, "generate", `user:${session.userId}:interview`)
+  if (limited) return limited
+
   let body: any
   try { body = await request.json() } catch { return NextResponse.json({ error: "invalid-body" }, { status: 400 }) }
   const profile = await db.userProfile.findUnique({ where: { accountId: session.userId }, select: { id: true, docLocale: true } })
@@ -35,12 +41,20 @@ export async function POST(request: Request) {
   })
 
   // Generate questions
-  const questions = await generateInterviewQuestions({
-    locale,
-    role: body.role || "",
-    context: body.context || "",
-    count: 6,
-  })
+  let questions
+  try {
+    questions = await generateInterviewQuestions({
+      locale,
+      role: body.role || "",
+      context: body.context || "",
+      count: 6,
+    })
+  } catch (e) {
+    console.error("[interview-sets] LLM failed:", (e as Error).message)
+    // Clean up the empty set we just created
+    await db.interviewSet.delete({ where: { id: set.id } })
+    return NextResponse.json({ error: "generation-failed" }, { status: 502 })
+  }
 
   if (questions.length > 0) {
     await db.interviewQuestion.createMany({
@@ -59,3 +73,4 @@ export async function POST(request: Request) {
   })
   return NextResponse.json({ ok: true, set: fullSet })
 }
+

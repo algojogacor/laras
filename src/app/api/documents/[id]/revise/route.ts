@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import ZAI from "z-ai-web-dev-sdk"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
+import { applyRateLimit } from "@/lib/rate-limit"
 import { serializeProfile, type ProfileWithRelations } from "@/lib/profile"
 import {
   type GeneratedCVATS,
@@ -27,6 +28,10 @@ export async function POST(
 ) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+
+  // Rate limit: 20 revisions per minute per user (LLM cost-abuse protection)
+  const limited = applyRateLimit(request, "generate", `user:${session.userId}:revise`)
+  if (limited) return limited
 
   const { id: documentId } = await params
   let body: { instruction?: string; documentType?: string }
@@ -167,6 +172,7 @@ Return the revised output as JSON with the SAME structure as the previous output
     })
   } catch (e) {
     // Mark revision as failed
+    console.error("[documents/revise] LLM failed:", (e as Error).message)
     await db.revisionRequest.create({
       data: {
         documentId,
@@ -174,6 +180,6 @@ Return the revised output as JSON with the SAME structure as the previous output
         status: "failed",
       },
     })
-    return NextResponse.json({ error: "revision-failed", message: (e as Error).message }, { status: 502 })
+    return NextResponse.json({ error: "revision-failed" }, { status: 502 })
   }
 }
