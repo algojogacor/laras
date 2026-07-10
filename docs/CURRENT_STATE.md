@@ -1,16 +1,16 @@
 # CURRENT_STATE.md
 
-Last verified: 2026-07-11 (canonical master-prompt gate)
+Last verified: 2026-07-11 (Phase 1A complete)
 Current branch: main
-Current commit: d75a5fa70ca13aa218832b64f92012367275e854
+Current commit: (pending — Phase 1A commit)
 Database: SQLite (local file: /home/z/my-project/db/custom.db)
 Storage: Supabase Storage (configured in .env, used for file uploads)
 Authentication: Custom JWT (jose) + bcrypt, cookie-based session (laras_session)
 AI provider: z-ai-web-dev-sdk (ZAI.create() auto-configured, no explicit key)
-Typecheck: FAIL (10 pre-existing errors)
+Typecheck: PASS (0 errors) — fixed in Phase 1A
 Lint: PASS
-Build: FAIL (blocked by type errors)
-Browser QA: PARTIAL (dev server runs, all routes return 200, but type errors block production build)
+Build: PASS — fixed in Phase 1A
+Browser QA: PASS (touched surfaces: dashboard, public profile, connections, privacy — all render correctly on desktop + mobile + ID/EN)
 Tests: NONE (no test files, no test framework; listening bank validator reports '0 valid, 0 invalid out of 0 total' — bank is empty, not actually validated)
 Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948d6e...)
 
@@ -78,8 +78,7 @@ Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948
 
 | System | Issue |
 |--------|-------|
-| TypeScript type-checking | 10 pre-existing type errors (nullable field mismatches in dashboard, public profile, connections, privacy, connections lib) — blocks `tsc --noEmit` and `bun run build` |
-| Production build | Fails at "Running TypeScript" step due to the 10 type errors |
+| (none) | Phase 1A restored the build. All 10 pre-existing type errors fixed. `tsc --noEmit`, `lint`, and `build` all pass. |
 
 ## 6. Missing
 
@@ -156,7 +155,7 @@ Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948
 
 ## 11. Deployment risks
 
-1. **Build fails**: `bun run build` fails due to 10 type errors. Cannot deploy a production build until fixed.
+1. **Build passes** (Phase 1A): `bun run build` now succeeds. Previously blocked by 10 type errors.
 2. **No CI/CD**: No GitHub Actions or CI pipeline. All checks are manual.
 3. **Database is local SQLite**: Not suitable for production. The .env has Turso credentials but the runtime uses the shell-overridden `file:` URL.
 4. **No environment validation**: No startup check that required env vars (AUTH_SECRET, etc.) are present. `getSecret()` throws at runtime if missing.

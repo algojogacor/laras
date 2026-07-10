@@ -199,8 +199,8 @@ export interface ActivityItem {
  */
 export function buildActivityTimeline(params: {
   documents: { id: string; type: string; title: string; updatedAt: Date }[]
-  applications: { id: string; position: string; organization: string; status: string; updatedAt: Date }[]
-  interviews: { id: string; title: string; role: string; updatedAt: Date }[]
+  applications: { id: string; position: string; organization: string | null; status: string; updatedAt: Date }[]
+  interviews: { id: string; title: string; role: string | null; updatedAt: Date }[]
   english: { id: string; createdAt: Date; score: number | null }[]
   typeLabels: Record<string, string>
 }): ActivityItem[] {
@@ -222,7 +222,7 @@ export function buildActivityTimeline(params: {
       id: `app-${a.id}`,
       kind: "application",
       title: a.position,
-      subtitle: `${a.organization} · ${a.status}`,
+      subtitle: `${a.organization ?? "—"} · ${a.status}`,
       href: `/applications`,
       timestamp: a.updatedAt,
     })

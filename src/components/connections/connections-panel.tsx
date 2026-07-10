@@ -271,7 +271,7 @@ export function ConnectionsPanel({
             <ConnectionRow
               key={c.id}
               name={c.other.fullName || c.other.email || "Unknown"}
-              headline={c.other.headline || c.other.email}
+              headline={c.other.headline || c.other.email || ""}
               initials={initials(c.other.fullName)}
               action={
                 <div className="flex gap-1.5">
@@ -299,7 +299,7 @@ export function ConnectionsPanel({
             <ConnectionRow
               key={c.id}
               name={c.other.fullName || c.other.email || "Unknown"}
-              headline={c.other.headline || c.other.email}
+              headline={c.other.headline || c.other.email || ""}
               initials={initials(c.other.fullName)}
               action={<StatusBadge text={labels.alreadyConnected} variant="success" icon={Check} />}
             />
@@ -314,7 +314,7 @@ export function ConnectionsPanel({
             <ConnectionRow
               key={c.id}
               name={c.other.fullName || c.other.email || "Unknown"}
-              headline={c.other.headline || c.other.email}
+              headline={c.other.headline || c.other.email || ""}
               initials={initials(c.other.fullName)}
               action={<StatusBadge text={labels.pending} variant="muted" icon={Clock} />}
             />

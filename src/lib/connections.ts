@@ -215,7 +215,14 @@ export async function searchUsers(
   })
   if (!myProfile) return []
 
-  const result = []
+  const result: Array<{
+    id: string
+    fullName: string | null
+    headline: string | null
+    email: string | null
+    photoUrl: string | null
+    connectionStatus: ConnectionStatus | "none"
+  }> = []
   for (const p of profiles) {
     const conn = await db.connection.findFirst({
       where: {

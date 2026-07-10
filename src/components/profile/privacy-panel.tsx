@@ -108,8 +108,8 @@ export function PrivacyPanel({
   )
 
   const handleChange = (field: ConsentField, visibility: Visibility) => {
-    const prev = entries.find((e) => e.field === field)?.visibility
-    if (prev === visibility) return
+    const oldVisibility = entries.find((e) => e.field === field)?.visibility
+    if (oldVisibility === visibility) return
     // Optimistic update
     setEntries((prev) => prev.map((e) => (e.field === field ? { ...e, visibility } : e)))
     startSave(async () => {
@@ -123,9 +123,9 @@ export function PrivacyPanel({
         toast.success(labels.saved)
         router.refresh()
       } catch {
-        // Revert on failure
+        // Revert on failure to the previous visibility
         setEntries((prev) =>
-          prev.map((e) => (e.field === field ? { ...e, visibility: prev?.visibility ?? "private" } : e))
+          prev.map((e) => (e.field === field ? { ...e, visibility: oldVisibility ?? "private" } : e))
         )
         toast.error(labels.error)
       }

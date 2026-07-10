@@ -47,14 +47,14 @@ interface PublicProfileData {
   }>
   educations: Array<{
     institution: string
-    degree: string
+    degree: string | null
     field: string | null
     startDate: string | null
     endDate: string | null
   }>
-  skills: Array<{ name: string; category: string; proficiency: string | null }>
+  skills: Array<{ name: string; category: string | null; proficiency: string | null }>
   certifications: Array<{ name: string; issuer: string | null }>
-  languages: Array<{ language: string; level: string }>
+  languages: Array<{ language: string; level: string | null }>
   consent: Record<string, Visibility>
   /** Viewer relationship: 'owner' | 'connection' | 'public' */
   viewerRelation: "owner" | "connection" | "public"
@@ -368,7 +368,7 @@ export function PublicProfileView({
           <div className="flex flex-wrap gap-2">
             {profile.languages.map((l, i) => (
               <span key={i} className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs">
-                {l.language} <span className="text-muted-foreground">· {l.level}</span>
+                {l.language}{l.level ? <span className="text-muted-foreground"> · {l.level}</span> : null}
               </span>
             ))}
           </div>
