@@ -11,6 +11,7 @@ import {
   type DimensionKey,
 } from "@/lib/readiness"
 import { computeVerificationSummary, type VerificationType } from "@/lib/verification"
+import { getEntitlement } from "@/lib/entitlement"
 import { generateSuggestions } from "@/lib/suggestions"
 import { SmartSuggestions } from "@/components/dashboard/smart-suggestions"
 import { ReadinessRing } from "@/components/dashboard/readiness-ring"
@@ -18,6 +19,7 @@ import { CompletenessBreakdown } from "@/components/dashboard/completeness-break
 import { QuickActions } from "@/components/dashboard/quick-actions"
 import { ActivityTimeline } from "@/components/dashboard/activity-timeline"
 import { VerificationPanel } from "@/components/dashboard/verification-panel"
+import { AnnouncementFeed } from "@/components/dashboard/announcement-feed"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -89,6 +91,24 @@ export default async function DashboardPage() {
     ...c,
     label: claimLabelMap[c.type],
   }))
+
+  // Announcements feed (Brief §9.4/§9.5 — targeted to user's plan + admin)
+  const entitlement = await getEntitlement(profile)
+  const audiences = ["all"]
+  if (entitlement.plan === "free") audiences.push("free")
+  else audiences.push("pro")
+  if (session.role === "admin" || session.role === "owner") audiences.push("admin")
+  const now = new Date()
+  const announcements = await db.announcement.findMany({
+    where: {
+      status: "published",
+      publishedAt: { lte: now },
+      audience: { in: audiences },
+    },
+    orderBy: [{ priority: "desc" }, { publishedAt: "desc" }],
+    take: 5,
+    select: { id: true, title: true, body: true, audience: true, priority: true, publishedAt: true },
+  })
 
   const levelLabelMap: Record<string, string> = {
     starter: t.dashboard.levelStarter,
@@ -203,6 +223,19 @@ export default async function DashboardPage() {
         </h1>
         <p className="mt-1.5 text-muted-foreground">{t.dashboard.welcomeBack}</p>
       </div>
+
+      {/* --- Announcements feed --- */}
+      <AnnouncementFeed
+        initialAnnouncements={announcements.map((a) => ({
+          ...a,
+          priority: a.priority as "low" | "normal" | "high" | "urgent",
+          publishedAt: a.publishedAt ? a.publishedAt.toISOString() : null,
+        }))}
+        labels={{
+          feedTitle: t.announcements.feedTitle,
+          feedEmpty: t.announcements.feedEmpty,
+        }}
+      />
 
       {/* --- Career Readiness Hero --- */}
       <div className="grid gap-4 lg:grid-cols-3">

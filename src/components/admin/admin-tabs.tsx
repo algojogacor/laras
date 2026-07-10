@@ -1,28 +1,31 @@
 "use client"
 
 import { useState } from "react"
-import { ShieldCheck, Crown } from "lucide-react"
+import { ShieldCheck, Crown, Megaphone } from "lucide-react"
 import { AdminPanel } from "@/components/admin/admin-panel"
 import { LicensePanel } from "@/components/admin/license-panel"
+import { AnnouncementsPanel } from "@/components/admin/announcements-panel"
 import { cn } from "@/lib/utils"
 
 interface AdminTabsProps {
   verificationLabels: React.ComponentProps<typeof AdminPanel>["labels"]
   licenseLabels: React.ComponentProps<typeof LicensePanel>["labels"]
-  initialTab?: "verification" | "licenses"
+  announcementLabels: React.ComponentProps<typeof AnnouncementsPanel>["labels"]
+  initialTab?: "verification" | "licenses" | "announcements"
 }
 
 export function AdminTabs({
   verificationLabels,
   licenseLabels,
+  announcementLabels,
   initialTab = "verification",
 }: AdminTabsProps) {
-  const [tab, setTab] = useState<"verification" | "licenses">(initialTab)
+  const [tab, setTab] = useState<"verification" | "licenses" | "announcements">(initialTab)
 
   return (
     <div className="space-y-6">
       {/* Tab switcher */}
-      <div className="inline-flex rounded-lg border border-border bg-card p-1 shadow-soft">
+      <div className="inline-flex flex-wrap rounded-lg border border-border bg-card p-1 shadow-soft">
         <TabButton
           active={tab === "verification"}
           onClick={() => setTab("verification")}
@@ -35,12 +38,20 @@ export function AdminTabs({
           icon={Crown}
           label={licenseLabels.licensesTitle}
         />
+        <TabButton
+          active={tab === "announcements"}
+          onClick={() => setTab("announcements")}
+          icon={Megaphone}
+          label={announcementLabels.adminTitle}
+        />
       </div>
 
       {tab === "verification" ? (
         <AdminPanel labels={verificationLabels} />
-      ) : (
+      ) : tab === "licenses" ? (
         <LicensePanel labels={licenseLabels} />
+      ) : (
+        <AnnouncementsPanel labels={announcementLabels} />
       )}
     </div>
   )

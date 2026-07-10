@@ -530,3 +530,29 @@ model Connection {
   @@index([addresseeId])
   @@index([status])
 }
+
+// ---------------------------------------------------------------------------
+// Announcement — Targeted platform communications (Brief §9.4/§9.5)
+// Admin-authored announcements shown to users based on audience targeting:
+//   all       — every user
+//   free      — users on the free plan
+//   pro       — users with a pro/org license
+//   admin     — admin/owner only
+// Priority: low | normal | high | urgent (controls visual prominence).
+// Status: draft | published | archived. Only published announcements with
+// publishedAt <= now appear in the user feed.
+// ---------------------------------------------------------------------------
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  body        String
+  audience    String   @default("all") // all | free | pro | admin
+  priority    String   @default("normal") // low | normal | high | urgent
+  status      String   @default("draft") // draft | published | archived
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([audience])
+}
