@@ -4,8 +4,18 @@ import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { getLocaleAndDict } from "@/lib/i18n"
 import { computeCompletion, type ProfileWithRelations } from "@/lib/profile"
+import {
+  computeProfileBreakdown,
+  computeReadinessScore,
+  buildActivityTimeline,
+  type DimensionKey,
+} from "@/lib/readiness"
 import { generateSuggestions } from "@/lib/suggestions"
 import { SmartSuggestions } from "@/components/dashboard/smart-suggestions"
+import { ReadinessRing } from "@/components/dashboard/readiness-ring"
+import { CompletenessBreakdown } from "@/components/dashboard/completeness-breakdown"
+import { QuickActions } from "@/components/dashboard/quick-actions"
+import { ActivityTimeline } from "@/components/dashboard/activity-timeline"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -17,7 +27,8 @@ import {
   PenLine,
   ArrowRight,
   Sparkles,
-  Clock,
+  TrendingUp,
+  Activity as ActivityIcon,
 } from "lucide-react"
 
 export default async function DashboardPage() {
@@ -40,57 +51,9 @@ export default async function DashboardPage() {
 
   const { t, locale } = await getLocaleAndDict()
   const completion = computeCompletion(profile)
+  const breakdown = computeProfileBreakdown(profile)
 
   const greetingName = profile.fullName?.split(" ")[0] ?? session.email.split("@")[0]
-
-  const verticals = [
-    {
-      title: t.landing.v1Title,
-      desc: t.landing.v1Desc,
-      Icon: FileText,
-      cta: t.dashboard.v1Cta,
-      href: "/documents",
-      active: true,
-    },
-    {
-      title: t.landing.v2Title,
-      desc: t.landing.v2Desc,
-      Icon: ClipboardList,
-      cta: t.dashboard.v2Cta,
-      href: "/applications",
-      active: true,
-    },
-    {
-      title: t.landing.v3Title,
-      desc: t.landing.v3Desc,
-      Icon: MessageSquareText,
-      cta: t.dashboard.v3Cta,
-      href: "/interview",
-      active: true,
-    },
-    {
-      title: t.landing.v4Title,
-      desc: t.landing.v4Desc,
-      Icon: Headphones,
-      cta: t.dashboard.v4Cta,
-      href: "/english",
-      active: true,
-    },
-    {
-      title: t.landing.v5Title,
-      desc: t.landing.v5Desc,
-      Icon: PenLine,
-      cta: t.dashboard.v5Cta,
-      href: "/documents/essay/new",
-      active: true,
-    },
-  ]
-
-  const recentApps = await db.application.findMany({
-    where: { userProfileId: profile.id },
-    orderBy: { updatedAt: "desc" },
-    take: 4,
-  })
 
   // Cross-vertical stats
   const [docCount, appCount, interviewCount, englishCount] = await Promise.all([
@@ -100,29 +63,105 @@ export default async function DashboardPage() {
     db.englishSession.count({ where: { userProfileId: profile.id, score: { not: null } } }),
   ])
 
-  // Recent documents
-  const recentDocs = await db.document.findMany({
-    where: { userProfileId: profile.id },
-    orderBy: { updatedAt: "desc" },
-    take: 3,
-    select: { id: true, type: true, title: true, updatedAt: true },
+  // Composite readiness score
+  const readiness = computeReadinessScore({
+    completion,
+    docCount,
+    appCount,
+    interviewCount,
+    englishCount,
   })
 
-  // Recent interview sessions
-  const recentInterviews = await db.interviewSet.findMany({
-    where: { userProfileId: profile.id },
-    orderBy: { updatedAt: "desc" },
-    take: 3,
-    select: { id: true, title: true, role: true, updatedAt: true },
+  const levelLabelMap: Record<string, string> = {
+    starter: t.dashboard.levelStarter,
+    building: t.dashboard.levelBuilding,
+    ready: t.dashboard.levelReady,
+    competitive: t.dashboard.levelCompetitive,
+  }
+  const levelDescMap: Record<string, string> = {
+    starter: t.dashboard.levelStarterDesc,
+    building: t.dashboard.levelBuildingDesc,
+    ready: t.dashboard.levelReadyDesc,
+    competitive: t.dashboard.levelCompetitiveDesc,
+  }
+  const levelLabel = levelLabelMap[readiness.level]
+  const levelDesc = levelDescMap[readiness.level]
+
+  const dimensionLabels: Record<DimensionKey, string> = {
+    basics: t.dashboard.dimBasics,
+    experience: t.dashboard.dimExperience,
+    skills: t.dashboard.dimSkills,
+    education: t.dashboard.dimEducation,
+    languages: t.dashboard.dimLanguages,
+    preferences: t.dashboard.dimPreferences,
+  }
+  const dimensionHints: Record<DimensionKey, string> = {
+    basics: t.dashboard.hintBasics,
+    experience: t.dashboard.hintExperience,
+    skills: t.dashboard.hintSkills,
+    education: t.dashboard.hintEducation,
+    languages: t.dashboard.hintLanguages,
+    preferences: t.dashboard.hintPreferences,
+  }
+
+  const verticals = [
+    { title: t.landing.v1Title, desc: t.landing.v1Desc, Icon: FileText, cta: t.dashboard.v1Cta, href: "/documents" },
+    { title: t.landing.v2Title, desc: t.landing.v2Desc, Icon: ClipboardList, cta: t.dashboard.v2Cta, href: "/applications" },
+    { title: t.landing.v3Title, desc: t.landing.v3Desc, Icon: MessageSquareText, cta: t.dashboard.v3Cta, href: "/interview" },
+    { title: t.landing.v4Title, desc: t.landing.v4Desc, Icon: Headphones, cta: t.dashboard.v4Cta, href: "/english" },
+    { title: t.landing.v5Title, desc: t.landing.v5Desc, Icon: PenLine, cta: t.dashboard.v5Cta, href: "/documents/essay/new" },
+  ]
+
+  const quickActions = [
+    { key: "cv", title: t.dashboard.qaCvTitle, desc: t.dashboard.qaCvDesc, href: "/documents/cv-ats/new", accent: "bg-chart-1/5" },
+    { key: "app", title: t.dashboard.qaAppTitle, desc: t.dashboard.qaAppDesc, href: "/applications", accent: "bg-chart-2/5" },
+    { key: "interview", title: t.dashboard.qaInterviewTitle, desc: t.dashboard.qaInterviewDesc, href: "/interview", accent: "bg-chart-4/5" },
+    { key: "english", title: t.dashboard.qaEnglishTitle, desc: t.dashboard.qaEnglishDesc, href: "/english", accent: "bg-chart-3/5" },
+  ]
+
+  // Recent data for timeline
+  const [recentDocs, recentApps, recentInterviews, recentEnglish] = await Promise.all([
+    db.document.findMany({
+      where: { userProfileId: profile.id },
+      orderBy: { updatedAt: "desc" },
+      take: 4,
+      select: { id: true, type: true, title: true, updatedAt: true },
+    }),
+    db.application.findMany({
+      where: { userProfileId: profile.id },
+      orderBy: { updatedAt: "desc" },
+      take: 4,
+      select: { id: true, position: true, organization: true, status: true, updatedAt: true },
+    }),
+    db.interviewSet.findMany({
+      where: { userProfileId: profile.id },
+      orderBy: { updatedAt: "desc" },
+      take: 3,
+      select: { id: true, title: true, role: true, updatedAt: true },
+    }),
+    db.englishSession.findMany({
+      where: { userProfileId: profile.id, score: { not: null } },
+      orderBy: { createdAt: "desc" },
+      take: 3,
+      select: { id: true, createdAt: true, score: true },
+    }),
+  ])
+
+  const typeLabels: Record<string, string> = t.documents.types as Record<string, string>
+  const timeline = buildActivityTimeline({
+    documents: recentDocs,
+    applications: recentApps,
+    interviews: recentInterviews,
+    english: recentEnglish,
+    typeLabels,
   })
 
-  // All applications (for deadline-based suggestions)
+  // All applications for deadline-based suggestions
   const allApps = await db.application.findMany({
     where: { userProfileId: profile.id },
     select: { id: true, position: true, organization: true, status: true, deadline: true },
   })
 
-  // Smart suggestions
   const suggestions = generateSuggestions({
     profile: {
       fullName: profile.fullName, headline: profile.headline, summary: profile.summary,
@@ -147,7 +186,66 @@ export default async function DashboardPage() {
         <p className="mt-1.5 text-muted-foreground">{t.dashboard.welcomeBack}</p>
       </div>
 
-      {/* Stats strip */}
+      {/* --- Career Readiness Hero --- */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* Readiness ring + level */}
+        <Card className="lg:col-span-1 shadow-soft">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              {t.dashboard.readinessTitle}
+            </CardTitle>
+            <CardDescription className="text-xs">{t.dashboard.readinessDesc}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center pt-2">
+            <ReadinessRing
+              score={readiness.score}
+              level={levelLabel}
+              levelDescription={levelDesc}
+            />
+            <p className="mt-3 text-center text-xs leading-relaxed text-muted-foreground">
+              {levelDesc}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Profile breakdown */}
+        <Card className="lg:col-span-2 shadow-soft">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {t.dashboard.breakdownTitle}
+                </CardTitle>
+                <CardDescription className="mt-0.5 text-xs">{t.dashboard.breakdownDesc}</CardDescription>
+              </div>
+              <div className="text-right">
+                <div className="font-serif text-3xl font-semibold text-primary tabular-nums">
+                  {breakdown.overall}%
+                </div>
+                <p className="text-[10px] text-muted-foreground">{t.dashboard.completionTitle}</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <CompletenessBreakdown
+              dimensions={breakdown.dimensions}
+              labels={dimensionLabels}
+              hints={dimensionHints}
+            />
+            {breakdown.overall < 100 && (
+              <Button asChild variant="outline" size="sm" className="mt-4 w-full">
+                <Link href="/profile">
+                  {t.dashboard.completeProfile}
+                  <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* --- Stats strip --- */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label={t.documents.title} value={docCount} href="/documents" Icon={FileText} />
         <StatCard label={t.applications.title} value={appCount} href="/applications" Icon={ClipboardList} />
@@ -155,37 +253,38 @@ export default async function DashboardPage() {
         <StatCard label={t.english.title} value={englishCount} href="/english" Icon={Headphones} />
       </div>
 
-      {/* Completion + quick action */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      {/* --- Quick Actions --- */}
+      <section>
+        <h2 className="font-serif text-xl font-semibold">{t.dashboard.quickActionsTitle}</h2>
+        <div className="mt-4">
+          <QuickActions actions={quickActions} />
+        </div>
+      </section>
+
+      {/* --- Smart Suggestions --- */}
+      <SmartSuggestions suggestions={suggestions} />
+
+      {/* --- Activity Timeline + Tagline --- */}
+      <section className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2 shadow-soft">
-          <CardHeader className="flex flex-row items-start justify-between space-y-0">
-            <div>
-              <CardTitle className="text-base font-medium text-muted-foreground">
-                {t.dashboard.completionTitle}
-              </CardTitle>
-              <CardDescription className="mt-1">{t.dashboard.completionDesc}</CardDescription>
-            </div>
-            <div className="text-right">
-              <div className="font-serif text-4xl font-semibold text-primary">{completion}%</div>
-            </div>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 font-serif text-base">
+              <ActivityIcon className="h-4 w-4 text-primary" />
+              {t.dashboard.timelineTitle}
+            </CardTitle>
+            <CardDescription className="text-xs">{t.dashboard.timelineDesc}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <Progress value={completion} className="h-2.5" />
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                {profile.experiences.length} {t.profile.experience.toLowerCase()} ·{" "}
-                {profile.skills.length} {t.profile.skills.toLowerCase()} ·{" "}
-                {profile.educations.length} {t.profile.education.toLowerCase()}
-              </span>
-              {completion < 100 && (
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/profile">
-                    {t.dashboard.completeProfile}
-                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                  </Link>
-                </Button>
-              )}
-            </div>
+          <CardContent>
+            <ActivityTimeline
+              items={timeline}
+              emptyMessage={t.dashboard.timelineEmpty}
+              timeAgoLabels={{
+                now: t.dashboard.timeNow,
+                minutes: t.dashboard.timeMinutes,
+                hours: t.dashboard.timeHours,
+                days: t.dashboard.timeDays,
+              }}
+            />
           </CardContent>
         </Card>
 
@@ -207,12 +306,9 @@ export default async function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </section>
 
-      {/* Smart Suggestions */}
-      <SmartSuggestions suggestions={suggestions} />
-
-      {/* Verticals */}
+      {/* --- Verticals --- */}
       <section>
         <h2 className="font-serif text-xl font-semibold">{t.dashboard.verticalsTitle}</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -228,11 +324,6 @@ export default async function DashboardPage() {
                     <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       <Icon className="h-5 w-5" />
                     </div>
-                    {!v.active && (
-                      <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                        {t.dashboard.comingSoon}
-                      </span>
-                    )}
                   </div>
                   <h3 className="mt-4 font-serif text-lg font-semibold">{v.title}</h3>
                   <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground text-pretty">
@@ -255,63 +346,6 @@ export default async function DashboardPage() {
           })}
         </div>
       </section>
-
-      {/* Recent activity — cross-vertical */}
-      <section className="grid gap-4 lg:grid-cols-2">
-        {/* Recent applications */}
-        <Card className="shadow-soft">
-          <CardHeader className="pb-3">
-            <CardTitle className="font-serif text-base flex items-center gap-2">
-              <ClipboardList className="h-4 w-4 text-primary" />
-              {t.applications.title}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentApps.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">{t.dashboard.noActivity}</p>
-            ) : (
-              <ul className="space-y-2">
-                {recentApps.map((a) => (
-                  <li key={a.id} className="flex items-center justify-between rounded-lg border border-border p-2.5">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{a.position}</p>
-                      <p className="truncate text-xs text-muted-foreground">{a.organization}</p>
-                    </div>
-                    <span className="ml-2 shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] capitalize text-muted-foreground">{a.status}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Recent documents */}
-        <Card className="shadow-soft">
-          <CardHeader className="pb-3">
-            <CardTitle className="font-serif text-base flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" />
-              {t.documents.title}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentDocs.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">{t.dashboard.noActivity}</p>
-            ) : (
-              <ul className="space-y-2">
-                {recentDocs.map((d) => (
-                  <li key={d.id} className="flex items-center justify-between rounded-lg border border-border p-2.5">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{d.title}</p>
-                      <p className="text-xs text-muted-foreground">{t.documents.types[d.type as keyof typeof t.documents.types] ?? d.type}</p>
-                    </div>
-                    <span className="ml-2 shrink-0 text-[10px] text-muted-foreground">{new Date(d.updatedAt).toLocaleDateString()}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </section>
     </div>
   )
 }
@@ -325,7 +359,7 @@ function StatCard({ label, value, href, Icon }: { label: string; value: number; 
             <Icon className="h-4 w-4" />
           </div>
           <div className="min-w-0">
-            <p className="font-serif text-2xl font-semibold leading-none">{value}</p>
+            <p className="font-serif text-2xl font-semibold leading-none tabular-nums">{value}</p>
             <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{label}</p>
           </div>
         </CardContent>
