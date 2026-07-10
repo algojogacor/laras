@@ -968,3 +968,41 @@ Turso/libSQL adalah production database (live, verified). Supabase Storage aktif
 3. Local SQLite = dev fallback
 4. Custom JWT auth retained (Supabase Auth migration not in scope)
 5. edge-tts for TTS (Kokoro requires Python ML infra impractical in sandbox)
+
+---
+Task ID: RESTORE-001
+Agent: main (orchestrator)
+Task: Restore Laras project from LARAS_MASTER_BACKUP.zip to active project root, security audit, push to public GitHub repo algojogacor/laras
+
+Work Log:
+- TAHAP 1 (Restore): Extracted LARAS_MASTER_BACKUP.zip.zip (49MB) to staging, copied laras/ contents (including .git history, src, public, prisma, package.json, worklog.md) directly to /home/z/my-project/ — NO nested laras/ folder. Structure verified: /home/z/my-project/src, /public, /prisma, /package.json, /worklog.md.
+- TAHAP 2 (Secret Scan): CRITICAL finding — .env was TRACKED in git (committed in 4 commits: initial + 3 feature commits). .env contained live credentials: DATABASE_URL, TURSO_AUTH_TOKEN, TURSO_DATABASE_URL, AUTH_SECRET, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SECRET_KEY, SUPABASE_SERVICE_ROLE_KEY, ZAI_API_KEY. Also found Turso DB hostname in worklog.md line 931.
+- TAHAP 2 (Remediation): Used git-filter-repo to (a) purge .env from ALL 24 commits (history rewritten, new hashes), (b) redact Turso DB hostname across all history. Verified: no secret patterns remain in any blob across all history. Re-created .env (gitignored, chmod 600) with Turso credentials only; other vars left empty. Created .env.example with variable names only. Hardened .gitignore: added !.env.example, *.key, credentials.json, service-account.json, dist/, *.zip, *.tar.gz.
+- TAHAP 3 (Verify): bun install (883 packages, 11.77s). prisma generate (Prisma Client v6.19.2). typecheck: 381 pre-existing errors (i18n dictionary ID/EN literal type mismatch — NOT from restore, next.config has ignoreBuildErrors=true). lint: 0 errors. production build: SUCCESS (exit 0, standalone output verified, BUILD_ID=nFbUhOJN2fHtz49SuKmlj).
+- TAHAP 4 (Turso): Wrote scripts/verify-turso.ts (safe output, no credential leak). Connection VERIFIED: SELECT 1 OK, 22 tables (Account, UserProfile, Experience, Education, Skill, Certification, Application, Document, Essay, EnglishSession, EnglishCertificate, InterviewSet, InterviewQuestion, ListeningQuestion, ReadingQuestion, StructureQuestion, LanguageProficiency, Achievement, AuditLog, ApplicationDocument, DocumentVersion, RevisionRequest), Prisma ORM OK (Account count=6). No destructive operations.
+- TAHAP 5 (Push): Verified GITHUB_TOKEN via API — authenticated as algojogacor. Repo algojogacor/laras exists (public, default=main, permissions: admin+push). Remote was EMPTY (0 branches). Added remote with CLEAN URL (https://github.com/algojogacor/laras.git, NO token in URL). Committed security hardening (commit 61e8553). Pushed to origin main via http.extraheader auth (token NOT in remote URL, NOT stored in .git/config). NOT a force-push (first push to empty remote). Verified: local HEAD = origin/main = 61e8553. Remote tree has 1777 files, .env NOT present, .env.example present, no .pem/.key/credentials files.
+
+Stage Summary:
+- Project fully restored to /home/z/my-project/ (no nested folder).
+- Git history rewritten (24 commits, new hashes) — all secrets purged.
+- 25 commits pushed to origin main (24 rewritten + 1 new security hardening commit).
+- Remote verified clean: .env absent, .env.example present, no sensitive files.
+- Turso connection live (22 tables, 6 accounts).
+- Build passes (standalone output ready for deployment).
+- Working tree clean except backup artifacts.
+
+Verification results:
+- Restore structure: ✓ (/home/z/my-project/src, /public, /prisma, /package.json, /worklog.md)
+- Secret scan: ✓ (history purged, no secrets in any blob)
+- .gitignore: ✓ (comprehensive, .env ignored, .env.example allowed)
+- .env.example: ✓ (variable names only, no values)
+- Dependencies: ✓ (883 packages installed)
+- Prisma generate: ✓
+- Typecheck: 381 pre-existing errors (non-blocking, ignoreBuildErrors=true)
+- Lint: ✓ (0 errors)
+- Production build: ✓ (exit 0, standalone output verified)
+- Turso connection: ✓ (22 tables, 6 accounts, no destructive ops)
+- GitHub auth: ✓ (algojogacor, push permission)
+- Push: ✓ (origin main, not force, clean URL)
+- Remote verification: ✓ (HEAD matches, .env absent, 1777 files)
+- Working tree: clean (only backup artifacts untracked/ignored)
