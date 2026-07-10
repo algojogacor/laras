@@ -1750,3 +1750,102 @@ missing "Trust and Verification Graph" primitive.
   also unblocks the entitlement/license engine which depends on roles.
 - Alternatively, start the Consent/Privacy Graph (brief §9.1) — a Prisma
   model tracking per-field visibility consent, surfaced on the Profile page.
+
+---
+
+## ROUND-3 — Admin Control Plane: role-based access + VerificationBadge issuance (Brief §9.4)
+
+Tanggal: 2026-07-10
+Branch: upgrade/laras-100x (pushed: 7b3d913..1f4f26e)
+Commit: 1f4f26e (feat(governance): Admin Control Plane)
+Agent: Z.ai Code (webDevReview cron, round 3)
+
+### QA assessment (start of round)
+- Dev server UP, all 7 app pages return HTTP 200, no errors. Previous cron
+  commit (813a8cc) only appended a worklog entry.
+- App stable → advanced ROUND-2's recommendation: build the governance/admin
+  control plane (brief §9.4) so the Trust & Verification Graph becomes
+  admin-driven rather than purely derived.
+
+### Decision: build the Admin Control Plane (Brief §9.4)
+Complete the verification loop: admins can now issue/revoke VerificationBadge
+rows (especially identity, which was pending-by-design in ROUND-2). This also
+establishes the role foundation the entitlement/license engine will depend on.
+
+### Work Log
+1. Schema + auth:
+   - `prisma/schema.prisma`: added `Account.role` (user | admin | owner,
+     default "user"). `db:push` applied.
+   - `src/lib/auth.ts`: `getSession()` now returns `{ userId, email, role }`;
+     exported `isAdminRole(role)` helper.
+
+2. Admin API:
+   - `src/app/api/admin/users/route.ts` (GET): lists all users with profile
+     summary + verification badges. Admin/owner only (401 unauth, 403 non-admin).
+   - `src/app/api/admin/verification/route.ts` (POST): upserts a
+     VerificationBadge (profileId, type, status, note). Sets verifiedAt on
+     'verified'. Writes an AuditLog entry (resourceType=VerificationBadge,
+     metadata includes badgeType/status/note/by) for every admin action.
+
+3. Admin UI:
+   - `src/app/(app)/admin/page.tsx` (server): redirects unauth; renders a
+     forbidden card (ShieldAlert) for non-admins; renders AdminPanel otherwise.
+   - `src/components/admin/admin-panel.tsx` (client): fetches users, renders
+     3 stat cards (total users / verified badges / pending badges), a search
+     box, and a user table with avatar, role badge, badge-icon chips, and a
+     "Manage badges" button per row. The dialog shows current badges + an
+     issue form (type selector, status selector, admin note). Toast feedback
+     ("Badge updated.") + live state update + router.refresh() on save.
+   - `src/components/site/app-header.tsx`: Admin nav entry (ShieldCheck icon,
+     primary colour) shown only to admin/owner. Mobile nav too.
+   - `src/app/(app)/layout.tsx`: passes `isAdmin={isAdminRole(account.role)}`
+     to AppHeader.
+
+4. i18n: +38 admin keys (ID + EN) — title/subtitle, forbidden states, table
+   headers, role labels, 6 badge-type labels, 4 status labels, stats, dialog
+   copy, search placeholder.
+
+### Bug fixed during round
+- EN admin i18n block was initially misplaced inside the `id` object (my
+  Python insertion targeted the 2nd `  settings: {` occurrence, but both id
+  and en have a settings block, so the EN admin block landed inside id →
+  duplicate `admin:` key overwrote the ID values → `t.admin` undefined at
+  runtime → "Cannot read properties of undefined (reading 'title')").
+  Fixed by removing the misplaced EN block and reinserting it after
+  `const en: Dictionary = {`, before the en settings block. Verified
+  `t.admin.title` resolves in both locales.
+
+### Verification (agent-browser + VLM)
+- Promoted `qa@laras.test` to `owner`; re-logged in (session now carries role).
+- `GET /api/admin/users` → 200, returns 2 users with roles + badges.
+- `/admin` renders: "Admin panel" heading, 3 stat cards, search box, user
+  table (QA Tester=owner, Demo User=user) with Manage badges buttons. Admin
+  nav link (ShieldCheck) visible in header.
+- Opened dialog for Demo User → Identity pre-selected → Mark verified →
+  toast "Badge updated." → dialog now shows "Identity: Verified" →
+  DB confirms `identity` badge (status=verified) for Demo User →
+  AuditLog entry recorded (by=qa@laras.test, resourceId=badge.id).
+- VLM: "clean and professional, OK — no overflow/misalignment/cramped spacing."
+- ESLint clean. No console errors.
+- Screenshot: download/admin-round3.png.
+
+### Unresolved / next-phase priorities
+1. The admin panel is verification-only. Brief §9.4 envisions a fuller control
+   plane: content moderation, user suspension, announcement targeting. Next.
+2. VerificationBadge rows issued by admin override derived state, but derived
+   "verified" badges are still not persisted on first compute (ROUND-2 note).
+   LOW priority.
+3. Brief §9 remaining: Consent/Privacy Graph, entitlement/license engine,
+   network, announcements, opportunities deepening.
+4. The admin "Manage badges" dialog button label always shows setVerified/
+   setRejected text even when status is 'expired' or 'pending'. Minor copy.
+5. No pagination on the user table — fine for pre-prod scale, but add
+   pagination before production.
+
+### Next-round recommendation
+- Extend the admin control plane: add user suspension (Account.suspended) +
+   a content-moderation surface, OR start the entitlement/license engine
+   (brief §9.4) since roles now exist — a `License` model + entitlement check
+   middleware would let admins grant premium features to specific users.
+- Alternatively, begin the Consent/Privacy Graph (brief §9.1) — a per-field
+   visibility consent model surfaced on the Profile page.
