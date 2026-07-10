@@ -2290,3 +2290,89 @@ Four of the brief §9.1/§9.3 graphs are now implemented:
   Network Graph into the Consent/Privacy Graph, completing the loop.
 - Alternatively, add a notification badge in the header for pending
   incoming connection requests + unread items.
+
+---
+
+## ROUND-9 — Public profile route + consent filtering + connection badge (Brief §9.1/§9.3)
+
+Tanggal: 2026-07-10
+Branch: upgrade/laras-100x (pushed: bfe4e5b..65ff6b0)
+Commit: 65ff6b0 (feat(profile): public profile route + consent filtering + connection badge)
+Agent: Z.ai Code (webDevReview cron, round 9)
+
+### QA assessment (start of round)
+- Dev server UP, all 9 pages (incl /connections) return HTTP 200, no errors.
+  Previous cron commit (3b65dce) only appended a worklog entry.
+- App stable → advanced ROUND-8's recommendation: add a public profile route
+  that wires the Network Graph into the Consent/Privacy Graph.
+
+### Decision: public profile route + connection notification badge
+Completes the loop between the Consent/Privacy Graph (ROUND-7) and the
+Network Graph (ROUND-8). The public profile route resolves the viewer's
+relationship (owner/connection/public) and shows only consented fields.
+Also adds a pending-connection notification badge in the header.
+
+### Work Log
+1. Public profile route:
+   - `src/proxy.ts`: added `/u` to PUBLIC_PREFIXES (accessible unauthenticated).
+   - `src/app/u/[profileId]/page.tsx`: loads profile by ID, resolves viewer
+     relationship (owner if self, connection if `areConnected`, else public),
+     gets consent map, serializes + passes to PublicProfileView.
+   - `src/components/profile/public-profile-view.tsx`: read-only client
+     component. Header card (avatar, name, headline, member-since, verified
+     badges, connect button for non-connections). Consent-gated sections:
+     contact (email/phone/links), summary, experience, education, skills,
+     certifications, languages. Locked fields show a "Private field" or
+     "Connections only" dashed indicator. "Connect to see more" nudge for
+     public viewers.
+   - `src/app/(app)/profile/page.tsx`: "View public profile" button (opens
+     /u/[id] in new tab) above the ProfileEditor.
+
+2. Connection notification badge:
+   - `src/lib/notifications.ts`: `getPendingConnectionCount()` — counts
+     pending incoming connections for the current user.
+   - `src/app/(app)/layout.tsx`: fetches pendingCount, passes to AppHeader.
+   - `src/components/site/app-header.tsx`: Connections nav link shows an
+     accent-coloured badge with the pending count (capped at "9+"). Desktop
+     + mobile.
+
+3. i18n: +24 publicProfile keys (ID + EN).
+
+### Verification (agent-browser)
+- Public route `/u/[id]` returns 200 for unauthenticated viewers.
+- Owner view: shows "Edit your profile" link + all fields (owner bypasses
+  consent).
+- Connection view (Demo User viewing qa): sees location (Jakarta), email
+  (qa@laras.test), links (linkedin, github) — all "connections"-level fields
+  that public viewers don't see. No "Edit" link (not owner).
+- Consent-gated locked fields show "Private field"/"Connections only"
+  indicators when hidden.
+- VLM: "layout clean, verified-badge/member-since readable, no visual issues."
+- ESLint clean. No console errors.
+- Screenshot: download/public-profile-connection.png.
+
+### Laras Core graph integration (after ROUND-9)
+The four Laras Core graphs now interoperate:
+- Consent/Privacy Graph (ROUND-7) defines per-field visibility levels.
+- Network Graph (ROUND-8) resolves the "connections" relationship.
+- Public profile route (this round) applies the consent filter using the
+  network relationship — connections see "connections"-level fields, public
+  viewers see only "public" fields, owners see everything.
+- Trust/Verification Graph (ROUND-2) badges surface on the public profile.
+
+### Unresolved / next-phase priorities
+1. No real-time notification system (the badge is count-only, polled on page
+   load). Could add SSE/polling for live updates.
+2. No public profile URL slug (currently /u/[cuid] — not shareable-friendly).
+   Could add a handle/slug field.
+3. No message/chat between connections (the "Send message" button is a stub).
+4. Brief §9 remaining: Opportunity Graph, Announcements, opportunities
+   deepening.
+
+### Next-round recommendation
+- Add an Announcements system (brief §9.4/§9.5): an Announcement model +
+  admin authoring surface + a targeted feed on the dashboard. This would be
+  the first step toward the "announcements" product scope.
+- Alternatively, deepen the Opportunities workflow (brief §9.6) — the
+  Application tracker exists but could integrate with the Career Graph to
+  suggest relevant opportunities based on profile + readiness score.
