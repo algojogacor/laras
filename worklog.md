@@ -2196,3 +2196,97 @@ Three of the brief §9.1 Laras Core graphs are now implemented:
 - Alternatively, add a public profile route `/u/[id]` that uses
   filterProfileByConsent to show only consented fields (treating all viewers
   as non-connections until the network graph exists).
+
+---
+
+## ROUND-8 — Relationship/Network Graph: connections request/accept flow (Brief §9.3)
+
+Tanggal: 2026-07-10
+Branch: upgrade/laras-100x (pushed: b9b3a95..bfe4e5b)
+Commit: bfe4e5b (feat(network): Relationship/Network Graph)
+Agent: Z.ai Code (webDevReview cron, round 8)
+
+### QA assessment (start of round)
+- Dev server UP, all 8 pages return HTTP 200, no errors. Previous cron
+  commit (352e00e) only appended a worklog entry.
+- App stable → advanced ROUND-7's recommendation: build the Relationship/
+  Network Graph (brief §9.3) so the "connections" privacy level becomes
+  meaningful.
+
+### Decision: build the Relationship/Network Graph
+Adds the Connection model + request/accept/decline flow + a /connections
+surface. This makes the "connections" visibility level from ROUND-7's
+Consent/Privacy Graph functional — connected users can see each other's
+"connections"-level profile fields.
+
+### Work Log
+1. Schema + engine:
+   - `prisma/schema.prisma`: `Connection` model (requesterId, addresseeId,
+     status, message) with `@@unique([requesterId, addresseeId])` +
+     bidirectional relations on UserProfile (connectionsOutgoing/Incoming).
+     `db:push` applied.
+   - `src/lib/connections.ts`: `requestConnection` (prevents self/duplicate/
+     block, allows re-request after decline), `acceptConnection`/
+     `declineConnection` (addressee-only), `areConnected` (bidirectional
+     accepted check), `listConnections` (grouped: accepted/pendingIncoming/
+     pendingOutgoing with 'other' user profile), `searchUsers` (by name/
+     email, excludes self + shows connection status).
+
+2. API:
+   - `src/app/api/connections/route.ts`: GET (list or ?q= search), POST
+     (send request). Audit log on every request.
+   - `src/app/api/connections/[id]/route.ts`: PATCH {action: accept|decline}.
+     Audit log on every action.
+
+3. UI:
+   - `src/components/connections/connections-panel.tsx`: client component
+     with 3 stat cards (total/incoming/sent), search box + results (with
+     per-result connect button + optional message), incoming requests
+     (accept/decline), accepted connections list, outgoing requests list.
+     Avatars, status badges, optimistic updates, toast feedback.
+   - `src/app/(app)/connections/page.tsx`: server component, computes
+     groups + renders ConnectionsPanel.
+   - `src/components/site/app-header.tsx`: Connections nav entry (Users
+     icon) for all users.
+
+4. i18n: +24 connections keys (ID + EN).
+
+### Bug fixed during round
+- Schema had a `#` comment line (Prisma uses `//`) → parse error on
+  db:generate. Fixed to `//`.
+
+### Verification (agent-browser + curl)
+- qa searched "demo" → found Demo User (status=none) → sent request with
+  message → qa has 1 pendingOutgoing.
+- Demo User login → 1 pendingIncoming from QA Tester → accept → both now
+  have 1 accepted connection (verified bidirectional: qa sees Demo in
+  accepted, Demo sees QA in accepted).
+- /connections page renders: "Connections" heading, 3 stat cards, search
+  box, "Your connections" with Demo User listed. VLM: "layout clear,
+  readable, no visual issues."
+- ESLint clean. No console errors.
+- Screenshot: download/connections-page.png.
+
+### Laras Core graph coverage (after ROUND-8)
+Four of the brief §9.1/§9.3 graphs are now implemented:
+1. Trust and Verification Graph (ROUND-2)
+2. Entitlement / License Graph (ROUND-4/5/6)
+3. Consent and Privacy Graph (ROUND-7)
+4. Relationship / Network Graph (this round)
+
+### Unresolved / next-phase priorities
+1. The `areConnected` helper exists but isn't yet wired into
+   `isFieldVisible` calls — a public profile view would use it to resolve
+   the "connections" visibility level. No public `/u/[id]` route yet.
+2. No real-time notifications for incoming requests (user must visit
+   /connections to see them). Could add a notification badge in the header.
+3. No connection removal/disconnect after acceptance.
+4. Brief §9 remaining: Opportunity Graph, Announcements, opportunities
+   deepening.
+
+### Next-round recommendation
+- Add a public profile route `/u/[profileId]` that uses `areConnected` +
+  `filterProfileByConsent` to show only consented fields — this wires the
+  Network Graph into the Consent/Privacy Graph, completing the loop.
+- Alternatively, add a notification badge in the header for pending
+  incoming connection requests + unread items.
