@@ -2019,3 +2019,90 @@ at the API layer, and visual CV locked to Pro+ at the page layer.
 - Alternatively, begin the Consent/Privacy Graph (brief §9.1) — a per-field
   visibility consent model on the Profile page, since the Trust/Verification
   and Entitlement graphs are now in place.
+
+---
+
+## ROUND-6 — Gate interview sets + advanced English (Brief §9.4 entitlement)
+
+Tanggal: 2026-07-10
+Branch: upgrade/laras-100x (pushed: 6214bb1..e3747ba)
+Commit: e3747ba (feat(entitlement): gate interview sets + advanced English)
+Agent: Z.ai Code (webDevReview cron, round 6)
+
+### QA assessment (start of round)
+- Dev server UP, all 8 pages return HTTP 200, no errors. Previous cron
+  commit (42b800f) only appended a worklog entry.
+- App stable → advanced ROUND-5's recommendation: gate the remaining Pro
+  features (interview.unlimited, english.advanced) reusing the established
+  pattern.
+
+### Decision: complete the Pro-feature gating
+ROUND-5 gated documents (cap 5) + visual CV. This round gates interview sets
+(free cap 3) and advanced English (hard difficulty is Pro+), completing the
+entitlement coverage for all 5 product verticals.
+
+### Work Log
+1. Entitlement engine (`src/lib/entitlement.ts`):
+   - `canCreateInterviewSet()`: free cap 3, pro/org with interview.unlimited
+     bypass. Returns {allowed, reason, used, limit}.
+   - `canAccessAdvancedEnglish()`: pro+ for hard difficulty. Returns
+     {allowed, reason}.
+
+2. Interview gate (`src/app/api/interview-sets/route.ts`):
+   - POST calls canCreateInterviewSet() after profile lookup. Returns 402
+     {error:'entitlement-limit', reason:'interview-limit', used, limit} when
+     the free-tier cap (3) is hit.
+
+3. English advanced gate:
+   - `src/app/(app)/english/page.tsx`: computes canAccessAdvancedEnglish()
+     server-side, passes canAccessHard to EnglishHub.
+   - `src/components/english/english-hub.tsx`: accepts canAccessHard prop;
+     the 'Hard' difficulty button shows a Lock icon + 'PRO' badge and is
+     disabled (cursor-not-allowed, muted, opacity-70) when canAccessHard is
+     false. Reuses the existing lockedTitle/proOnly i18n keys from ROUND-5
+     (no new keys needed).
+
+### Bug fixed during round
+- After adding canCreateInterviewSet() to entitlement.ts, the running dev
+  server returned 500 "canCreateInterviewSet is not a function" — Turbopack
+  cached the stale entitlement module. `touch` didn't help; fixed by
+  restarting the dev server to force a clean compile.
+
+### Verification (agent-browser + curl + VLM)
+- Pro user (qa): interview-set create → 200 (unlimited); English Hard button
+  enabled.
+- Suspended qa → free: interview-set create hits cap at 3 → 4th returns 402
+  `{"error":"entitlement-limit","reason":"interview-limit","used":3,"limit":3}`.
+- English page (free): Hard button is disabled with Lock + "PRO" badge.
+  VLM: "lock clear, disabled state obvious (grayed out, PRO badge), no
+  visual issues."
+- Reactivated Pro → both gates open again.
+- ESLint clean. No console errors.
+- Screenshot: download/english-hard-locked.png.
+
+### Entitlement coverage summary (after ROUND-6)
+All 5 product verticals now have entitlement gates:
+- Documents: free cap 5, visual CV pro+ (ROUND-5)
+- Interview: free cap 3 (this round)
+- English: hard difficulty pro+ (this round)
+- Applications: no gate (core tracking is free)
+- Essay: covered by the document cap
+
+### Unresolved / next-phase priorities
+1. The 402 responses are JSON-only; client-side buttons don't show a friendly
+   upgrade modal on 402. Could add a shared client-side entitlement error
+   handler. LOW.
+2. No license self-service/purchase flow (pre-prod admin-grant is sufficient).
+3. Brief §9 remaining: Consent/Privacy Graph, network, announcements,
+   opportunities deepening.
+4. The entitlement engine is now feature-complete for gating; the next
+   foundational brief §9.1 primitive is the Consent/Privacy Graph.
+
+### Next-round recommendation
+- Begin the Consent/Privacy Graph (brief §9.1): a Prisma model tracking
+  per-field visibility consent (public / connections / private) for profile
+  fields, surfaced on the Profile page. This completes the third Laras Core
+  graph (after Trust/Verification and Entitlement).
+- Alternatively, add a client-side entitlement error handler so 402 responses
+  from generate buttons show a friendly upgrade modal instead of a generic
+  error toast.
