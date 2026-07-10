@@ -164,3 +164,34 @@ export async function canAccessVisualCV(
   if (hasFeature(e, "documents.visual_cv")) return { allowed: true }
   return { allowed: false, reason: "visual-cv-locked" }
 }
+
+/**
+ * Check whether the user can create another interview set. Free tier is
+ * capped at 3; pro/org with interview.unlimited bypass the cap.
+ */
+export async function canCreateInterviewSet(
+  profile: Pick<UserProfile, "id">
+): Promise<{ allowed: boolean; reason?: string; used: number; limit: number | null }> {
+  const e = await getEntitlement(profile)
+  const used = await db.interviewSet.count({ where: { userProfileId: profile.id } })
+  if (hasFeature(e, "interview.unlimited")) {
+    return { allowed: true, used, limit: null }
+  }
+  const limit = FREE_TIER_LIMITS.maxInterviewSets
+  if (used >= limit) {
+    return { allowed: false, reason: "interview-limit", used, limit }
+  }
+  return { allowed: true, used, limit }
+}
+
+/**
+ * Check whether the user can access advanced (hard) English practice.
+ * Pro+ feature (english.advanced).
+ */
+export async function canAccessAdvancedEnglish(
+  profile: Pick<UserProfile, "id">
+): Promise<{ allowed: boolean; reason?: string }> {
+  const e = await getEntitlement(profile)
+  if (hasFeature(e, "english.advanced")) return { allowed: true }
+  return { allowed: false, reason: "english-advanced-locked" }
+}

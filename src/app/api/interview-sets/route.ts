@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { applyRateLimit } from "@/lib/rate-limit"
 import { generateInterviewQuestions } from "@/lib/content-engine"
+import { canCreateInterviewSet } from "@/lib/entitlement"
 
 export async function GET() {
   const session = await getSession()
@@ -29,6 +30,15 @@ export async function POST(request: Request) {
   try { body = await request.json() } catch { return NextResponse.json({ error: "invalid-body" }, { status: 400 }) }
   const profile = await db.userProfile.findUnique({ where: { accountId: session.userId }, select: { id: true, docLocale: true } })
   if (!profile) return NextResponse.json({ error: "no-profile" }, { status: 404 })
+
+  // Entitlement gate: free tier capped at 3 interview sets (Brief §9.4)
+  const interviewEntitlement = await canCreateInterviewSet(profile)
+  if (!interviewEntitlement.allowed) {
+    return NextResponse.json(
+      { error: "entitlement-limit", reason: interviewEntitlement.reason, used: interviewEntitlement.used, limit: interviewEntitlement.limit },
+      { status: 402 }
+    )
+  }
 
   const locale = (body.locale as "id" | "en") || (profile.docLocale as "id" | "en") || "id"
   const set = await db.interviewSet.create({

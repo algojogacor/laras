@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, BookOpen, Braces, Headphones, Loader2, Check, X, RefreshCw, Trophy, Sparkles, ArrowRight, Award } from "lucide-react"
+import { ArrowLeft, BookOpen, Braces, Headphones, Loader2, Check, X, RefreshCw, Trophy, Sparkles, ArrowRight, Award, Lock } from "lucide-react"
 import { toast } from "sonner"
 import { useT } from "@/components/providers/locale-provider"
 import type { Locale } from "@/lib/i18n/dictionary"
@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils"
 type HistoryItem = { id: string; module: string; score: number; createdAt: string }
 type Phase = "hub" | "practice" | "results"
 
-export function EnglishHub({ locale, history }: { locale: Locale; history: HistoryItem[] }) {
+export function EnglishHub({ locale, history, canAccessHard = true }: { locale: Locale; history: HistoryItem[]; canAccessHard?: boolean }) {
   const t = useT()
   const [phase, setPhase] = useState<Phase>("hub")
   const [activeModule, setModule] = useState<"reading" | "structure" | "listening">("reading")
@@ -93,18 +93,31 @@ export function EnglishHub({ locale, history }: { locale: Locale; history: Histo
           <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-sm font-medium text-muted-foreground">{t.english.difficulty}</span>
             <div className="flex gap-2">
-              {(["easy", "medium", "hard"] as const).map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setDifficulty(d)}
-                  className={cn(
-                    "rounded-full border px-4 py-1.5 text-sm font-medium transition-all",
-                    difficulty === d ? "border-primary bg-primary text-primary-foreground shadow-soft" : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                  )}
-                >
-                  {t.english[d]}
-                </button>
-              ))}
+              {(["easy", "medium", "hard"] as const).map((d) => {
+                const hardLocked = d === "hard" && !canAccessHard
+                return (
+                  <button
+                    key={d}
+                    onClick={() => !hardLocked && setDifficulty(d)}
+                    disabled={hardLocked}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition-all",
+                      hardLocked && "cursor-not-allowed border-border bg-muted/50 text-muted-foreground opacity-70",
+                      !hardLocked && difficulty === d && "border-primary bg-primary text-primary-foreground shadow-soft",
+                      !hardLocked && difficulty !== d && "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    )}
+                    title={hardLocked ? t.documents.lockedTitle : undefined}
+                  >
+                    {hardLocked && <Lock className="h-3 w-3" />}
+                    {t.english[d]}
+                    {hardLocked && (
+                      <span className="ml-0.5 rounded bg-primary/15 px-1 py-0.5 text-[8px] font-semibold uppercase text-primary">
+                        {t.documents.proOnly}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           </CardContent>
         </Card>
