@@ -996,3 +996,25 @@ Stage Summary:
 - Security: clean fresh git history, no secrets in source or about-to-be-pushed history.
 - Verification: typecheck/lint/build all pass; Turso DB connection verified.
 - Ready for first push to https://github.com/algojogacor/laras (PUBLIC).
+
+---
+Task ID: restore-2 (QA + browser verification)
+Agent: Z.ai Code
+Task: Baseline QA via agent-browser + verify auth→DB→onboarding flow.
+
+Work Log:
+- Started dev server persistently (setsid+exec+disown; dies across Bash calls so QA uses combined commands via scripts/dev-and-qa.sh).
+- Browser QA (agent-browser):
+  - Home (/): renders Laras landing — "Satu data diri. Semua kesempatan", 5 verticals, ID locale default. HTTP 200.
+  - /login: renders "Selamat datang kembali" form (email+password). HTTP 200.
+  - /signup: renders "Mulai perjalananmu" form (name+email+password). HTTP 200.
+  - Signup submit → POST /api/auth/signup 200 (3.3s). Account created in Turso (count 7, most recent qa-test-...@laras.test / QA Tester). Session cookie set.
+  - Redirect to /onboarding works (heading "Lengkapi profilmu"). HTTP 200.
+- Verified runtime Turso DB connection (my db.ts Turso-prefer fix is functional — writes succeed).
+- Verified i18n (ID default), branding, theme toggle, locale toggle present.
+
+Stage Summary:
+- Core infrastructure WORKS: Next.js 16 build, Turso/libSQL runtime (read+write), auth (signup+session cookie), routing, i18n.
+- Known gaps (config, not code): ZAI_API_KEY empty → AI generation (documents, English practice) will fail at the LLM call. Supabase keys empty → Storage uploads fail (may have local fallback).
+- QA artifacts: scripts/dev-and-qa.sh, scripts/db-smoke.ts.
+- Next: create QA_REPORT.md, PRODUCT_AUDIT.md, ROADMAP.md; production hardening; set up continuous cron.
