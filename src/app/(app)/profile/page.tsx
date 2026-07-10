@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { getLocaleAndDict } from "@/lib/i18n"
@@ -6,6 +7,8 @@ import { computeCompletion, serializeProfile, type ProfileWithRelations } from "
 import { getConsentEntries } from "@/lib/privacy"
 import { ProfileEditor } from "@/components/profile/profile-editor"
 import { PrivacyPanel } from "@/components/profile/privacy-panel"
+import { Button } from "@/components/ui/button"
+import { ExternalLink } from "lucide-react"
 
 export default async function ProfilePage() {
   const session = await getSession()
@@ -30,6 +33,14 @@ export default async function ProfilePage() {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/u/${profile.id}`} target="_blank">
+            <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+            {t.publicProfile.viewPublic}
+          </Link>
+        </Button>
+      </div>
       <ProfileEditor initialProfile={serializeProfile(profile)} initialCompletion={completion} />
       <PrivacyPanel
         initialEntries={consentEntries}

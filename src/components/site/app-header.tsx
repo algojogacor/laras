@@ -14,10 +14,12 @@ export function AppHeader({
   user,
   locale,
   isAdmin = false,
+  pendingConnections = 0,
 }: {
   user: { id: string; email: string; name: string | null; fullName: string | null }
   locale: Locale
   isAdmin?: boolean
+  pendingConnections?: number
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
@@ -31,14 +33,14 @@ export function AppHeader({
       ? { dashboard: "Dasbor", documents: "Dokumen", applications: "Lamaran", interview: "Wawancara", english: "Bahasa Inggris", profile: "Profil", connections: "Koneksi", admin: "Admin" }
       : { dashboard: "Dashboard", documents: "Documents", applications: "Applications", interview: "Interview", english: "English", profile: "Profile", connections: "Connections", admin: "Admin" }
 
-  const navItems: Array<{ href: string; label: string; isAdmin?: boolean }> = [
+  const navItems: Array<{ href: string; label: string; isAdmin?: boolean; badge?: number }> = [
     { href: "/dashboard", label: navLabels.dashboard },
     { href: "/documents", label: navLabels.documents },
     { href: "/applications", label: navLabels.applications },
     { href: "/interview", label: navLabels.interview },
     { href: "/english", label: navLabels.english },
     { href: "/profile", label: navLabels.profile },
-    { href: "/connections", label: navLabels.connections },
+    { href: "/connections", label: navLabels.connections, badge: pendingConnections },
     ...(isAdmin ? [{ href: "/admin", label: navLabels.admin, isAdmin: true }] : []),
   ]
 
@@ -65,6 +67,11 @@ export function AppHeader({
               >
                 {item.isAdmin && <ShieldCheck className="h-3.5 w-3.5" />}
                 {item.label}
+                {item.badge && item.badge > 0 ? (
+                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-accent-foreground">
+                    {item.badge > 9 ? "9+" : item.badge}
+                  </span>
+                ) : null}
               </Link>
             ))}
           </nav>
@@ -115,6 +122,11 @@ export function AppHeader({
               >
                 {item.isAdmin && <ShieldCheck className="h-3.5 w-3.5" />}
                 {item.label}
+                {item.badge && item.badge > 0 ? (
+                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-accent-foreground">
+                    {item.badge > 9 ? "9+" : item.badge}
+                  </span>
+                ) : null}
               </Link>
             ))}
           </div>
