@@ -1422,3 +1422,118 @@ Prioritas round berikutnya:
 2. ROADMAP-010: Scale listening bank (13 → 50+)
 3. ROADMAP-012: Add automated tests (Vitest unit)
 4. ROADMAP-015: PWA manifest + service worker
+
+---
+
+## SURFACE-0 — Surface Laras ZIP codebase into the sandbox & establish upgrade/laras-100x branch
+
+Tanggal: 2026-07-10
+Branch: upgrade/laras-100x
+Commit: 36f51f4 (chore(platform): establish Laras ecosystem foundation from ZIP baseline)
+Agent: Z.ai Code (orchestrator)
+
+### Task
+Understand the pasted LARAS 100X brief and surface (extract + deploy) the
+`laras-with-env.zip` codebase so it runs in the sandbox preview, then push to
+the GitHub `upgrade/laras-100x` branch.
+
+### Current project status / assessment
+Laras is a mature, Indonesia-first Career Operating System with 5 product
+verticals (Document Suite, Application Ops, Interview Prep, English Readiness,
+Opportunity Essays) sharing one UserProfile "Career Graph". Prior to this
+session the codebase existed only inside the uploaded ZIP; the sandbox held an
+unrelated fresh Next.js starter. The ZIP is now the running source of truth.
+
+### Work Log
+- Read the full LARAS 100X brief (Pasted Content) — 10-round autonomous
+  pre-production transformation mandate, ZIP = single source of truth, push to
+  `upgrade/laras-100x`, never reduce scope.
+- Extracted `laras-with-env.zip` (Windows backslash paths) via a Python
+  normaliser into `/tmp/laras-v2` (1272 files, 19MB).
+- Inspected key files: package.json (Next 16, Prisma 6, z-ai-web-dev-sdk,
+  Supabase, i18n), .env (Turso + Supabase dev creds), prisma/schema.prisma
+  (22 models, driverAdapters), src/proxy.ts (JWT session middleware),
+  worklog.md (5 prior rounds).
+- Removed the sandbox's fresh-starter files (src, package.json, configs) and
+  rsync'd the full Laras project into `/home/z/my-project`, preserving
+  `upload/`, `download/`, `tool-results/`, and the existing `.git`.
+- `bun install` → 846 packages, 10.2s (Next 16.1.3, React 19, Prisma 6.19.2).
+- Database: aligned `DATABASE_URL` to the sandbox shell env
+  (`file:/home/z/my-project/db/custom.db`, local SQLite) for reliable surfacing.
+  `prisma generate` + `prisma db push` → 22 tables created (Account,
+  UserProfile, Experience, Education, Skill, Certification, Document,
+  Application, InterviewSet, EnglishCertificate, ListeningQuestion, …).
+- Dev server: first attempts died because the background process was reaped;
+  fixed with a `( setsid bash -c 'exec next dev -p 3000 …' & )` subshell that
+  reparents to init. Server now persists across commands (Next 16.1.3
+  Turbopack, ready in ~1s, GET / 200).
+- QA via agent-browser (golden path):
+  - Landing `/` renders the full Laras homepage (Indonesian hero
+    "Satu data diri. Semua kesempatan.", 5 verticals, stats, skip-link).
+  - Language toggle ID→EN switches hero to "One profile. Every opportunity."
+  - "Mulai gratis" → /signup form; filled Name/Email/Password, submitted →
+    account written to DB, session cookie set, redirected to /onboarding
+    (5-step wizard, "Step 1 of 5: Your basics"). Prisma query log confirms the
+    full Career Graph is being read. Command Palette (⌘K) present in header.
+  - No hydration errors / runtime errors in dev.log (only verbose prisma:query
+    logs, expected in dev).
+- Git:
+  - Found `.env` was tracked in the sandbox's Initial commit → `git rm --cached
+    .env` (staged as deletion); verified .env content is NOT in the index.
+  - Scanned staged files for Turso/Supabase token patterns → none.
+  - Added remote `origin https://github.com/algojogacor/laras.git` (clean URL,
+    no token).
+  - Auth via `GIT_ASKPASS` helper reading `LARAS_GH_TOKEN` from env (token
+    never hardcoded in the script, never added to remote URL or .git/config).
+  - `git fetch origin` (token valid) → remote has main + 3 restore branches,
+    no upgrade branch yet.
+  - `git switch -c upgrade/laras-100x` (preserves ZIP working tree), committed
+    1245 files, pushed → `origin/upgrade/laras-100x` (new branch, tracking set).
+  - Cleaned up: removed askpass script, unset token, verified no token in
+    .git/config.
+
+### Verification results
+- Dev server: LISTENING on :3000, HTTP 200, persists across commands.
+- Caddy gateway :81 → HTTP 200 (preview panel works).
+- Landing, i18n, auth signup→DB→onboarding all browser-verified.
+- GitHub: https://github.com/algojogacor/laras/tree/upgrade/laras-100x live.
+
+### Unresolved issues / risks / next-phase priorities
+1. `ZAI_API_KEY` is empty in .env and not present in the sandbox shell env —
+   AI generation features (CV/cover-letter/essay generation, interview
+   feedback, English generation) will fail until a key is provided. The
+   z-ai-web-dev-sdk may auto-configure in this environment — needs verification
+   by exercising a generation endpoint. HIGH priority for the cron/QA rounds.
+2. Dev log is very noisy (`prisma:query` logs every query in dev). Consider
+   gating the query log behind a VERBOSE flag in src/lib/db.ts.
+3. The `brief/` directory and `upload/Pasted Content_*.txt` were committed
+   (harmless context) — could be moved to .gitignore if desired.
+4. The Turso remote DB credentials remain in the local `.env` (untracked, safe)
+   but are unused in favour of local SQLite. Decide whether to keep Turso as
+   the eventual production DB or standardise on local SQLite for pre-prod.
+5. The broader LARAS 100X transformation (Career Graph deepening, entitlement
+   engine, governance/admin, network, announcements, opportunities
+   deepening — per brief §9) is NOT yet started; this session only surfaced
+   the existing codebase. The recurring webDevReview cron will drive it.
+6. Mini-service `tts-service` not yet started in this session (the .zscripts/
+   dev.sh starts it); can be started when TTS features are exercised.
+
+### Next-phase recommendation (for the webDevReview cron)
+- First verify a real AI generation flow end-to-end (e.g. create a CV-ATS doc)
+  and resolve the ZAI_API_KEY question.
+- Then begin brief §9 product-architecture work: consolidate the Career Graph,
+  add the entitlement/license + governance/admin primitives, and deepen the
+  cross-product preparation workflows — following brief §5 discovery first.
+
+### Git addendum (SURFACE-0)
+The sandbox auto-switches the working branch back to `main` between Bash
+commands, so the initial commit landed on `main` (36f51f4) instead of
+`upgrade/laras-100x`. Fixed by:
+  git branch -f upgrade/laras-100x main
+  git push origin main:upgrade/laras-100x   # fast-forward, no force-push
+Remote `origin/upgrade/laras-100x` is now at 36f51f4. ✅
+
+**Push convention for all future rounds:** commit on `main` (sandbox-enforced),
+then publish with `git push origin main:upgrade/laras-100x` (never push `main`
+itself). Auth via `GIT_ASKPASS` reading `LARAS_GH_TOKEN` from env — token must
+never be hardcoded, committed, or added to the remote URL.
