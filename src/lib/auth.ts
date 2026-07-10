@@ -37,7 +37,7 @@ export async function verifySessionToken(token: string): Promise<{ sub: string }
   }
 }
 
-export async function getSession(): Promise<{ userId: string; email: string } | null> {
+export async function getSession(): Promise<{ userId: string; email: string; role: string } | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get(COOKIE_NAME)?.value
   if (!token) return null
@@ -45,10 +45,15 @@ export async function getSession(): Promise<{ userId: string; email: string } | 
   if (!payload) return null
   const account = await db.account.findUnique({
     where: { id: payload.sub },
-    select: { id: true, email: true },
+    select: { id: true, email: true, role: true },
   })
   if (!account) return null
-  return { userId: account.id, email: account.email }
+  return { userId: account.id, email: account.email, role: account.role }
+}
+
+/** Returns true if the session belongs to an admin or owner. */
+export function isAdminRole(role: string | undefined | null): boolean {
+  return role === "admin" || role === "owner"
 }
 
 export async function setSessionCookie(token: string) {

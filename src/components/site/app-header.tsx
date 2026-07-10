@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Menu, X } from "lucide-react"
+import { Menu, X, ShieldCheck } from "lucide-react"
 import { Logo } from "@/components/site/logo"
 import { LocaleToggle } from "@/components/site/locale-toggle"
 import { ThemeToggle } from "@/components/site/theme-toggle"
@@ -13,9 +13,11 @@ import type { Locale } from "@/lib/i18n/dictionary"
 export function AppHeader({
   user,
   locale,
+  isAdmin = false,
 }: {
   user: { id: string; email: string; name: string | null; fullName: string | null }
   locale: Locale
+  isAdmin?: boolean
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
@@ -26,16 +28,17 @@ export function AppHeader({
       : { profile: "Profile", settings: "Settings", logout: "Log out" }
   const navLabels =
     locale === "id"
-      ? { dashboard: "Dasbor", documents: "Dokumen", applications: "Lamaran", interview: "Wawancara", english: "Bahasa Inggris", profile: "Profil" }
-      : { dashboard: "Dashboard", documents: "Documents", applications: "Applications", interview: "Interview", english: "English", profile: "Profile" }
+      ? { dashboard: "Dasbor", documents: "Dokumen", applications: "Lamaran", interview: "Wawancara", english: "Bahasa Inggris", profile: "Profil", admin: "Admin" }
+      : { dashboard: "Dashboard", documents: "Documents", applications: "Applications", interview: "Interview", english: "English", profile: "Profile", admin: "Admin" }
 
-  const navItems = [
+  const navItems: Array<{ href: string; label: string; isAdmin?: boolean }> = [
     { href: "/dashboard", label: navLabels.dashboard },
     { href: "/documents", label: navLabels.documents },
     { href: "/applications", label: navLabels.applications },
     { href: "/interview", label: navLabels.interview },
     { href: "/english", label: navLabels.english },
     { href: "/profile", label: navLabels.profile },
+    ...(isAdmin ? [{ href: "/admin", label: navLabels.admin, isAdmin: true }] : []),
   ]
 
   return (
@@ -51,12 +54,15 @@ export function AppHeader({
                 key={item.href}
                 href={item.href}
                 aria-current={pathname === item.href ? "page" : undefined}
-                className={`rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors hover:bg-secondary hover:text-foreground ${
+                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors hover:bg-secondary hover:text-foreground ${
                   pathname === item.href
                     ? "bg-secondary text-foreground"
-                    : "text-muted-foreground"
+                    : item.isAdmin
+                      ? "text-primary"
+                      : "text-muted-foreground"
                 }`}
               >
+                {item.isAdmin && <ShieldCheck className="h-3.5 w-3.5" />}
                 {item.label}
               </Link>
             ))}
@@ -98,12 +104,15 @@ export function AppHeader({
                 href={item.href}
                 aria-current={pathname === item.href ? "page" : undefined}
                 onClick={() => setMobileOpen(false)}
-                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary hover:text-foreground ${
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary hover:text-foreground ${
                   pathname === item.href
                     ? "bg-secondary text-foreground"
-                    : "text-muted-foreground"
+                    : item.isAdmin
+                      ? "text-primary"
+                      : "text-muted-foreground"
                 }`}
               >
+                {item.isAdmin && <ShieldCheck className="h-3.5 w-3.5" />}
                 {item.label}
               </Link>
             ))}

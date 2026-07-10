@@ -20,6 +20,7 @@ model Account {
   email        String       @unique
   passwordHash String
   name         String?
+  role         String       @default("user") // user | admin | owner (Brief §9.4 governance)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   profile      UserProfile?
