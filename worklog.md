@@ -1121,3 +1121,97 @@ Prioritas round berikutnya:
 3. ROADMAP-008: Add getSession to any other routes missing it (audit all 32 routes)
 4. ROADMAP-011: Remove dead dependencies (next-auth, next-intl)
 5. ROADMAP-010: Scale listening bank (13 → 50+ sets)
+
+---
+
+## Round 2 — Rate limiting + error sanitization + dead deps removal
+
+Tanggal: 2026-07-10
+Branch: main
+Commit awal: 9f736cc (fix(round-1): P1 bugs)
+Tujuan: Implement rate limiting (BUG-002), sanitize error messages (BUG-006), remove dead dependencies (ROADMAP-011).
+
+Masalah yang ditemukan:
+- BUG-002 (P1): No rate limiting — brute-force + LLM cost abuse
+- BUG-006 (P2): 7 API routes leak (e as Error).message to client
+- ROADMAP-011: next-auth + next-intl installed but unused (dead deps)
+
+Keputusan:
+- Implement in-memory rate limiter (sliding window, per-IP for auth, per-user for LLM)
+- Sanitize all error responses — no more (e as Error).message leak
+- Remove dead deps (next-auth, next-intl)
+- Defer Upstash Redis upgrade (single-instance sufficient for now)
+
+Implementasi:
+1. src/lib/rate-limit.ts (NEW): In-memory rate limiter with:
+   - Sliding window counter per key
+   - Periodic sweep (every 5 min) to prevent memory leak
+   - getClientIP() helper (x-forwarded-for, x-real-ip, cf-connecting-ip)
+   - RATE_LIMITS presets: auth (10/min), signup (5/min), generate (20/min), summarize (10/min), api (60/min)
+   - applyRateLimit() helper returns 429 Response or null
+   - Rate limit headers: Retry-After, X-RateLimit-Limit/Remaining/Reset
+
+2. Rate limiting applied to 9 routes:
+   - /api/auth/login (10/min per IP)
+   - /api/auth/signup (5/min per IP, stricter)
+   - /api/documents/cv-ats/generate (20/min per user)
+   - /api/documents/cover-letter/generate (20/min per user)
+   - /api/documents/bio/generate (20/min per user)
+   - /api/documents/essay/generate (20/min per user)
+   - /api/documents/essay/probe (20/min per user)
+   - /api/documents/[id]/revise (20/min per user)
+   - /api/english/generate (20/min per user)
+   - /api/interview-sets POST (20/min per user)
+   - /api/interview-sets/[id]/feedback (20/min per user)
+   - /api/applications/summarize (already fixed in Round 1)
+
+3. Error sanitization in 7 routes:
+   - All (e as Error).message removed from client responses
+   - Server-side console.error retained for debugging
+   - Generic error codes only: generation-failed, probe-failed, revision-failed, feedback-failed, summarize-failed
+
+4. Interview-sets POST: Added try/catch around generateInterviewQuestions — cleans up empty set on failure (prevents orphaned sets)
+
+5. bun remove next-auth next-intl (2 dead deps removed)
+
+File yang berubah:
+- src/lib/rate-limit.ts (NEW)
+- src/app/api/auth/login/route.ts
+- src/app/api/auth/signup/route.ts
+- src/app/api/documents/cv-ats/generate/route.ts
+- src/app/api/documents/cover-letter/generate/route.ts
+- src/app/api/documents/bio/generate/route.ts
+- src/app/api/documents/essay/generate/route.ts
+- src/app/api/documents/essay/probe/route.ts
+- src/app/api/documents/[id]/revise/route.ts
+- src/app/api/english/generate/route.ts
+- src/app/api/interview-sets/route.ts
+- src/app/api/interview-sets/[id]/feedback/route.ts
+- package.json (removed next-auth, next-intl)
+- bun.lock
+
+Migration: None
+Test yang dijalankan:
+- bunx tsc --noEmit → 0 errors ✓
+- bunx eslint . → 0 errors ✓
+- bun run build → exit 0, 53 routes ✓
+
+Hasil QA:
+- Rate limiting: IMPLEMENTED (12 routes protected)
+- Error sanitization: COMPLETE (no more message leak in any route)
+- Dead deps: REMOVED (next-auth, next-intl)
+- Build still passes with reactStrictMode + no ignoreBuildErrors
+
+Risiko tersisa:
+- In-memory rate limiter doesn't share state across instances (multi-instance needs Upstash Redis)
+- Rate limits not yet tested under load (need integration test)
+- No automated test for rate limit behavior
+
+Commit akhir: (pending push)
+Push status: (pending)
+Prioritas round berikutnya:
+1. ROADMAP-019: Schema drift fix (add 4 missing Prisma models: Achievement, AuditLog, ReadingQuestion, StructureQuestion)
+2. ROADMAP-010: Scale listening bank (13 → 50+ sets)
+3. ROADMAP-009: Render CommandDialog (or remove)
+4. ROADMAP-013: Internationalize certificate pages
+5. ROADMAP-006: Wire ConfigPanel to builders (or remove)
