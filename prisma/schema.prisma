@@ -73,6 +73,7 @@ model UserProfile {
   certificates   EnglishCertificate[]
   achievements   Achievement[]
   auditLogs      AuditLog[]
+  verificationBadges VerificationBadge[]
 }
 
 // --- Riwayat pengalaman (Section 4) — contextNotes is the anti-generic foundation ---
@@ -423,4 +424,31 @@ model StructureQuestion {
   updatedAt   DateTime @updatedAt
 
   @@index([difficulty, published])
+}
+
+// ---------------------------------------------------------------------------
+// VerificationBadge — Trust and Verification Graph (Brief §9.1)
+// Tracks per-claim verification state: email, phone, skill, education,
+// employment, identity. Each badge has a status (pending | verified | rejected
+// | expired) and an optional verifiedAt timestamp + verifier note.
+// In pre-production, email/phone badges auto-verify on profile completion;
+// other types are admin-issuable. This is the foundation for trust signals
+// shown on the dashboard and (future) public profile.
+// ---------------------------------------------------------------------------
+model VerificationBadge {
+  id            String   @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  type          String   // email | phone | identity | education | employment | skill
+  status        String   @default("pending") // pending | verified | rejected | expired
+  verifiedAt    DateTime?
+  expiresAt     DateTime? // optional expiry (e.g. annual re-verification)
+  evidence      String?  // JSON: { summary, source, referenceId? }
+  note          String?  // admin/verifier note
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userProfileId, type]) // one badge per type per user
+  @@index([userProfileId])
+  @@index([status])
 }

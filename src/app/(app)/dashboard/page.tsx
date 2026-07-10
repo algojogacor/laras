@@ -10,12 +10,14 @@ import {
   buildActivityTimeline,
   type DimensionKey,
 } from "@/lib/readiness"
+import { computeVerificationSummary, type VerificationType } from "@/lib/verification"
 import { generateSuggestions } from "@/lib/suggestions"
 import { SmartSuggestions } from "@/components/dashboard/smart-suggestions"
 import { ReadinessRing } from "@/components/dashboard/readiness-ring"
 import { CompletenessBreakdown } from "@/components/dashboard/completeness-breakdown"
 import { QuickActions } from "@/components/dashboard/quick-actions"
 import { ActivityTimeline } from "@/components/dashboard/activity-timeline"
+import { VerificationPanel } from "@/components/dashboard/verification-panel"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -29,6 +31,7 @@ import {
   Sparkles,
   TrendingUp,
   Activity as ActivityIcon,
+  ShieldCheck,
 } from "lucide-react"
 
 export default async function DashboardPage() {
@@ -71,6 +74,21 @@ export default async function DashboardPage() {
     interviewCount,
     englishCount,
   })
+
+  // Trust & Verification summary (Brief §9.1 — Trust and Verification Graph)
+  const verification = await computeVerificationSummary(profile)
+  const claimLabelMap: Record<VerificationType, string> = {
+    email: t.dashboard.claimEmail,
+    phone: t.dashboard.claimPhone,
+    identity: t.dashboard.claimIdentity,
+    education: t.dashboard.claimEducation,
+    employment: t.dashboard.claimEmployment,
+    skill: t.dashboard.claimSkill,
+  }
+  const verificationClaims = verification.claims.map((c) => ({
+    ...c,
+    label: claimLabelMap[c.type],
+  }))
 
   const levelLabelMap: Record<string, string> = {
     starter: t.dashboard.levelStarter,
@@ -202,10 +220,27 @@ export default async function DashboardPage() {
               score={readiness.score}
               level={levelLabel}
               levelDescription={levelDesc}
+              size={168}
             />
-            <p className="mt-3 text-center text-xs leading-relaxed text-muted-foreground">
+            <p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">
               {levelDesc}
             </p>
+            {/* Compact component breakdown */}
+            <div className="mt-4 grid w-full grid-cols-5 gap-1.5">
+              {readiness.components.map((c) => (
+                <div key={c.key} className="text-center">
+                  <div className="mx-auto h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${c.value}%` }}
+                    />
+                  </div>
+                  <span className="mt-1 block text-[9px] font-medium tabular-nums text-muted-foreground">
+                    {c.value}%
+                  </span>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
@@ -220,8 +255,8 @@ export default async function DashboardPage() {
                 <CardDescription className="mt-0.5 text-xs">{t.dashboard.breakdownDesc}</CardDescription>
               </div>
               <div className="text-right">
-                <div className="font-serif text-3xl font-semibold text-primary tabular-nums">
-                  {breakdown.overall}%
+                <div className="font-serif text-xl font-semibold text-foreground tabular-nums sm:text-2xl">
+                  {breakdown.overall}<span className="text-sm text-muted-foreground">%</span>
                 </div>
                 <p className="text-[10px] text-muted-foreground">{t.dashboard.completionTitle}</p>
               </div>
@@ -232,6 +267,7 @@ export default async function DashboardPage() {
               dimensions={breakdown.dimensions}
               labels={dimensionLabels}
               hints={dimensionHints}
+              completeLabel={t.dashboard.dimComplete}
             />
             {breakdown.overall < 100 && (
               <Button asChild variant="outline" size="sm" className="mt-4 w-full">
@@ -244,6 +280,35 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* --- Trust & Verification (Brief §9.1) --- */}
+      <Card className="shadow-soft">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 font-serif text-base">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            {t.dashboard.verificationTitle}
+          </CardTitle>
+          <CardDescription className="text-xs">{t.dashboard.verificationDesc}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <VerificationPanel
+            claims={verificationClaims}
+            verifiedCount={verification.verifiedCount}
+            totalCount={verification.totalCount}
+            trustScore={verification.trustScore}
+            labels={{
+              title: t.dashboard.verificationTitle,
+              desc: t.dashboard.verificationDesc,
+              verified: t.dashboard.statusVerified,
+              pending: t.dashboard.statusPending,
+              rejected: t.dashboard.statusRejected,
+              expired: t.dashboard.statusExpired,
+              trustScore: t.dashboard.trustScore,
+              of: t.dashboard.of,
+            }}
+          />
+        </CardContent>
+      </Card>
 
       {/* --- Stats strip --- */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
