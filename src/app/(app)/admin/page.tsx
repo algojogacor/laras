@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation"
 import { getSession, isAdminRole } from "@/lib/auth"
 import { getLocaleAndDict } from "@/lib/i18n"
-import { AdminPanel } from "@/components/admin/admin-panel"
+import { AdminTabs } from "@/components/admin/admin-tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -46,8 +46,8 @@ export default async function AdminPage() {
         <p className="mt-1.5 text-muted-foreground">{t.admin.subtitle}</p>
       </div>
 
-      <AdminPanel
-        labels={{
+      <AdminTabs
+        verificationLabels={{
           title: t.admin.title,
           subtitle: t.admin.subtitle,
           usersTitle: t.admin.usersTitle,
@@ -87,6 +87,33 @@ export default async function AdminPage() {
           noBadge: t.admin.noBadge,
           selectType: t.admin.selectType,
           selectStatus: t.admin.selectStatus,
+        }}
+        licenseLabels={{
+          licensesTitle: t.admin.licensesTitle,
+          licensesDesc: t.admin.licensesDesc,
+          grantLicense: t.admin.grantLicense,
+          editLicense: t.admin.editLicense,
+          noLicenses: t.admin.noLicenses,
+          plan: t.admin.plan,
+          planFree: t.admin.planFree,
+          planPro: t.admin.planPro,
+          planOrg: t.admin.planOrg,
+          statusActive: t.admin.statusActive,
+          statusSuspended: t.admin.statusSuspended,
+          statusExpired: t.admin.statusExpired,
+          statusCancelled: t.admin.statusCancelled,
+          expiresAt: t.admin.expiresAt,
+          noExpiry: t.admin.noExpiry,
+          licenseNote: t.admin.licenseNote,
+          selectPlan: t.admin.selectPlan,
+          selectStatus2: t.admin.selectStatus2,
+          expiryDate: t.admin.expiryDate,
+          licenseGranted: t.admin.licenseGranted,
+          licenseUpdated: t.admin.licenseUpdated,
+          licenseError: t.admin.licenseError,
+          suspend: t.admin.suspend,
+          reactivate: t.admin.reactivate,
+          cancel: t.admin.cancel,
         }}
       />
     </div>

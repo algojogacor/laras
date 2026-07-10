@@ -75,6 +75,7 @@ model UserProfile {
   achievements   Achievement[]
   auditLogs      AuditLog[]
   verificationBadges VerificationBadge[]
+  licenses       License[]
 }
 
 // --- Riwayat pengalaman (Section 4) — contextNotes is the anti-generic foundation ---
@@ -452,4 +453,29 @@ model VerificationBadge {
   @@unique([userProfileId, type]) // one badge per type per user
   @@index([userProfileId])
   @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// License — Entitlement & License Engine (Brief §9.4 monetization/entitlement)
+// Grants a user access to a plan (free | pro | org) with optional feature
+// flags and an expiry. Multiple licenses can exist per user (e.g. a pro trial
+// + an org license); the most permissive active one wins at entitlement time.
+// ---------------------------------------------------------------------------
+model License {
+  id            String   @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  plan          String   @default("free") // free | pro | org
+  status        String   @default("active") // active | expired | suspended | cancelled
+  features      String?  // JSON string[] of feature keys this license grants (overrides plan defaults if set)
+  note          String?  // admin note (reason for grant, promo code, etc.)
+  issuedById    String?  // Account.id of the admin who issued it (audit trail)
+  startsAt      DateTime @default(now())
+  expiresAt     DateTime? // null = no expiry
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userProfileId])
+  @@index([status])
+  @@index([plan])
 }
