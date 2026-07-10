@@ -1849,3 +1849,95 @@ establishes the role foundation the entitlement/license engine will depend on.
    middleware would let admins grant premium features to specific users.
 - Alternatively, begin the Consent/Privacy Graph (brief §9.1) — a per-field
    visibility consent model surfaced on the Profile page.
+
+---
+
+## ROUND-4 — Entitlement & License Engine (Brief §9.4 monetization/entitlement)
+
+Tanggal: 2026-07-10
+Branch: upgrade/laras-100x (pushed: 1f4f26e..f218cef)
+Commit: f218cef (feat(entitlement): License engine + admin grant/revoke + settings plan card)
+Agent: Z.ai Code (webDevReview cron, round 4)
+
+### QA assessment (start of round)
+- Dev server UP, all 8 pages (incl /admin) return HTTP 200, no errors.
+  Previous cron commit (7709e18) only appended a worklog entry.
+- App stable → advanced ROUND-3's recommendation: build the entitlement/
+  license engine (brief §9.4) since roles now exist.
+
+### Decision: build the Entitlement & License Engine
+Establishes the monetization foundation the brief calls for: a License model,
+an entitlement engine, an admin grant/revoke surface, and a user-facing plan
+card. Feature keys enable gating premium capabilities (visual CV, unlimited
+documents/interviews, advanced English bank, priority support).
+
+### Work Log
+1. Schema + engine:
+   - `prisma/schema.prisma`: `License` model (plan, status, features JSON,
+     note, issuedById, startsAt, expiresAt) + relation on UserProfile.
+     `db:push` applied.
+   - `src/lib/entitlement.ts`: `getEntitlement()` loads all licenses, filters
+     to active+not-expired, picks the most permissive (org > pro > free),
+     merges plan features + license-specific overrides. Exports `PLAN_FEATURES`,
+     `hasFeature()`, `canCreateDocument()` (free-tier cap of 5 docs),
+     `canAccessVisualCV()` (pro+). 6 feature keys defined.
+
+2. Admin API (`src/app/api/admin/licenses/route.ts`):
+   - GET: list all licenses with joined user info (admin/owner only).
+   - POST: grant a new license (profileId, plan, status, expiresAt, note).
+   - PATCH: update status/expiry/note (suspend, reactivate, extend, cancel).
+   - Every action writes an AuditLog entry (resourceType=License).
+
+3. Admin UI:
+   - `src/components/admin/admin-tabs.tsx`: tabbed wrapper (Verification |
+     Licenses) with icon buttons.
+   - `src/components/admin/license-panel.tsx`: searchable license list with
+     plan badges (Free/Pro/Org), status dots, expiry, quick suspend/reactivate
+     buttons, and a grant/edit dialog (plan selector, status selector, expiry
+     date, note).
+   - `src/app/(app)/admin/page.tsx`: now renders AdminTabs with both panels.
+
+4. User surface:
+   - `src/components/settings/license-card.tsx`: plan badge, status, expiry,
+     features list with checkmarks (granted) / lock icons (locked), and an
+     upgrade nudge for free-tier users (dashed border, arrow-up icon).
+   - `src/app/(app)/settings/page.tsx`: computes entitlement server-side and
+     renders the LicenseCard above the existing SettingsForm.
+
+5. i18n: +36 entitlement keys (ID + EN) — plan labels (Free/Pro/Org), 4
+   statuses, 5 feature labels, upgrade title/desc/contactAdmin, dialog fields
+   (selectPlan, selectStatus, expiryDate, note), grant/updated/error toasts.
+
+### Verification (agent-browser + VLM)
+- Granted Pro license to Demo User via admin API → 200, AuditLog recorded
+  (by=qa@laras.test, plan=pro).
+- Granted Pro license to qa user → settings page shows "Your plan: PRO" with
+  all 5 features checkmarked (Unlimited documents, Visual CV, Unlimited
+  interview practice, Advanced listening bank, Priority support).
+- Admin Licenses tab: renders "Grant license" button + license list (Demo
+  User: Pro, qa: Pro) with suspend/reactivate/edit actions per row.
+- VLM on settings license card: "PRO badge clear, features readable with
+  checkmarks, layout balanced, no visual issues."
+- ESLint clean. No console errors.
+- Screenshots: download/settings-license-pro.png, download/admin-licenses.png.
+
+### Unresolved / next-phase priorities
+1. The entitlement engine exists but feature gates are not yet wired into the
+   actual feature routes (e.g. /documents/cv-visual/new should call
+   canAccessVisualCV and block free users). The helpers exist; wiring is next.
+2. Free-tier document cap (canCreateDocument) not enforced at the API layer
+   yet — /api/documents/cv-ats/generate etc. should check it.
+3. No license self-service/purchase flow (brief mentions monetization but
+   pre-prod admin-grant is sufficient for now).
+4. Brief §9 remaining: Consent/Privacy Graph, network, announcements,
+   opportunities deepening.
+5. The license features JSON override is parsed but there's no admin UI to
+   pick individual features — only plan-level. LOW priority.
+
+### Next-round recommendation
+- Wire the entitlement gates into the actual feature routes: enforce
+  canCreateDocument() in /api/documents/[type]/generate and
+  canAccessVisualCV() in /documents/cv-visual/new. Add a "locked" UI state
+  on the visual CV card for free users with an upgrade nudge.
+- Alternatively, begin the Consent/Privacy Graph (brief §9.1) — a per-field
+  visibility consent model on the Profile page.
