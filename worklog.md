@@ -1468,3 +1468,42 @@ Prioritas round berikutnya:
 3. Automated tests (ROADMAP X1) — Vitest smoke tests for auth + DB + generation
 4. PWA manifest + service worker (ROADMAP-015)
 5. Observability — structured logging (ROADMAP L5)
+
+---
+Task ID: round-7 (GenerationOverlay in all builders + completion checklist)
+Agent: Z.ai Code (autonomous cron round)
+Task: Integrate GenerationOverlay into remaining document builders (ROADMAP priority 1), add new CompletionChecklist feature to dashboard.
+
+Work Log:
+- Assessed state: on restore/laras-20260710-b @ 20b0cd6 (clean). Verified typecheck PASS.
+- Integrated GenerationOverlay (animated progress + error/retry) into:
+  - cover-letter-builder.tsx: added genError state, proper error extraction, overlay with regen support
+  - bio-builder.tsx: added genError state, overlay with retry/cancel
+  - essay-builder.tsx: added genError state, overlay handles both probing + draft generation
+- All 4 document builders (cv-ats from round 6 + these 3) now have consistent generation UX
+- New feature: CompletionChecklist component (src/components/dashboard/completion-checklist.tsx):
+  - Replaces bare percentage with actionable item-by-item breakdown
+  - 8 checklist items: fullName, headline, summary, contact, links, experiences, skills, education
+  - Each item: done/incomplete badge, hint text for incomplete items, green/amber color coding
+  - Remaining count + full-width CTA button to /profile when incomplete
+  - Bilingual (ID/EN)
+- Integrated into dashboard: replaced old completion card with the new checklist widget (2-col span)
+- Fixed duplicate import in dashboard after merge
+
+Verification:
+- typecheck: PASS (tsc --noEmit 0 errors)
+- lint: PASS (eslint 0 errors)
+- build: PASS (53 routes compiled)
+- Working tree: clean
+
+Stage Summary:
+- All document builders now have consistent, polished generation UX with proper error states
+- Dashboard has a new actionable completion checklist that guides users to fill gaps
+- Commit: 2cdfc83 (pushed, verified local==remote)
+
+Prioritas round berikutnya:
+1. Mobile responsive QA (ROADMAP X3) — test at 375px, fix overflow/touch targets
+2. Automated tests (ROADMAP X1) — Vitest smoke tests for auth + DB
+3. PWA manifest + service worker (ROADMAP-015)
+4. Observability — structured logging (ROADMAP L5)
+5. Integrate GenerationOverlay into English hub + interview practice
