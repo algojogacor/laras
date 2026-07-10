@@ -76,6 +76,7 @@ model UserProfile {
   auditLogs      AuditLog[]
   verificationBadges VerificationBadge[]
   licenses       License[]
+  consentSettings ConsentSetting[]
 }
 
 // --- Riwayat pengalaman (Section 4) — contextNotes is the anti-generic foundation ---
@@ -478,4 +479,27 @@ model License {
   @@index([userProfileId])
   @@index([status])
   @@index([plan])
+}
+
+// ---------------------------------------------------------------------------
+// ConsentSetting — Consent and Privacy Graph (Brief §9.1)
+// Per-field visibility consent for a user's profile. Each trackable field
+// (fullName, email, phone, location, links, experiences, education, skills,
+// certifications, languages) has a visibility level:
+//   public       — visible to anyone (future public profile)
+//   connections  — visible only to accepted connections (future network)
+//   private      — visible only to the user themselves
+// Defaults are conservative (private for contact info, public for professional
+// history). Users can change any field's visibility at any time.
+// ---------------------------------------------------------------------------
+model ConsentSetting {
+  id            String   @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  field         String   // fullName | email | phone | location | links | experiences | education | skills | certifications | languages
+  visibility    String   @default("private") // public | connections | private
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userProfileId, field]) // one setting per field per user
+  @@index([userProfileId])
 }
