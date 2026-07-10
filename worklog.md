@@ -1650,3 +1650,103 @@ from a flat stats page into a multi-dimensional readiness cockpit.
   partially via UserProfile + relations) and add the missing "Consent and
   Privacy Graph" + "Trust and Verification Graph" primitives as Prisma
   models, with a first surface in the Profile page.
+
+---
+
+## ROUND-2 — Trust & Verification Graph + dashboard polish (VLM-driven)
+
+Tanggal: 2026-07-10
+Branch: upgrade/laras-100x (pushed: 414003d..7b3d913)
+Commit: 7b3d913 (feat(dashboard): Trust & Verification Graph + breakdown polish)
+Agent: Z.ai Code (webDevReview cron, round 2)
+
+### QA assessment (start of round)
+- Dev server UP, all 7 app pages load with 0 errors. Previous cron commit
+  (0b553e7) only appended a worklog entry.
+- Used VLM (z-ai vision CLI) to objectively audit the ROUND-1 dashboard
+  screenshots (light + mobile). VLM identified 5 concrete issues:
+  1. Duplicate levelDesc paragraph in readiness card (a11y-tree duplication).
+  2. "100%" repetition in breakdown cards — should use checkmarks.
+  3. Oversized "100%" header competing with the section title.
+  4. Weak colour differentiation between ring (62%) and breakdown bars (100%).
+  5. Mobile: hint text truncation/overlap with progress bar; ring oversized.
+- Verified dark mode (toggle + `agent-browser set media dark`) and mobile
+  (`agent-browser set viewport 375 812`) both work.
+
+### Decision: fix VLM-identified bugs + add new feature (Trust & Verification Graph)
+Per ROUND-1's recommendation, begin brief §9.1 "Laras Core" — add the
+missing "Trust and Verification Graph" primitive.
+
+### Work Log
+1. Fixed readiness card duplication + added a compact 5-component readiness
+   breakdown bar under the ring (shows profile/docs/apps/interview/english
+   contribution percentages).
+
+2. Rewrote `completeness-breakdown.tsx`:
+   - Complete dimensions (score=100) now show a green checkmark badge +
+     "Complete" label instead of "100%".
+   - Bars use chart-2 (green) for complete vs primary for partial — clear
+     colour hierarchy.
+   - Hint uses `line-clamp-2` (wraps on mobile instead of truncating).
+   - Cards get a subtle green tint (`border-chart-2/30 bg-chart-2/[0.04]`)
+     when complete.
+
+3. Reduced the breakdown header "100%" from text-3xl to text-xl/2xl so it no
+   longer competes with the section title.
+
+4. NEW — Trust & Verification Graph (brief §9.1):
+   - `prisma/schema.prisma`: added `VerificationBadge` model (type, status,
+     verifiedAt, expiresAt, evidence, note) with `@@unique([userProfileId,
+     type])` + relation on UserProfile. `db:push` applied → table created.
+   - `src/lib/verification.ts`: `computeVerificationSummary()` merges
+     persisted badges (admin override) with derived state from profile data.
+     6 claim types (email, phone, identity, education, employment, skill)
+     with weights (identity heaviest at 0.30). Identity is admin-issuable;
+     others auto-derive from profile data. Returns trustScore 0–100.
+   - `src/components/dashboard/verification-panel.tsx`: animated trust-score
+     header (ShieldCheck/ShieldAlert, coloured by score) + 6 claim cards
+     with status dots, icons, and status labels. Responsive (2-col mobile,
+     3-col desktop). Staggered reveal via framer-motion.
+   - Dashboard now renders a "Verification & trust" card: 70% trust score,
+     5/6 verified (identity pending by design).
+
+5. i18n: +17 keys (ID + EN) — verificationTitle/Desc, trustScore, 6 claim
+   labels, 4 status labels, dimComplete, "of".
+
+### Bug fixed during round
+- After `db:push` added the VerificationBadge model, the running dev server
+  crashed with `Cannot read properties of undefined (reading 'findMany')`
+  because the old Prisma client (loaded at startup) didn't know the new
+  model. Fixed by restarting the dev server so it picks up the regenerated
+  Prisma client.
+
+### Verification (agent-browser + VLM)
+- Desktop: all sections render — Career readiness ring (62% READY) → Profile
+  breakdown (all 6 dims show checkmarks + "Complete") → Verification & trust
+  (70%, 5/6 verified, Identity pending) → stats → quick actions →
+  suggestions → timeline → verticals. VLM: "no visual issues remain".
+- Mobile (375px): VLM confirms "no overflow, text clipping, or cramped
+  spacing. Layout fits 375px with balanced spacing and clear readability."
+- Dark mode: verified via toggle + `set media dark`.
+- ESLint clean. No console errors.
+- Screenshots: download/dashboard-round2-light.png, dashboard-round2-mobile.png.
+
+### Unresolved / next-phase priorities
+1. The VerificationBadge model is read-only from the dashboard (no admin UI
+   to issue identity badges yet). The governance/admin control plane (brief
+   §9.4) is the natural home for this — unstarted.
+2. The verification claims are derived but not persisted on first compute.
+   Consider upserting derived "verified" badges so the audit trail is
+   durable. LOW priority.
+3. Brief §9 remaining: Consent/Privacy Graph, entitlement/license engine,
+  governance/admin, network, announcements, opportunities deepening.
+4. The readiness "of" label reads "5/6 of" — the "of" placement is slightly
+  awkward in EN. Minor copy fix. LOW.
+
+### Next-round recommendation
+- Begin brief §9.4 (governance/admin): add an owner-admin role + a minimal
+  admin surface to issue VerificationBadge rows (especially identity), so
+  the Trust graph becomes admin-driven rather than purely derived. This
+  also unblocks the entitlement/license engine which depends on roles.
+- Alternatively, start the Consent/Privacy Graph (brief §9.1) — a Prisma
+  model tracking per-field visibility consent, surfaced on the Profile page.
