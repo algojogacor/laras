@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { applyRateLimit } from "@/lib/rate-limit"
 import { serializeProfile, type ProfileWithRelations } from "@/lib/profile"
+import { canCreateDocument } from "@/lib/entitlement"
 import { generateEssay, textConcretenessCheck } from "@/lib/content-engine"
 
 export async function POST(request: Request) {
@@ -27,6 +28,15 @@ export async function POST(request: Request) {
     },
   })) as ProfileWithRelations | null
   if (!profile) return NextResponse.json({ error: "no-profile" }, { status: 404 })
+
+  // Entitlement gate: free tier capped at 5 documents (Brief §9.4)
+  const docEntitlement = await canCreateDocument(profile)
+  if (!docEntitlement.allowed) {
+    return NextResponse.json(
+      { error: "entitlement-limit", reason: docEntitlement.reason, used: docEntitlement.used, limit: docEntitlement.limit },
+      { status: 402 }
+    )
+  }
 
   const locale = (body.locale as "id" | "en") || (profile.docLocale as "id" | "en") || "id"
   const tone = body.tone || profile.preferredTone || "warm"

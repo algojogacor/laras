@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Plus, FileText, Mail, Quote, PenLine, Palette, Presentation } from "lucide-react"
+import { Plus, FileText, Mail, Quote, PenLine, Palette, Presentation, Lock } from "lucide-react"
 import { useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import {
@@ -25,7 +25,7 @@ const TYPES = [
   { value: "deck", href: "/documents/deck/new", Icon: Presentation },
 ] as const
 
-export function DocumentsTypePicker() {
+export function DocumentsTypePicker({ lockedTypes = [] }: { lockedTypes?: string[] }) {
   const t = useT()
   const [open, setOpen] = useState(false)
 
@@ -43,33 +43,50 @@ export function DocumentsTypePicker() {
           <DialogDescription>{t.documents.chooseTypeDesc}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-2 py-2">
-          {TYPES.map(({ value, href, Icon }) => (
-            <DialogClose asChild key={value}>
-              <Link
-                href={href}
-                className={cn(
-                  "group flex items-center gap-4 rounded-xl border border-border p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-soft"
-                )}
-              >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-serif text-base font-semibold">
-                    {t.documents.types[value as keyof typeof t.documents.types]}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {value === "cv-ats" && t.documents.cvAtsNewSubtitle}
-                    {value === "cv-visual" && t.documents.subtitle}
-                    {value === "cover-letter" && t.documents.clNewSubtitle}
-                    {value === "bio" && t.documents.bioNewSubtitle}
-                    {value === "essay" && t.documents.essayNewSubtitle}
-                    {value === "deck" && t.documents.subtitle}
-                  </p>
-                </div>
-              </Link>
-            </DialogClose>
-          ))}
+          {TYPES.map(({ value, href, Icon }) => {
+            const locked = lockedTypes.includes(value)
+            return (
+              <DialogClose asChild key={value}>
+                <Link
+                  href={href}
+                  className={cn(
+                    "group flex items-center gap-4 rounded-xl border border-border p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-soft",
+                    locked && "opacity-75"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors",
+                      locked
+                        ? "bg-muted text-muted-foreground"
+                        : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="flex items-center gap-2 font-serif text-base font-semibold">
+                      {t.documents.types[value as keyof typeof t.documents.types]}
+                      {locked && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-primary">
+                          <Lock className="h-2.5 w-2.5" />
+                          {t.documents.proOnly}
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {value === "cv-ats" && t.documents.cvAtsNewSubtitle}
+                      {value === "cv-visual" && t.documents.subtitle}
+                      {value === "cover-letter" && t.documents.clNewSubtitle}
+                      {value === "bio" && t.documents.bioNewSubtitle}
+                      {value === "essay" && t.documents.essayNewSubtitle}
+                      {value === "deck" && t.documents.subtitle}
+                    </p>
+                  </div>
+                </Link>
+              </DialogClose>
+            )
+          })}
         </div>
       </DialogContent>
     </Dialog>

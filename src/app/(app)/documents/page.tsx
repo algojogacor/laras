@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { getLocaleAndDict } from "@/lib/i18n"
+import { getEntitlement, hasFeature } from "@/lib/entitlement"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -39,6 +40,11 @@ export default async function DocumentsPage() {
 
   const { t } = await getLocaleAndDict()
 
+  // Entitlement: which document types are locked for this user? (Brief §9.4)
+  const entitlement = await getEntitlement(profile)
+  const lockedTypes: string[] = []
+  if (!hasFeature(entitlement, "documents.visual_cv")) lockedTypes.push("cv-visual")
+
   const documents = await db.document.findMany({
     where: { userProfileId: profile.id },
     orderBy: { updatedAt: "desc" },
@@ -52,7 +58,7 @@ export default async function DocumentsPage() {
           <h1 className="font-serif text-3xl font-semibold tracking-tight">{t.documents.title}</h1>
           <p className="mt-1.5 text-muted-foreground">{t.documents.subtitle}</p>
         </div>
-        <DocumentsTypePicker />
+        <DocumentsTypePicker lockedTypes={lockedTypes} />
       </div>
 
       {documents.length === 0 ? (
