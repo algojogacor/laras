@@ -2582,3 +2582,219 @@ Phase 1B — Server-side consent enforcement
 
 ### Phase 1B started
 NO
+
+---
+
+## Phase 1B — Server-side public-profile consent enforcement
+
+Tanggal: 2026-07-11
+Branch: main
+Starting commit: 561589cac5d8080283e92fb50b6a5df05b2732b1
+Phase: 1B only
+Agent: Codex
+
+### Objective
+
+Close the public-profile privacy leak by ensuring restricted profile values are
+removed on the server before they can enter Server/Client Component props,
+HTML, embedded RSC/Flight data, metadata, public API JSON, logs, errors, or
+shared caches.
+
+### Baseline and Graphify orientation
+
+- Initial source baseline: branch `main`, HEAD
+  `561589cac5d8080283e92fb50b6a5df05b2732b1`.
+- `graphify-out/` was an untracked generated directory. It was excluded only
+  in local `.git/info/exclude`; no repository source or commit was changed.
+- The first Graphify CLI update revealed that Graphify 0.9.12 did not honor
+  `.git/info/exclude` and expanded into `skills/`. Its automatic pre-update
+  backup was restored immediately and the contaminated cache was quarantined.
+- A local, uncommitted `.graphifyignore` was then used to exclude
+  `skills/`, `download/`, `upload/`, `tool-results/`, `graphify-out/`,
+  `public/audio/`, `output/`, and `generated/`.
+- The successful incremental update scanned 248 code files and produced a
+  2,263-node graph. The final manifest contains no `skills/` sources and no
+  external `D:\laras-referensi` sources. Existing legacy semantic nodes from
+  artifact directories were not used for decisions, and the scoped update
+  added none.
+- Graphify queries were run before manual source reading:
+  1. DFS trace for Prisma → profile → consent → serialization → server/client
+     props → RSC/session/relationship.
+  2. BFS inventory for consent, privacy visibility, public profile, session,
+     connection relationship, metadata, serialization, and routes.
+  3. Path `ConsentSetting` → `PublicProfileView` (no ConsentSetting node was
+     present, so Graphify could not produce a path).
+  4. Explain `filterProfileByConsent` (found only a call to
+     `isFieldVisible`).
+- Every security conclusion was then checked against source, Prisma schema,
+  current Next.js 16 and Prisma documentation, runtime responses, and tests.
+
+### Prior vulnerability and root cause
+
+- `src/app/u/[profileId]/page.tsx` loaded a broad Prisma `UserProfile`,
+  serialized it with the owner-oriented `serializeProfile()`, and passed
+  restricted values to a Client Component together with the full consent map
+  and viewer relation.
+- `PublicProfileView` hid values only during React rendering. The restricted
+  values were already present in RSC/Flight props.
+- The old generic `filterProfileByConsent()` was never used and allowed every
+  untracked raw property through. Stored consent values were trusted through a
+  type cast without runtime validation.
+
+### Current consent model and authorization matrix
+
+- Stored values: `public`, `connections`, `private`.
+- Existing controlled fields and defaults:
+  - Public: `fullName`, `experiences`, `education`, `skills`,
+    `certifications`, `languages`.
+  - Connections: `location`, `links`.
+  - Private: `email`, `phone`.
+- Missing rows use these documented conservative defaults.
+- Unknown values or duplicate settings omit the affected field for non-owners.
+- Summary is not an existing ConsentSetting field and is owner-only in Phase
+  1B. Headline, avatar, verified indicator types, and member-since date remain
+  intentionally public. Opportunity preferences and account identifiers never
+  enter the public DTO.
+- Audience matrix:
+
+| Viewer | Public fields | Connections fields | Private fields |
+|---|---:|---:|---:|
+| OWNER | Include | Include | Include |
+| ACCEPTED_CONNECTION | Include | Include | Omit |
+| PENDING_CONNECTION | Include | Omit | Omit |
+| AUTHENTICATED_STRANGER | Include | Omit | Omit |
+| ANONYMOUS | Include | Omit | Omit |
+
+The complete field-by-field matrix is in `docs/DECISIONS.md` D7.
+
+### Implementation
+
+- Added `src/lib/public-profile.ts`:
+  - one authoritative pure projection;
+  - narrow serializable DTO;
+  - runtime consent validation;
+  - explicit viewer classification;
+  - fail-closed duplicate/malformed/missing relationship handling;
+  - omission of unauthorized properties;
+  - nested-array/object minimization;
+  - safe allowlisted HTTP(S) social links;
+  - verified indicator types without evidence, notes, IDs, or verifier data.
+- Added `src/lib/public-profile.server.ts` with the Next.js `server-only`
+  guard. The route imports the projection only through this boundary.
+- Reworked `src/app/u/[profileId]/page.tsx`:
+  - narrow Prisma `select`;
+  - session-only viewer resolution;
+  - exact accepted relationship query;
+  - constant redacted relationship-error log;
+  - `force-dynamic` cache policy;
+  - only the projected DTO crosses into the Client Component.
+- Reworked `PublicProfileView` to render field presence. It no longer
+  receives or evaluates stored consent values, raw relations, profile IDs, or
+  restricted data.
+- Fixed a touched-surface hydration mismatch by rendering the already-derived
+  member date in deterministic ISO form instead of using an implicit
+  server/browser locale.
+- Added the small official `server-only` guard dependency.
+
+### Metadata, API, cache, logs, and errors
+
+- Public-profile metadata remains inherited static Laras metadata; no profile
+  field is used in title, description, Open Graph, or structured data.
+- No public-profile JSON API exists. Anonymous `/api/profile` remains 401 and
+  returns no target profile data.
+- Viewer-specific page output is dynamic and not stored in a shared cache.
+- No secret, cookie, Account data, profile DTO input, or canary is logged.
+- No new user-visible error response contains profile data.
+
+### Tests and runtime verification
+
+- Test-first workflow: the new `bun:test` file initially failed because the
+  projection module did not exist, then passed after the server projection was
+  implemented.
+- Deterministic runtime users: owner, accepted connection, pending connection,
+  authenticated stranger, and anonymous visitor.
+- Required canaries include:
+  `private-email-canary@example.test`, `PRIVATE_PHONE_CANARY`,
+  `CONNECTION_ONLY_CANARY`, `PRIVATE_SUMMARY_CANARY`, and
+  `PRIVATE_VERIFICATION_EVIDENCE_CANARY`.
+- Runtime leak results:
+  - Owner: private email, phone, summary, and connection-only value present;
+    private verification evidence absent.
+  - Accepted connection: connection-only value present; private email, phone,
+    summary, and verification evidence absent.
+  - Pending, stranger, anonymous: public canaries present; connection-only and
+    private canaries absent.
+  - Raw HTML including embedded RSC/Flight: unauthorized canaries absent.
+  - Metadata: private canaries absent.
+  - Anonymous profile API request: 401; no canaries.
+  - Server logs: Prisma parameters remained placeholders; no canary values.
+- Playwright found and the implementation fixed a locale-dependent hydration
+  mismatch on the touched profile surface. A separate pre-existing
+  `/favicon.ico` 404 remains outside Phase 1B and does not expose data.
+
+### Final validation
+
+All final checks completed on 2026-07-11:
+
+- `DATABASE_URL=file:D:/laras-phase1b-runtime-20260711c.db bunx prisma validate`
+  — exit 0 (schema valid; existing preview-feature deprecation warning only).
+- `bunx prisma generate` — exit 0.
+- `bunx tsc --noEmit --pretty false` — exit 0.
+- `bun run lint` — exit 0.
+- `bun test` — exit 0; 14 passed, 0 failed, 71 assertions.
+- `bun run listening:validate` — exit 0; 0 valid and 0 invalid because the
+  known listening bank is empty.
+- `bun run listening:report` — exit 0; confirmed 0 listening questions.
+- `bun run build` — exit 0; Next.js 16.1.3 compiled, typechecked, collected
+  page data, and generated 51/51 static pages. Next standalone emitted the
+  known Windows warning for two traced chunk filenames containing
+  `node:https`; this did not fail the build. The package post-build copy uses
+  Bun's Windows-compatible `cp -R` option.
+- Anonymous runtime response — HTTP 200 with
+  `Cache-Control: no-store, must-revalidate`; all restricted canaries absent
+  from HTML and embedded RSC/Flight.
+- Server-log canary search — 0 matches.
+- `git diff --check` — exit 0.
+
+Final staged-scope and secret/unsafe-shortcut review is performed immediately
+before the commit. The commit SHA is reported from Git after creation, avoiding
+an impossible self-referential SHA inside the commit itself.
+
+### Schema changes
+
+NONE.
+
+### Dashboard changes
+
+NONE.
+
+### Landing-page changes
+
+NONE.
+
+### Unrelated work
+
+NONE.
+
+### Known issues deliberately not fixed
+
+- Resource ownership authorization and IDOR (Phase 1C).
+- Verification semantics.
+- Entitlement atomicity.
+- Empty listening bank.
+- Legacy dashboard and landing-page positioning.
+- Profile handle/slug and the unrelated favicon 404.
+
+### Commit
+
+Exactly one local commit is created with subject
+`fix: enforce server-side public-profile consent`; its SHA is recorded in the
+final Phase 1B report.
+
+### Next approved phase
+
+Phase 1C — Resource ownership authorization and IDOR closure.
+
+### Phase 1C started
+
+NO.

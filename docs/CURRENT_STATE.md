@@ -1,17 +1,17 @@
 # CURRENT_STATE.md
 
-Last verified: 2026-07-11 (Phase 1A complete)
+Last verified: 2026-07-11 (Phase 1B complete; all acceptance checks passed)
 Current branch: main
-Current commit: (pending — Phase 1A commit)
+Phase 1B starting commit: 561589cac5d8080283e92fb50b6a5df05b2732b1
 Database: SQLite (local file: /home/z/my-project/db/custom.db)
 Storage: Supabase Storage (configured in .env, used for file uploads)
 Authentication: Custom JWT (jose) + bcrypt, cookie-based session (laras_session)
 AI provider: z-ai-web-dev-sdk (ZAI.create() auto-configured, no explicit key)
-Typecheck: PASS (0 errors) — fixed in Phase 1A
-Lint: PASS
-Build: PASS — fixed in Phase 1A
+Typecheck: PASS (0 errors)
+Lint: PASS (0 errors)
+Build: PASS (Next.js 16.1.3 production build; 51/51 static pages generated)
 Browser QA: PASS (touched surfaces: dashboard, public profile, connections, privacy — all render correctly on desktop + mobile + ID/EN)
-Tests: NONE (no test files, no test framework; listening bank validator reports '0 valid, 0 invalid out of 0 total' — bank is empty, not actually validated)
+Tests: bun:test focused consent projection suite added for Phase 1B; final result is recorded in the Phase 1B section below. Listening bank remains empty and is not part of this phase.
 Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948d6e...)
 
 ---
@@ -39,6 +39,7 @@ Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948
 | Admin panel (verification/licenses/announcements tabs) | 3 tabs render, CRUD APIs work for admin/owner |
 | Connection request/accept/decline | /api/connections POST + PATCH work, bidirectional |
 | Privacy settings (per-field consent) | /api/profile/privacy GET/PATCH work, persisted to DB |
+| Public-profile consent enforcement | One server-only projection removes unauthorized values before Server/Client props, HTML, and RSC serialization |
 | Entitlement gates (document cap, visual CV lock, interview cap, English hard) | API returns 402 on cap; page shows FeatureLock |
 
 ## 2. Listening-bank investigation (Step 6 resolution)
@@ -56,10 +57,10 @@ Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948
 
 | System | Issue |
 |--------|-------|
-| Public profile (/u/[id]) | Renders, resolves viewer relationship, BUT consent filtering is UI-only — full data leaks in RSC payload (see §5) |
+| Public profile (/u/[id]) | Server-side consent projection is implemented. The route still uses a profile ID instead of a public handle, which is deliberately deferred. |
 | Verification graph | VerificationBadge model + admin issuance works, but 5/6 badge types auto-derive "verified" from self-declared profile data (no real verification) |
 | Entitlement engine | License model + feature gates work, but no quota ledger, no atomic consumption, no license-code redemption |
-| Consent/privacy graph | ConsentSetting model + PrivacyPanel UI work, but `filterProfileByConsent` is defined and NEVER USED — enforcement is client-side only |
+| Consent/privacy graph | ConsentSetting model, PrivacyPanel, viewer-aware server projection, and public-profile enforcement work. The graph remains incomplete: consent history, preview modes, bulk controls, and future fields are deferred. |
 | Network graph | Connection request/accept works, but no messaging, no communities, no mentorship, no alumni discovery |
 | Announcements | Admin CRUD + dashboard feed work, but no read/dismiss tracking (reappear every visit), no notification delivery |
 | Activity timeline | Dashboard shows merged recent activity, but computed on-the-fly (not a durable event store) |
@@ -69,7 +70,7 @@ Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948
 
 | System | Issue |
 |--------|-------|
-| Consent filtering on public profile | The client component conditionally renders fields based on consent, but the server passes the full unredacted profile in RSC payload — a public viewer can read hidden emails/phones in page source |
+| Consent filtering on public profile | RESOLVED in Phase 1B: the Client Component renders a narrow DTO and never receives restricted values, raw consent records, or relationship rows. |
 | Readiness score | Computed from activity counts (saturate at 3 items) — displayed but based on shallow heuristics |
 | Trust score | Computed from auto-derived badge statuses — self-declared data marked as "verified" inflates the score |
 | License card (settings) | Shows plan + features, but the "features" are hardcoded per-plan, not dynamically resolved from a capability engine |
@@ -128,7 +129,7 @@ Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948
 
 ## 8. Security risks
 
-1. **CRITICAL — Public profile data leak**: The `/u/[profileId]` page passes the full unredacted profile (including email, phone) to the client component as RSC props. A public viewer can read "connections"-only and "private" fields in the page source. `filterProfileByConsent` exists but is never called server-side.
+1. **RESOLVED IN PHASE 1B — Public profile data leak**: `/u/[profileId]` now selects a narrow source shape and projects it through one server-only DTO before any serialization boundary. Unauthorized properties are omitted, not blanked or hidden in CSS/React.
 2. **HIGH — No server-side authorization for non-admin APIs**: Most APIs check only `getSession()` (authenticated), not ownership or relationship. E.g., `/api/documents/[id]` doesn't verify the document belongs to the caller; `/api/connections/[id]` PATCH checks addressee but other resource APIs may not check ownership.
 3. **HIGH — No MFA, no session assurance**: Sessions are 30-day JWTs with no MFA, no step-up auth for sensitive operations.
 4. **MEDIUM — Owner bootstrap is insecure**: The owner role is set via DB script (`bun -e "db.account.update..."`), not a secure bootstrap mechanism. Anyone with DB access can self-promote.
@@ -149,7 +150,7 @@ Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948
 1. **"Verified" is misleading**: 5/6 verification badge types auto-mark as "verified" when the user simply fills in their own profile data. This creates false trust signals. Only identity badges require admin issuance.
 2. **Trust score is inflated**: The 70% trust score shown on the dashboard is computed from auto-derived badges — a user who fills in their email gets a "verified email" badge, inflating their trust score without any real verification.
 3. **Readiness score lacks evidence quality**: The readiness score rewards activity volume (saturating at 3 items per vertical), not evidence quality. A user with 3 shallow CVs scores the same as one with 3 evidence-rich CVs.
-4. **Consent is not enforced**: Users set privacy levels expecting them to be enforced, but a public viewer can see all data in the page source. This is a false sense of privacy.
+4. **RESOLVED IN PHASE 1B — Consent enforcement**: Viewer-specific server projection enforces public/connections/private visibility before HTML and RSC serialization.
 5. **Entitlement is not atomic**: `canCreateDocument` does a `count()` then allows/blocks — under concurrent requests, a user could exceed the cap before the count updates. No transaction or lock.
 6. **Announcements reappear**: No read state means published announcements show forever, training users to ignore them.
 
@@ -159,5 +160,55 @@ Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948
 2. **No CI/CD**: No GitHub Actions or CI pipeline. All checks are manual.
 3. **Database is local SQLite**: Not suitable for production. The .env has Turso credentials but the runtime uses the shell-overridden `file:` URL.
 4. **No environment validation**: No startup check that required env vars (AUTH_SECRET, etc.) are present. `getSecret()` throws at runtime if missing.
-5. **Standalone output mode**: `next.config.ts` has `output: "standalone"` but the build script's `cp -r` commands assume a specific directory structure that may break.
+5. **Standalone output warning on Windows**: the build completes, but Next.js warns that two traced chunks containing `node:https` cannot be copied to standalone output because `:` is invalid in a Windows filename. The post-build copies now use Bun's cross-platform `cp -R` form.
 6. **No health check endpoint**: The `/api` route returns a basic response but there's no structured health/readiness probe.
+
+## 12. Phase 1B consent enforcement implementation
+
+### Previous vulnerability and root cause
+
+- The public route loaded a broad Prisma profile and called the owner-oriented `serializeProfile()`.
+- It passed restricted values, the complete consent map, and the derived viewer relationship into a Client Component.
+- The Client Component's `isVisible()` checks controlled only rendering. Restricted values already existed in Server Component props and the RSC/Flight payload.
+- `filterProfileByConsent()` was generic, allowed every untracked raw property through, used unchecked casts for stored visibility, and was never called by the public route.
+
+### Viewer classification and fail-closed behavior
+
+- `OWNER`: matched only from the authenticated server session's Account ID.
+- `ACCEPTED_CONNECTION`: requires exactly one relationship row for the expected profile pair with status exactly `accepted`.
+- `PENDING_CONNECTION`: represented explicitly but receives public fields only.
+- `AUTHENTICATED_STRANGER`: authenticated without a single accepted relationship.
+- `ANONYMOUS`: no valid server session.
+- Incoming/outgoing pending, declined, blocked, duplicated, malformed, unknown, missing, or failed relationship resolution never grants connection access.
+
+### Projection and serialization boundary
+
+- `src/lib/public-profile.ts` defines the single narrow serializable DTO and projection.
+- `src/lib/public-profile.server.ts` applies the Next.js `server-only` import guard.
+- Unauthorized properties are omitted. Nested relation objects are rebuilt from allowlisted scalar fields.
+- Account identifiers, raw profile ID props, consent records, relationship rows, nested IDs, audit/license/admin/moderation data, verification evidence and notes, private context, GPA, credential IDs, and credential URLs never enter the DTO.
+- Verification output contains only allowlisted verified indicator types.
+- The Client Component receives only the projected profile, viewer class, and derived omitted-field names for generic lock indicators.
+
+### Metadata, API, logs, and cache
+
+- The route has no profile-specific metadata, Open Graph, or structured-data generator; inherited metadata is static Laras copy and contains no profile data.
+- There is no unauthenticated public-profile JSON API. Owner-only `/api/profile` and `/api/profile/privacy` retain their authenticated purpose.
+- Relationship-resolution errors log only a constant message without profile, session, or canary values.
+- The route is explicitly `force-dynamic`. It uses no shared cache, ISR, `use cache`, or `unstable_cache`, so viewer-specific responses cannot cross permission boundaries.
+
+### Authorization matrix
+
+The canonical field-by-field matrix is recorded in `docs/DECISIONS.md` under D7. The existing ten ConsentSetting fields retain their documented conservative defaults. No new consent, verification, entitlement, license, or schema semantics were introduced.
+
+### Tests and runtime leak verification
+
+- Focused `bun:test` cases cover owner, accepted connection, incoming/outgoing pending, declined, blocked, authenticated stranger, anonymous, duplicated relationships, missing relationship results, malformed/unknown/duplicate consent, conservative missing-row defaults, nested minimization, internal identifiers, and verification evidence.
+- Deterministic runtime fixtures use the required canaries. Browser and raw-response verification covers HTML plus embedded RSC/Flight data, metadata, API denial, console, and server logs for all five viewer classes.
+- Final command results and the Phase 1B commit are recorded in `worklog.md`.
+
+### Residual limitations deliberately deferred
+
+- Consent applies only to the ten existing ConsentSetting fields. Summary remains owner-only until a future approved phase defines explicit consent semantics.
+- Profile URLs still expose the existing profile ID as the route locator; it is no longer duplicated inside the public DTO.
+- Consent history, public-profile preview modes, search visibility, resource ownership/IDOR, verification semantics, entitlement atomicity, and the empty listening bank remain outside Phase 1B.

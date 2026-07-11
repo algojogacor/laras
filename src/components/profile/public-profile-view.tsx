@@ -15,51 +15,15 @@ import {
   ShieldCheck,
   UserPlus,
   Lock,
-  Globe2,
-  Users,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { cn } from "@/lib/utils"
-
-type Visibility = "public" | "connections" | "private"
-
-interface PublicProfileData {
-  id: string
-  fullName: string | null
-  headline: string | null
-  summary: string | null
-  email: string | null
-  phone: string | null
-  location: string | null
-  links: Record<string, string> | null
-  photoUrl: string | null
-  createdAt: string
-  experiences: Array<{
-    title: string
-    organization: string
-    startDate: string | null
-    endDate: string | null
-    current: boolean
-    description: string | null
-  }>
-  educations: Array<{
-    institution: string
-    degree: string | null
-    field: string | null
-    startDate: string | null
-    endDate: string | null
-  }>
-  skills: Array<{ name: string; category: string | null; proficiency: string | null }>
-  certifications: Array<{ name: string; issuer: string | null }>
-  languages: Array<{ language: string; level: string | null }>
-  consent: Record<string, Visibility>
-  /** Viewer relationship: 'owner' | 'connection' | 'public' */
-  viewerRelation: "owner" | "connection" | "public"
-  verifiedBadges: Array<{ type: string; status: string }>
-}
+import type {
+  PublicProfileControlledField,
+  PublicProfileDTO,
+} from "@/lib/public-profile"
 
 interface PublicProfileLabels {
   title: string
@@ -90,35 +54,28 @@ function initials(name: string | null): string {
   return name.split(" ").slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("")
 }
 
-function isVisible(vis: Visibility | undefined, relation: "owner" | "connection" | "public"): boolean {
-  if (relation === "owner") return true
-  if (vis === "public") return true
-  if (vis === "connections") return relation === "connection"
-  return false
-}
-
-function LockedField({ label, vis, labels }: { label: string; vis: Visibility; labels: PublicProfileLabels }) {
-  const Icon = vis === "private" ? Lock : Users
-  const text = vis === "private" ? labels.privateField : labels.connectionsOnly
+function LockedField({ label, labels }: { label: string; labels: PublicProfileLabels }) {
   return (
     <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-      <Icon className="h-3.5 w-3.5" />
+      <Lock className="h-3.5 w-3.5" />
       <span className="truncate">{label}</span>
-      <span className="ml-auto text-[10px] uppercase tracking-wide">{text}</span>
+      <span className="ml-auto text-[10px] uppercase tracking-wide">{labels.privateField}</span>
     </div>
   )
 }
 
 export function PublicProfileView({
-  profile,
+  data,
   labels,
 }: {
-  profile: PublicProfileData
+  data: PublicProfileDTO
   labels: PublicProfileLabels
 }) {
-  const isOwner = profile.viewerRelation === "owner"
-  const isConnection = profile.viewerRelation === "connection"
-  const verifiedBadges = profile.verifiedBadges.filter((b) => b.status === "verified")
+  const { profile, viewerClass, omittedFields } = data
+  const isOwner = viewerClass === "OWNER"
+  const isConnection = viewerClass === "ACCEPTED_CONNECTION"
+  const isOmitted = (field: PublicProfileControlledField) => omittedFields.includes(field)
+  const verifiedBadges = profile.verifiedBadges
 
   return (
     <div className="space-y-6 animate-rise">
@@ -146,7 +103,7 @@ export function PublicProfileView({
             <Avatar className="h-20 w-20 shrink-0">
               {profile.photoUrl ? null : (
                 <AvatarFallback className="bg-primary/10 text-2xl font-semibold text-primary">
-                  {initials(profile.fullName)}
+                  {initials(profile.fullName ?? null)}
                 </AvatarFallback>
               )}
             </Avatar>
@@ -158,7 +115,7 @@ export function PublicProfileView({
                 <p className="mt-1 text-muted-foreground">{profile.headline}</p>
               )}
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                {isVisible(profile.consent.location, profile.viewerRelation) && profile.location && (
+                {profile.location && (
                   <span className="inline-flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
                     {profile.location}
@@ -166,7 +123,7 @@ export function PublicProfileView({
                 )}
                 <span className="inline-flex items-center gap-1">
                   <ShieldCheck className="h-3 w-3" />
-                  {labels.memberSince} {new Date(profile.createdAt).toLocaleDateString()}
+                  {labels.memberSince} {profile.memberSince.slice(0, 10)}
                 </span>
               </div>
               {/* Verified badges */}
@@ -175,20 +132,20 @@ export function PublicProfileView({
                   <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                     {labels.verifiedBadges}:
                   </span>
-                  {verifiedBadges.map((b) => (
+                  {verifiedBadges.map((badge) => (
                     <span
-                      key={b.type}
+                      key={badge}
                       className="inline-flex items-center gap-1 rounded-full bg-chart-2/15 px-2 py-0.5 text-[10px] font-medium text-chart-2"
                     >
                       <ShieldCheck className="h-2.5 w-2.5" />
-                      {b.type}
+                      {badge}
                     </span>
                   ))}
                 </div>
               )}
             </div>
             {/* Connect button for non-connections */}
-            {!isOwner && !isConnection && (
+            {(viewerClass === "AUTHENTICATED_STRANGER" || viewerClass === "ANONYMOUS") && (
               <Button asChild size="sm">
                 <Link href="/connections">
                   <UserPlus className="mr-1.5 h-3.5 w-3.5" />
@@ -201,7 +158,7 @@ export function PublicProfileView({
       </Card>
 
       {/* Connect-to-view nudge for public viewers */}
-      {profile.viewerRelation === "public" && (
+      {!isOwner && !isConnection && (
         <div className="rounded-lg border border-dashed border-primary/30 bg-primary/[0.03] p-3 text-center">
           <p className="text-sm text-muted-foreground">
             {labels.connectToView}
@@ -210,7 +167,7 @@ export function PublicProfileView({
       )}
 
       {/* Summary */}
-      {isVisible(profile.consent.summary, profile.viewerRelation) && profile.summary && (
+      {profile.summary && (
         <Card className="shadow-soft">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">{labels.summary}</CardTitle>
@@ -228,9 +185,8 @@ export function PublicProfileView({
         </CardHeader>
         <CardContent className="space-y-2">
           {(["email", "phone"] as const).map((field) => {
-            const vis = profile.consent[field] as Visibility
             const value = profile[field]
-            if (isVisible(vis, profile.viewerRelation)) {
+            if (!isOmitted(field)) {
               return value ? (
                 <div key={field} className="flex items-center gap-2 text-sm">
                   {field === "email" ? <Mail className="h-3.5 w-3.5 text-muted-foreground" /> : <Phone className="h-3.5 w-3.5 text-muted-foreground" />}
@@ -238,9 +194,9 @@ export function PublicProfileView({
                 </div>
               ) : null
             }
-            return <LockedField key={field} label={field === "email" ? "Email" : "Phone"} vis={vis} labels={labels} />
+            return <LockedField key={field} label={field === "email" ? "Email" : "Phone"} labels={labels} />
           })}
-          {isVisible(profile.consent.links, profile.viewerRelation) && profile.links && Object.keys(profile.links).length > 0 && (
+          {profile.links && Object.keys(profile.links).length > 0 && (
             <div className="flex flex-wrap items-center gap-3 pt-1">
               {Object.entries(profile.links).map(([key, url]) =>
                 url ? (
@@ -265,16 +221,14 @@ export function PublicProfileView({
       <ConsentSection
         title={labels.experience}
         icon={Briefcase}
-        visible={isVisible(profile.consent.experiences, profile.viewerRelation)}
+        visible={!isOmitted("experiences")}
         labels={labels}
-        vis={profile.consent.experiences as Visibility}
-        labelKey="experiences"
       >
-        {profile.experiences.length === 0 ? (
+        {(profile.experiences ?? []).length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">{labels.noExperience}</p>
         ) : (
           <ul className="space-y-3">
-            {profile.experiences.map((exp, i) => (
+            {(profile.experiences ?? []).map((exp, i) => (
               <li key={i} className="rounded-lg border border-border bg-card/50 p-3">
                 <p className="font-medium">{exp.title}</p>
                 <p className="text-sm text-muted-foreground">{exp.organization}</p>
@@ -292,16 +246,14 @@ export function PublicProfileView({
       <ConsentSection
         title={labels.education}
         icon={GraduationCap}
-        visible={isVisible(profile.consent.education, profile.viewerRelation)}
+        visible={!isOmitted("education")}
         labels={labels}
-        vis={profile.consent.education as Visibility}
-        labelKey="education"
       >
-        {profile.educations.length === 0 ? (
+        {(profile.educations ?? []).length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">{labels.noEducation}</p>
         ) : (
           <ul className="space-y-2">
-            {profile.educations.map((edu, i) => (
+            {(profile.educations ?? []).map((edu, i) => (
               <li key={i} className="rounded-lg border border-border bg-card/50 p-3">
                 <p className="font-medium">{edu.institution}</p>
                 <p className="text-sm text-muted-foreground">{edu.degree}{edu.field ? ` · ${edu.field}` : ""}</p>
@@ -315,16 +267,14 @@ export function PublicProfileView({
       <ConsentSection
         title={labels.skills}
         icon={Wrench}
-        visible={isVisible(profile.consent.skills, profile.viewerRelation)}
+        visible={!isOmitted("skills")}
         labels={labels}
-        vis={profile.consent.skills as Visibility}
-        labelKey="skills"
       >
-        {profile.skills.length === 0 ? (
+        {(profile.skills ?? []).length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">{labels.noSkills}</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
-            {profile.skills.map((s, i) => (
+            {(profile.skills ?? []).map((s, i) => (
               <Badge key={i} variant="secondary" className="text-xs">
                 {s.name}
                 {s.proficiency && <span className="ml-1 text-muted-foreground">· {s.proficiency}</span>}
@@ -335,17 +285,15 @@ export function PublicProfileView({
       </ConsentSection>
 
       {/* Certifications */}
-      {profile.certifications.length > 0 && (
+      {(isOmitted("certifications") || (profile.certifications?.length ?? 0) > 0) && (
         <ConsentSection
           title={labels.certifications}
           icon={Award}
-          visible={isVisible(profile.consent.certifications, profile.viewerRelation)}
+          visible={!isOmitted("certifications")}
           labels={labels}
-          vis={profile.consent.certifications as Visibility}
-          labelKey="certifications"
         >
           <ul className="space-y-2">
-            {profile.certifications.map((c, i) => (
+            {(profile.certifications ?? []).map((c, i) => (
               <li key={i} className="rounded-lg border border-border bg-card/50 p-3">
                 <p className="font-medium">{c.name}</p>
                 {c.issuer && <p className="text-sm text-muted-foreground">{c.issuer}</p>}
@@ -356,17 +304,15 @@ export function PublicProfileView({
       )}
 
       {/* Languages */}
-      {profile.languages.length > 0 && (
+      {(isOmitted("languages") || (profile.languages?.length ?? 0) > 0) && (
         <ConsentSection
           title={labels.languages}
           icon={LanguagesIcon}
-          visible={isVisible(profile.consent.languages, profile.viewerRelation)}
+          visible={!isOmitted("languages")}
           labels={labels}
-          vis={profile.consent.languages as Visibility}
-          labelKey="languages"
         >
           <div className="flex flex-wrap gap-2">
-            {profile.languages.map((l, i) => (
+            {(profile.languages ?? []).map((l, i) => (
               <span key={i} className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs">
                 {l.language}{l.level ? <span className="text-muted-foreground"> · {l.level}</span> : null}
               </span>
@@ -384,16 +330,12 @@ function ConsentSection({
   visible,
   children,
   labels,
-  vis,
-  labelKey,
 }: {
   title: string
   icon: typeof Briefcase
   visible: boolean
   children: React.ReactNode
   labels: PublicProfileLabels
-  vis: Visibility
-  labelKey: string
 }) {
   return (
     <Card className="shadow-soft">
@@ -407,7 +349,7 @@ function ConsentSection({
         {visible ? (
           children
         ) : (
-          <LockedField label={title} vis={vis} labels={labels} />
+          <LockedField label={title} labels={labels} />
         )}
       </CardContent>
     </Card>

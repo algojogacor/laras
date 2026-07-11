@@ -38,6 +38,39 @@ Record of architecture and product decisions — valid, superseded, and requirin
 - **Rationale**: Pre-existing in the ZIP. NextAuth is available but not used.
 - **Requires owner confirmation**: Whether to migrate to NextAuth v4 (available in package.json) for MFA, session management, and OAuth. The custom impl lacks MFA and step-up auth.
 
+### D7. Phase 1B public-profile consent authorization matrix
+- **Decision**: Public-profile data must cross the Server Component / Client Component boundary only through one narrowly typed, server-only projection. The projection derives the viewer from the server session and treats only an explicit, unique `accepted` relationship as connection access.
+- **Supported stored visibility values**: `public`, `connections`, and `private`.
+- **Viewer classifications**: `OWNER`, `ACCEPTED_CONNECTION`, `PENDING_CONNECTION`, `AUTHENTICATED_STRANGER`, and `ANONYMOUS`.
+- **Fail-closed rule**: Pending (incoming or outgoing), declined, blocked, duplicated, malformed, unknown, missing, or unresolved relationship state never grants connection access. Missing consent rows use the documented conservative defaults. Unknown or duplicated consent values omit that controlled field for non-owners.
+
+| Field | Stored visibility | Owner | Accepted connection | Pending connection | Authenticated stranger | Anonymous | Current behavior before Phase 1B | Required behavior |
+|---|---|---:|---:|---:|---:|---:|---|---|
+| Name | `fullName`; default `public` | Include | By visibility | Public only | Public only | Public only | Always rendered and raw value serialized even when restricted | Consent-controlled and omitted when unauthorized |
+| Headline | Not consent-controlled | Include | Include | Include | Include | Include | Always serialized | Intentionally always public |
+| Summary | No ConsentSetting field | Include | Omit | Omit | Omit | Omit | Visually hidden for non-owner but raw value serialized | Owner-only until a future phase adds explicit consent semantics |
+| Avatar | Not consent-controlled | Include | Include | Include | Include | Include | Always serialized | Intentionally always public; URL only, no upload metadata |
+| Location | `location`; default `connections` | Include | By visibility | Public only | Public only | Public only | UI-gated but raw value serialized | Consent-controlled and omitted when unauthorized |
+| Email | `email`; default `private` | Include | By visibility | Public only | Public only | Public only | UI-gated but raw value serialized | Consent-controlled and omitted when unauthorized |
+| Phone | `phone`; default `private` | Include | By visibility | Public only | Public only | Public only | UI-gated but raw value serialized | Consent-controlled and omitted when unauthorized |
+| Website and social links | `links`; default `connections` | Include | By visibility | Public only | Public only | Public only | UI-gated but raw JSON object serialized | Consent-controlled; parsed allowlisted scalar links only |
+| Experiences | `experiences`; default `public` | Include | By visibility | Public only | Public only | Public only | UI-gated but complete client array serialized | Consent-controlled; nested DTO excludes IDs, context notes, achievements JSON, and timestamps |
+| Education | `education`; default `public` | Include | By visibility | Public only | Public only | Public only | UI-gated but complete client array serialized | Consent-controlled; nested DTO excludes IDs, GPA, internal description, and relation keys |
+| Skills | `skills`; default `public` | Include | By visibility | Public only | Public only | Public only | UI-gated but complete client array serialized | Consent-controlled; nested DTO excludes IDs and private context |
+| Certifications | `certifications`; default `public` | Include | By visibility | Public only | Public only | Public only | UI-gated but complete client array serialized | Consent-controlled; nested DTO excludes credential ID, credential URL, and internal IDs |
+| Languages | `languages`; default `public` | Include | By visibility | Public only | Public only | Public only | UI-gated but complete client array serialized | Consent-controlled; nested DTO excludes internal IDs |
+| Opportunity preferences | Not consent-controlled | Omit | Omit | Omit | Omit | Omit | Broad serializer contains them, but current public-page mapping does not pass them | Never part of the public-profile DTO in Phase 1B |
+| Verification indicators | Not consent-controlled | Include | Include | Include | Include | Include | Badge type and status serialized; evidence not queried | Intentionally public indicators only; emit verified type, never evidence, notes, verifier data, or badge IDs |
+| Account identifiers | Not consent-controlled | Omit | Omit | Omit | Omit | Omit | Profile ID is passed to the Client Component although unused; Account relation is not queried | Keep the existing profile ID only as the route locator; never include it as a DTO property, and never include Account ID, account email, role, password hash, or session claims |
+| Member-since date | Derived from `createdAt` | Include | Include | Include | Include | Include | Always serialized | Intentionally public derived date; no other timestamps |
+
+- **Metadata and structured data**: The route has no `generateMetadata`, JSON-LD, or route-specific Open Graph output. It inherits static Laras metadata, which must remain profile-data-free.
+- **API surface**: There is no unauthenticated public-profile JSON API. `/api/profile` and `/api/profile/privacy` are owner-session endpoints and are not public-profile serialization paths.
+- **Cache decision**: Public-profile output is viewer-specific because it reads the session cookie. It must remain dynamically rendered and must not use `use cache`, `unstable_cache`, ISR, or `force-static`; no response may be shared across viewer classes.
+- **Implementation boundary**: `src/lib/public-profile.ts` owns the single pure projection and DTO contract. `src/lib/public-profile.server.ts` applies Next.js' `server-only` guard, and the public route imports the projection only through that guarded boundary.
+- **Query minimization**: The route selects only rendered profile scalars and narrow nested relation fields. It does not query Account data, verification evidence/notes/IDs, consent IDs/timestamps, nested relation IDs, admin/audit/license/moderation data, or private career context.
+- **Client contract**: The Client Component receives the projected DTO plus a derived list of omitted field names for generic lock indicators. It receives no raw Prisma record, consent map, stored visibility value, relationship row, viewer account/profile ID, or session claim.
+
 ---
 
 ## Superseded decisions
