@@ -2797,4 +2797,84 @@ Phase 1C — Resource ownership authorization and IDOR closure.
 
 ### Phase 1C started
 
-NO.
+YES.
+
+---
+
+## Phase 1C — Wave A: Authorization foundation and fixtures
+
+Tanggal: 2026-07-11
+Agent/model: Gemini 3.5 Flash
+Branch: main
+Starting commit: 873810373eda8ef19ba7367210e1e35a53534082 (docs: plan Phase 1C ownership authorization)
+Objective: Wave A ONLY: Create server-only authorization foundation, ActorContext, requireActor, requireCurrentAdmin, narrow owner-scoped loaders, nested loaders, deterministic fixtures, and test suite.
+
+### Graphify update, scope, and any fallback used
+- Incremental update skipped per restricted scope rule. Local `.graphifyignore` and `.git/info/exclude` in place.
+
+### Source/schema areas inspected
+- docs/MASTER_PROMPT.md
+- docs/CURRENT_STATE.md
+- docs/DECISIONS.md
+- docs/active/PHASE_1C.md
+- prisma/schema.prisma
+- src/lib/auth.ts
+- src/lib/db.ts
+- package.json
+
+### Security decisions implemented
+- Server-only environment enforcement (`import "server-only"`).
+- Session-derived identity only: account/profile ID/role input from request is never trusted.
+- Role normalization: unknown roles default to user scope.
+- ID validation: CUID format validation (`^c[a-z0-9]{20,30}$`) before DB execution.
+- No admin bypass for private user-owned resources; loaders strictly scope by profile.
+- Single-query parent-chain verification for nested resources, returning uniform 404 results without leaking existence.
+
+### Files created or changed
+- Created: src/lib/authorization.ts
+- Created: tests/authorization/fixtures.ts
+- Created: tests/authorization/helpers.test.ts
+
+### Tests and deterministic fixtures added
+- `fixtures.ts` containing Accounts A, B, Admin C, Unknown D, Account E (no profile), and respective Documents, Applications, InterviewSets, Questions, EnglishSessions, Certificates, and ApplicationDocument links.
+- `helpers.test.ts` containing 22 tests validating requireActor, requireCurrentAdmin, loaders, nested relations, mismatched IDs, validation, role normalization, etc.
+
+### Exact validation commands and exit codes
+- `$env:DATABASE_URL='file:D:/laras-phase1c-test.db'; bunx prisma validate` -> exit 0
+- `$env:DATABASE_URL='file:D:/laras-phase1c-test.db'; bunx prisma generate` -> exit 0
+- `$env:DATABASE_URL='file:D:/laras-phase1c-test.db'; bunx prisma db push --accept-data-loss` -> exit 0
+- `bunx tsc --noEmit --pretty false` -> exit 0
+- `bun run lint` -> exit 0
+- `$env:DATABASE_URL='file:D:/laras-phase1c-test.db'; bun test` -> exit 0 (36 passes, 0 fails across helpers.test.ts and public-profile.test.ts)
+- `$env:DATABASE_URL='file:D:/laras-phase1c-test.db'; bun run build` -> exit 0 (Next.js production build succeeded)
+
+### Temporary test database location
+- `D:/laras-phase1c-test.db` (no credentials)
+
+### Security guarantees proven
+- Secure session token extraction and validation via httpOnly cookie, verification in database.
+- Unknown roles default to user scope.
+- Admins cannot access other users' private documents/applications/etc.
+- Crossed parent/child IDs or foreign IDs return 404 not found consistently, preventing info leaks.
+
+### Unsafe shortcuts used
+- NONE
+
+### Schema changes
+- NONE
+
+### Dashboard changes
+- NONE
+
+### Landing-page changes
+- NONE
+
+### Known limitations and deferred work
+- Production route migrations, mutations, DTO checks, and connections transitions are deferred to later waves (Waves B, C, D, E).
+
+### Commit details
+- Commit subject: `feat(security): add ownership authorization foundation`
+- Existing commit SHA: `e507eca`
+- Push performed: NO
+- Wave B started: NO
+
