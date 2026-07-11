@@ -2878,3 +2878,54 @@ Objective: Wave A ONLY: Create server-only authorization foundation, ActorContex
 - Push performed: NO
 - Wave B started: NO
 
+---
+
+## Phase 1C — Wave A Remediation: Authorization checkpoint fixes
+
+- Date: 2026-07-11
+- Agent/model: Gemini 3.5 Flash
+- Branch: main
+- Reviewed baseline commit: eb39249e493c46dc48aba4c2792ebc674ff51ae9
+- Sol checkpoint disposition: BLOCKED
+
+### Correction Note
+- The previous Wave A entry's SHA `e507eca` was stale because the commit was amended; the reviewed final Wave A baseline was `eb39249e493c46dc48aba4c2792ebc674ff51ae9`.
+- The previous `db push` success claim was not reproducible during independent review; this remediation entry records the actual fresh-database procedure.
+
+### Findings Corrected
+- **Role Normalization**: Trimming and lowercasing database values was removed. Now performs an exact match check on `"admin"`, `"owner"`, or `"user"`, defaulting to `"user"` for any malformed, case-altered, or padded inputs.
+- **ID Validation**: Replaced loose regex check with strict CUID1 validation `/^c[a-z0-9]{24}$/` requiring exactly 25 characters starting with `'c'`.
+- **HTTP Error Mapping**: Added `handleAuthorizationError` in `src/lib/authorization.ts` mapping errors exhaustively to fixed, safe JSON payloads (400, 401, 403, 404, 409) and a generic 500 mapping for unknown errors.
+- **Fixture Seeding**: Updated to dynamically generate and return CUIDs using Prisma client, rather than hardcoding static placeholders.
+- **Test Coverage**: Added extensive integration tests in `helpers.test.ts` for all loaders, role reloading from DB, ID format validation, HTTP response shapes, and parent-child mismatch failures.
+
+### Technical Parameters & Verification
+- **Role-normalization decision**: Exact value check only.
+- **ID-format decision and generated-ID evidence**: Verified length 25 (e.g. `clygl3nco0000y81cfxtdtrw1`) and format `^c[a-z0-9]{24}$`.
+- **HTTP error-mapping contract**:
+  - `UNAUTHORIZED` (401) -> `{ "error": "unauthorized" }`
+  - `FORBIDDEN` (403) -> `{ "error": "forbidden" }`
+  - `NOT_FOUND` (404) -> `{ "error": "not-found" }`
+  - `BAD_REQUEST` (400) -> `{ "error": "invalid-id" }`
+  - `CONFLICT` (409) -> `{ "error": "conflict" }`
+  - Unknown Error (500) -> `{ "error": "internal-server-error" }`
+- **Validation Commands & Exit Codes**:
+  - `$env:DATABASE_URL="file:C:/Users/Arya Rizky/.gemini/antigravity-ide/brain/9533d743-6931-4bd1-bc2c-19b92fe36853/temp_test.db"; bun test` -> exit 0 (67 pass, 0 fail)
+  - `bunx prisma validate` -> exit 0
+  - `bunx prisma generate` -> exit 0
+  - `bunx tsc --noEmit --pretty false` -> exit 0
+  - `bun run lint` -> exit 0
+  - `bun run build` -> exit 0
+- **Actual database initialization method**: Normal fresh-database initialization (`prisma db push`) succeeded on the temporary SQLite database.
+- **Temporary database path without credentials**: `C:/Users/Arya Rizky/.gemini/antigravity-ide/brain/9533d743-6931-4bd1-bc2c-19b92fe36853/temp_test.db`
+- **Schema changes**: NONE
+- **Dashboard changes**: NONE
+- **Landing-page changes**: NONE
+- **Unsafe shortcuts**: NONE
+- **Remaining deferred work**: Wave B route migration, mutations, and DTO checks.
+- **Commit subject**: `fix(security): harden authorization foundation`
+- **Push performed**: NO
+- **Wave B started**: NO
+
+*Remediation commit SHA: reported in the final agent response and referenced by the next wave.*
+

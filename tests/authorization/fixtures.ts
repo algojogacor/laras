@@ -1,37 +1,37 @@
 import { db } from "@/lib/db"
 
 export const IDS = {
-  accountA: "caccounta000000000000000a",
-  accountB: "caccountb000000000000000b",
-  adminC: "cadminc0000000000000000c",
-  unknownD: "cunknownd000000000000000d",
-  accountE: "caccounte000000000000000e",
+  accountA: "",
+  accountB: "",
+  adminC: "",
+  unknownD: "",
+  accountE: "",
 
-  profileA: "cprofilea0000000000000000a",
-  profileB: "cprofileb0000000000000000b",
-  profileC: "cprofilec0000000000000000c",
-  profileD: "cprofiled0000000000000000d",
+  profileA: "",
+  profileB: "",
+  profileC: "",
+  profileD: "",
 
-  documentA: "cdocumenta000000000000000a",
-  documentB: "cdocumentb000000000000000b",
+  documentA: "",
+  documentB: "",
 
-  applicationA: "capplicationa00000000000a",
-  applicationB: "capplicationb00000000000b",
+  applicationA: "",
+  applicationB: "",
 
-  setA: "cinterviewseta0000000000a",
-  setB: "cinterviewsetb0000000000b",
+  setA: "",
+  setB: "",
 
-  questionA: "cquestiona00000000000000a",
-  questionB: "cquestionb00000000000000b",
+  questionA: "",
+  questionB: "",
 
-  sessionA: "csessiona000000000000000a",
-  sessionB: "csessionb000000000000000b",
+  sessionA: "",
+  sessionB: "",
 
-  certA: "ccertificatea00000000000a",
-  certB: "ccertificateb00000000000b",
+  certA: "",
+  certB: "",
 
-  appDocA: "cappdoca0000000000000000a",
-  appDocB: "cappdocb0000000000000000b",
+  appDocA: "",
+  appDocB: "",
 }
 
 export const CANARIES = {
@@ -71,217 +71,238 @@ export async function cleanDb() {
 }
 
 export async function seedDb() {
-  // 1. Create Accounts
-  await db.account.createMany({
-    data: [
-      {
-        id: IDS.accountA,
-        email: "user-a@example.com",
-        passwordHash: "dummy-hash-a",
-        role: "user",
-      },
-      {
-        id: IDS.accountB,
-        email: "user-b@example.com",
-        passwordHash: "dummy-hash-b",
-        role: "user",
-      },
-      {
-        id: IDS.adminC,
-        email: "admin-c@example.com",
-        passwordHash: "dummy-hash-c",
-        role: "admin",
-      },
-      {
-        id: IDS.unknownD,
-        email: "unknown-d@example.com",
-        passwordHash: "dummy-hash-d",
-        role: "moderator", // unknown role string
-      },
-      {
-        id: IDS.accountE,
-        email: "user-e@example.com",
-        passwordHash: "dummy-hash-e",
-        role: "user", // Account E exists but will not have a profile
-      },
-    ],
+  // 1. Create Accounts sequentially/individually so we get generated IDs
+  const accountA = await db.account.create({
+    data: {
+      email: "user-a@example.com",
+      passwordHash: "dummy-hash-a",
+      role: "user",
+    },
   })
+  const accountB = await db.account.create({
+    data: {
+      email: "user-b@example.com",
+      passwordHash: "dummy-hash-b",
+      role: "user",
+    },
+  })
+  const adminC = await db.account.create({
+    data: {
+      email: "admin-c@example.com",
+      passwordHash: "dummy-hash-c",
+      role: "admin",
+    },
+  })
+  const unknownD = await db.account.create({
+    data: {
+      email: "unknown-d@example.com",
+      passwordHash: "dummy-hash-d",
+      role: "moderator", // unknown role string
+    },
+  })
+  const accountE = await db.account.create({
+    data: {
+      email: "user-e@example.com",
+      passwordHash: "dummy-hash-e",
+      role: "user",
+    },
+  })
+
+  IDS.accountA = accountA.id
+  IDS.accountB = accountB.id
+  IDS.adminC = adminC.id
+  IDS.unknownD = unknownD.id
+  IDS.accountE = accountE.id
 
   // 2. Create UserProfiles
-  await db.userProfile.createMany({
-    data: [
-      {
-        id: IDS.profileA,
-        accountId: IDS.accountA,
-        fullName: "User A",
-        email: "user-a@example.com",
-      },
-      {
-        id: IDS.profileB,
-        accountId: IDS.accountB,
-        fullName: "User B",
-        email: "user-b@example.com",
-      },
-      {
-        id: IDS.profileC,
-        accountId: IDS.adminC,
-        fullName: "Admin C",
-        email: "admin-c@example.com",
-      },
-      {
-        id: IDS.profileD,
-        accountId: IDS.unknownD,
-        fullName: "Unknown D",
-        email: "unknown-d@example.com",
-      },
-    ],
+  const profileA = await db.userProfile.create({
+    data: {
+      accountId: IDS.accountA,
+      fullName: "User A",
+      email: "user-a@example.com",
+    },
   })
+  const profileB = await db.userProfile.create({
+    data: {
+      accountId: IDS.accountB,
+      fullName: "User B",
+      email: "user-b@example.com",
+    },
+  })
+  const profileC = await db.userProfile.create({
+    data: {
+      accountId: IDS.adminC,
+      fullName: "Admin C",
+      email: "admin-c@example.com",
+    },
+  })
+  const profileD = await db.userProfile.create({
+    data: {
+      accountId: IDS.unknownD,
+      fullName: "Unknown D",
+      email: "unknown-d@example.com",
+    },
+  })
+
+  IDS.profileA = profileA.id
+  IDS.profileB = profileB.id
+  IDS.profileC = profileC.id
+  IDS.profileD = profileD.id
 
   // 3. Create Documents
-  await db.document.createMany({
-    data: [
-      {
-        id: IDS.documentA,
-        userProfileId: IDS.profileA,
-        type: "cv-ats",
-        title: "CV ATS A",
-        content: CANARIES.documentA,
-        config: "{}",
-      },
-      {
-        id: IDS.documentB,
-        userProfileId: IDS.profileB,
-        type: "cv-ats",
-        title: "CV ATS B",
-        content: CANARIES.documentB,
-        config: "{}",
-      },
-    ],
+  const docA = await db.document.create({
+    data: {
+      userProfileId: IDS.profileA,
+      type: "cv-ats",
+      title: "CV ATS A",
+      content: CANARIES.documentA,
+      config: "{}",
+    },
   })
+  const docB = await db.document.create({
+    data: {
+      userProfileId: IDS.profileB,
+      type: "cv-ats",
+      title: "CV ATS B",
+      content: CANARIES.documentB,
+      config: "{}",
+    },
+  })
+
+  IDS.documentA = docA.id
+  IDS.documentB = docB.id
 
   // 4. Create Applications
-  await db.application.createMany({
-    data: [
-      {
-        id: IDS.applicationA,
-        userProfileId: IDS.profileA,
-        type: "work",
-        position: "Software Engineer A",
-        organization: "Org A",
-        notes: CANARIES.appA,
-      },
-      {
-        id: IDS.applicationB,
-        userProfileId: IDS.profileB,
-        type: "work",
-        position: "Software Engineer B",
-        organization: "Org B",
-        notes: CANARIES.appB,
-      },
-    ],
+  const appA = await db.application.create({
+    data: {
+      userProfileId: IDS.profileA,
+      type: "work",
+      position: "Software Engineer A",
+      organization: "Org A",
+      notes: CANARIES.appA,
+    },
   })
+  const appB = await db.application.create({
+    data: {
+      userProfileId: IDS.profileB,
+      type: "work",
+      position: "Software Engineer B",
+      organization: "Org B",
+      notes: CANARIES.appB,
+    },
+  })
+
+  IDS.applicationA = appA.id
+  IDS.applicationB = appB.id
 
   // 5. Create InterviewSets
-  await db.interviewSet.createMany({
-    data: [
-      {
-        id: IDS.setA,
-        userProfileId: IDS.profileA,
-        title: "Interview Set A",
-      },
-      {
-        id: IDS.setB,
-        userProfileId: IDS.profileB,
-        title: "Interview Set B",
-      },
-    ],
+  const setA = await db.interviewSet.create({
+    data: {
+      userProfileId: IDS.profileA,
+      title: "Interview Set A",
+    },
   })
+  const setB = await db.interviewSet.create({
+    data: {
+      userProfileId: IDS.profileB,
+      title: "Interview Set B",
+    },
+  })
+
+  IDS.setA = setA.id
+  IDS.setB = setB.id
 
   // 6. Create InterviewQuestions
-  await db.interviewQuestion.createMany({
-    data: [
-      {
-        id: IDS.questionA,
-        interviewSetId: IDS.setA,
-        question: CANARIES.questionA,
-        order: 1,
-      },
-      {
-        id: IDS.questionB,
-        interviewSetId: IDS.setB,
-        question: CANARIES.questionB,
-        order: 1,
-      },
-    ],
+  const qA = await db.interviewQuestion.create({
+    data: {
+      interviewSetId: IDS.setA,
+      question: CANARIES.questionA,
+      order: 1,
+    },
   })
+  const qB = await db.interviewQuestion.create({
+    data: {
+      interviewSetId: IDS.setB,
+      question: CANARIES.questionB,
+      order: 1,
+    },
+  })
+
+  IDS.questionA = qA.id
+  IDS.questionB = qB.id
 
   // 7. Create EnglishSessions
-  await db.englishSession.createMany({
-    data: [
-      {
-        id: IDS.sessionA,
-        userProfileId: IDS.profileA,
-        module: "reading",
-        passage: CANARIES.passageA,
-      },
-      {
-        id: IDS.sessionB,
-        userProfileId: IDS.profileB,
-        module: "reading",
-        passage: CANARIES.passageB,
-      },
-    ],
+  const sessA = await db.englishSession.create({
+    data: {
+      userProfileId: IDS.profileA,
+      module: "reading",
+      passage: CANARIES.passageA,
+    },
   })
+  const sessB = await db.englishSession.create({
+    data: {
+      userProfileId: IDS.profileB,
+      module: "reading",
+      passage: CANARIES.passageB,
+    },
+  })
+
+  IDS.sessionA = sessA.id
+  IDS.sessionB = sessB.id
 
   // 8. Create EnglishCertificates
-  await db.englishCertificate.createMany({
-    data: [
-      {
-        id: IDS.certA,
-        userProfileId: IDS.profileA,
-        sessionId: IDS.sessionA,
-        certificateId: "cert-id-a",
-        title: CANARIES.certA,
-        testMode: "reading",
-        testSpec: "LARAS_TOEFL_STYLE",
-        rawScore: 90,
-        percentage: 90,
-        confidence: "high",
-        skillBreakdown: "{}",
-        questionCount: 10,
-        disclaimerText: "",
-      },
-      {
-        id: IDS.certB,
-        userProfileId: IDS.profileB,
-        sessionId: IDS.sessionB,
-        certificateId: "cert-id-b",
-        title: CANARIES.certB,
-        testMode: "reading",
-        testSpec: "LARAS_TOEFL_STYLE",
-        rawScore: 85,
-        percentage: 85,
-        confidence: "high",
-        skillBreakdown: "{}",
-        questionCount: 10,
-        disclaimerText: "",
-      },
-    ],
+  const certA = await db.englishCertificate.create({
+    data: {
+      userProfileId: IDS.profileA,
+      sessionId: IDS.sessionA,
+      certificateId: "cert-id-a",
+      title: CANARIES.certA,
+      testMode: "reading",
+      testSpec: "LARAS_TOEFL_STYLE",
+      rawScore: 90,
+      percentage: 90,
+      confidence: "high",
+      skillBreakdown: "{}",
+      questionCount: 10,
+      disclaimerText: "",
+    },
+  })
+  const certB = await db.englishCertificate.create({
+    data: {
+      userProfileId: IDS.profileB,
+      sessionId: IDS.sessionB,
+      certificateId: "cert-id-b",
+      title: CANARIES.certB,
+      testMode: "reading",
+      testSpec: "LARAS_TOEFL_STYLE",
+      rawScore: 85,
+      percentage: 85,
+      confidence: "high",
+      skillBreakdown: "{}",
+      questionCount: 10,
+      disclaimerText: "",
+    },
   })
 
+  IDS.certA = certA.id
+  IDS.certB = certB.id
+
   // 9. Create ApplicationDocument Links
-  await db.applicationDocument.createMany({
-    data: [
-      {
-        id: IDS.appDocA,
-        applicationId: IDS.applicationA,
-        documentId: IDS.documentA,
-      },
-      {
-        id: IDS.appDocB,
-        applicationId: IDS.applicationB,
-        documentId: IDS.documentB,
-      },
-    ],
+  const appDocA = await db.applicationDocument.create({
+    data: {
+      applicationId: IDS.applicationA,
+      documentId: IDS.documentA,
+    },
   })
+  const appDocB = await db.applicationDocument.create({
+    data: {
+      applicationId: IDS.applicationB,
+      documentId: IDS.documentB,
+    },
+  })
+
+  IDS.appDocA = appDocA.id
+  IDS.appDocB = appDocB.id
+
+  return IDS
 }

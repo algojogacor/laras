@@ -1,6 +1,7 @@
 /// <reference types="bun-types" />
 
 import { mock, beforeAll, beforeEach, describe, expect, test } from "bun:test"
+import { db } from "@/lib/db"
 
 // Mock "server-only" to bypass client component runtime check in Bun tests
 mock.module("server-only", () => ({}))
@@ -37,11 +38,20 @@ let findOwnedInterviewQuestion: any
 let findOwnedApplicationDocumentPair: any
 let AuthorizationError: any
 let isValidId: any
+let handleAuthorizationError: any
 
 // Fixtures and DB imports
 import { cleanDb, seedDb, CANARIES, IDS } from "./fixtures"
 
-describe("Authorization Foundation Tests", () => {
+// Helper to mutate one character in a valid ID while keeping it syntactically valid
+function getNonexistentId(validId: string): string {
+  if (!validId || validId.length < 2) return "cyyyyyyyyyyyyyyyyyyyyyyyy"
+  const char = validId[1]
+  const newChar = char === "z" ? "y" : String.fromCharCode(char.charCodeAt(0) + 1)
+  return "c" + newChar + validId.slice(2)
+}
+
+describe("Authorization Foundation Remediation Tests", () => {
   beforeAll(async () => {
     // Ensure test environment is verified and configured with test secret
     process.env.AUTH_SECRET = "test-auth-secret-key-32-chars-long-or-more"
@@ -62,18 +72,31 @@ describe("Authorization Foundation Tests", () => {
     findOwnedApplicationDocumentPair = authorizationLib.findOwnedApplicationDocumentPair
     AuthorizationError = authorizationLib.AuthorizationError
     isValidId = authorizationLib.isValidId
+    handleAuthorizationError = authorizationLib.handleAuthorizationError
 
-    // Push the schema or check db connectivity. Clean and seed database.
+    // Clean and seed database.
     await cleanDb()
     await seedDb()
   })
 
-  beforeEach(() => {
+  beforeEach(async () => {
     mockCookieValue = undefined
+    // Reset Account A and Admin C roles back to their default seed roles
+    await db.account.update({
+      where: { id: IDS.accountA },
+      data: { role: "user" },
+    })
+    await db.account.update({
+      where: { id: IDS.adminC },
+      data: { role: "admin" },
+    })
   })
 
-  // 1. requireActor resolves Account/Profile A from trusted session state.
-  test("requireActor resolves Account/Profile A from trusted session state", async () => {
+  // ============================================================================
+  // 1. ROLE NORMALIZATION & ACTOR CONTEXT
+  // ============================================================================
+
+  test("requireActor resolves Account/Profile A from trusted session token", async () => {
     const token = await createSessionToken(IDS.accountA)
     mockCookieValue = token
 
@@ -84,251 +107,351 @@ describe("Authorization Foundation Tests", () => {
     expect(actor.role).toBe("user")
   })
 
-  // 2. Missing session is unauthorized (401).
-  test("requireActor throws UNAUTHORIZED on missing session", async () => {
-    mockCookieValue = undefined
-    expect(requireActor()).rejects.toThrow(new AuthorizationError("UNAUTHORIZED"))
-  })
-
-  // 3. Deleted/missing account fails closed (401).
-  test("requireActor throws UNAUTHORIZED when account is missing from database", async () => {
-    const token = await createSessionToken("cdeletedaccount0000000000a")
-    mockCookieValue = token
-    expect(requireActor()).rejects.toThrow(new AuthorizationError("UNAUTHORIZED"))
-  })
-
-  // 4. Missing profile fails closed with NOT_FOUND where a profile is required (e.g. loaders).
-  test("requireActor returns null profileId and loader throws NOT_FOUND when profile is missing", async () => {
-    const token = await createSessionToken(IDS.accountE) // Account E has no profile
-    mockCookieValue = token
-
-    const actor = await requireActor()
-    expect(actor.accountId).toBe(IDS.accountE)
-    expect(actor.profileId).toBeNull()
-
-    // Try a loader requiring a profile
-    expect(findOwnedDocument(IDS.documentA, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
-  })
-
-  // 5. Unknown role has ordinary user scope.
-  test("unknown role defaults to user role in normalization", async () => {
-    const token = await createSessionToken(IDS.unknownD) // Role: "moderator"
-    mockCookieValue = token
-
-    const actor = await requireActor()
-    expect(actor.role).toBe("user")
-  })
-
-  // 6. Admin role is accepted only by requireCurrentAdmin.
-  test("admin role is accepted by requireCurrentAdmin", async () => {
+  test("exact DB value 'admin' matches admin normalized role", async () => {
     const token = await createSessionToken(IDS.adminC) // Role: "admin"
     mockCookieValue = token
-
     const actor = await requireActor()
     expect(actor.role).toBe("admin")
     expect(() => requireCurrentAdmin(actor)).not.toThrow()
   })
 
-  // 7. Ordinary user is rejected by requireCurrentAdmin.
-  test("ordinary user role is rejected by requireCurrentAdmin", async () => {
-    const token = await createSessionToken(IDS.accountA)
+  test("exact DB value 'owner' matches owner normalized role", async () => {
+    // Temporarily update Admin C's role to "owner"
+    await db.account.update({
+      where: { id: IDS.adminC },
+      data: { role: "owner" },
+    })
+    const token = await createSessionToken(IDS.adminC)
     mockCookieValue = token
-
     const actor = await requireActor()
+    expect(actor.role).toBe("owner")
+    expect(() => requireCurrentAdmin(actor)).not.toThrow()
+  })
+
+  test("exact DB value 'user' matches user normalized role", async () => {
+    const token = await createSessionToken(IDS.accountA) // Role: "user"
+    mockCookieValue = token
+    const actor = await requireActor()
+    expect(actor.role).toBe("user")
     expect(() => requireCurrentAdmin(actor)).toThrow(new AuthorizationError("FORBIDDEN"))
   })
 
-  // 8. Document A is returned for Actor A.
-  test("findOwnedDocument returns Document A for Actor A", async () => {
-    const token = await createSessionToken(IDS.accountA)
-    mockCookieValue = token
+  test("malformed role values fail closed to user scope and are forbidden from admin routes", async () => {
+    const invalidRoles = [
+      "Admin",
+      " ADMIN ",
+      "Owner",
+      " owner ",
+      "moderator",
+      "",
+    ]
 
-    const actor = await requireActor()
-    const doc = await findOwnedDocument(IDS.documentA, actor)
-    expect(doc.id).toBe(IDS.documentA)
-    expect(doc.content).toBe(CANARIES.documentA)
-  })
-
-  // 9. Document B is not returned for Actor A.
-  test("findOwnedDocument throws NOT_FOUND for Document B accessed by Actor A", async () => {
-    const token = await createSessionToken(IDS.accountA)
-    mockCookieValue = token
-
-    const actor = await requireActor()
-    expect(findOwnedDocument(IDS.documentB, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
-  })
-
-  // 10. Missing document and foreign document produce the same public decision (NOT_FOUND).
-  test("missing document and foreign document throw identical NOT_FOUND error", async () => {
-    const token = await createSessionToken(IDS.accountA)
-    mockCookieValue = token
-    const actor = await requireActor()
-
-    let errorForeign: any
-    try {
-      await findOwnedDocument(IDS.documentB, actor)
-    } catch (e: any) {
-      errorForeign = e
+    for (const r of invalidRoles) {
+      await db.account.update({
+        where: { id: IDS.accountA },
+        data: { role: r },
+      })
+      const token = await createSessionToken(IDS.accountA)
+      mockCookieValue = token
+      const actor = await requireActor()
+      expect(actor.role).toBe("user")
+      expect(() => requireCurrentAdmin(actor)).toThrow(new AuthorizationError("FORBIDDEN"))
     }
-
-    let errorMissing: any
-    try {
-      await findOwnedDocument("cnonexistentdocid12345", actor)
-    } catch (e: any) {
-      errorMissing = e
-    }
-
-    expect(errorForeign).toBeInstanceOf(AuthorizationError)
-    expect(errorMissing).toBeInstanceOf(AuthorizationError)
-    expect(errorForeign.code).toBe("NOT_FOUND")
-    expect(errorMissing.code).toBe("NOT_FOUND")
   })
 
-  // 11. Application ownership behaves identically.
-  test("findOwnedApplication returns App A for Actor A, but throws NOT_FOUND for App B", async () => {
-    const token = await createSessionToken(IDS.accountA)
-    mockCookieValue = token
-    const actor = await requireActor()
-
-    const app = await findOwnedApplication(IDS.applicationA, actor)
-    expect(app.id).toBe(IDS.applicationA)
-    expect(app.notes).toBe(CANARIES.appA)
-
-    expect(findOwnedApplication(IDS.applicationB, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
-    expect(findOwnedApplication("cnonexistentappid12345", actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
-  })
-
-  // 12. InterviewSet ownership behaves identically.
-  test("findOwnedInterviewSet returns Set A for Actor A, but throws NOT_FOUND for Set B", async () => {
-    const token = await createSessionToken(IDS.accountA)
-    mockCookieValue = token
-    const actor = await requireActor()
-
-    const set = await findOwnedInterviewSet(IDS.setA, actor)
-    expect(set.id).toBe(IDS.setA)
-
-    expect(findOwnedInterviewSet(IDS.setB, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
-  })
-
-  // 13. Question A is accessible only through Set A and Actor A.
-  test("findOwnedInterviewQuestion returns Question A for Actor A using Set A", async () => {
-    const token = await createSessionToken(IDS.accountA)
-    mockCookieValue = token
-    const actor = await requireActor()
-
-    const question = await findOwnedInterviewQuestion(IDS.questionA, IDS.setA, actor)
-    expect(question.id).toBe(IDS.questionA)
-    expect(question.question).toBe(CANARIES.questionA)
-  })
-
-  // 14. Set A + Question B fails closed.
-  test("findOwnedInterviewQuestion throws NOT_FOUND for Set A + Question B", async () => {
-    const token = await createSessionToken(IDS.accountA)
-    mockCookieValue = token
-    const actor = await requireActor()
-
-    expect(findOwnedInterviewQuestion(IDS.questionB, IDS.setA, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
-  })
-
-  // 15. Set B + Question A fails closed.
-  test("findOwnedInterviewQuestion throws NOT_FOUND for Set B + Question A", async () => {
-    const token = await createSessionToken(IDS.accountA)
-    mockCookieValue = token
-    const actor = await requireActor()
-
-    expect(findOwnedInterviewQuestion(IDS.questionA, IDS.setB, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
-  })
-
-  // 16. EnglishSession ownership behaves identically.
-  test("findOwnedEnglishSession returns Session A for Actor A, but throws NOT_FOUND for Session B", async () => {
-    const token = await createSessionToken(IDS.accountA)
-    mockCookieValue = token
-    const actor = await requireActor()
-
-    const session = await findOwnedEnglishSession(IDS.sessionA, actor)
-    expect(session.id).toBe(IDS.sessionA)
-    expect(session.passage).toBe(CANARIES.passageA)
-
-    expect(findOwnedEnglishSession(IDS.sessionB, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
-  })
-
-  // 17. Foreign/missing internal IDs are not exposed through public error mapping.
-  test("findOwnedEnglishCertificate returns Cert A for Actor A, but throws NOT_FOUND for Cert B or missing", async () => {
-    const token = await createSessionToken(IDS.accountA)
-    mockCookieValue = token
-    const actor = await requireActor()
-
-    const cert = await findOwnedEnglishCertificate(IDS.certA, actor)
-    expect(cert.id).toBe(IDS.certA)
-    expect(cert.title).toBe(CANARIES.certA)
-
-    expect(findOwnedEnglishCertificate(IDS.certB, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
-    expect(findOwnedEnglishCertificate("cnonexistentcertid123", actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
-  })
-
-  // 18. Request-provided owner/account/profile data cannot alter ActorContext.
-  test("ActorContext fields come purely from session token and DB, cannot be influenced by input", async () => {
-    // Session token controls the sub identity
+  test("role comes from database lookup, not trusted from session token", async () => {
     const token = await createSessionToken(IDS.accountA)
     mockCookieValue = token
 
-    const actor = await requireActor()
-    expect(actor.accountId).toBe(IDS.accountA)
-    expect(actor.profileId).toBe(IDS.profileA)
+    // Initially "user"
+    let actor = await requireActor()
     expect(actor.role).toBe("user")
-  })
 
-  // 19. No helper grants private access solely because actor role is admin/owner.
-  test("Admin role cannot access private resources of another user via owned loaders", async () => {
-    const token = await createSessionToken(IDS.adminC) // Role is admin
-    mockCookieValue = token
+    // Update in DB
+    await db.account.update({
+      where: { id: IDS.accountA },
+      data: { role: "admin" },
+    })
 
-    const actor = await requireActor()
+    // Next request should get normalized "admin" role
+    actor = await requireActor()
     expect(actor.role).toBe("admin")
-
-    // Admin C cannot load Document A (owned by A) or Document B (owned by B)
-    // because loaders restrict queries to actor's own profileId
-    expect(findOwnedDocument(IDS.documentA, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
-    expect(findOwnedDocument(IDS.documentB, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
   })
 
-  // 20. Narrow selected resources do not contain unrelated account/private fields.
-  test("Loaders return narrow shapes excluding unrelated account, credentials, or private details", async () => {
+  test("missing account from DB fails closed with UNAUTHORIZED", async () => {
+    const token = await createSessionToken("cdeletedaccount0000000000a")
+    mockCookieValue = token
+    expect(requireActor()).rejects.toThrow(new AuthorizationError("UNAUTHORIZED"))
+  })
+
+  test("missing profile fails closed with NOT_FOUND on owned resource loaders", async () => {
+    const token = await createSessionToken(IDS.accountE) // Account E has no profile
+    mockCookieValue = token
+    const actor = await requireActor()
+    expect(actor.profileId).toBeNull()
+
+    expect(findOwnedDocument(IDS.documentA, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
+  })
+
+  test("token for Account A cannot produce Account B context", async () => {
     const token = await createSessionToken(IDS.accountA)
     mockCookieValue = token
     const actor = await requireActor()
-
-    const doc = await findOwnedDocument(IDS.documentA, actor)
-    expect(doc).not.toHaveProperty("passwordHash")
-    expect(doc).not.toHaveProperty("accountId")
-
-    const cert = await findOwnedEnglishCertificate(IDS.certA, actor)
-    expect(cert).not.toHaveProperty("passwordHash")
+    expect(actor.accountId).not.toBe(IDS.accountB)
+    expect(actor.profileId).not.toBe(IDS.profileB)
   })
 
-  // Test CUID validation utility
-  test("isValidId returns true for valid CUID, false otherwise", () => {
-    expect(isValidId("c012345678901234567890123")).toBe(true)
+  // ============================================================================
+  // 2. ID VALIDATION (isValidId)
+  // ============================================================================
+
+  test("isValidId validates standard CUID1 format strictly", () => {
+    // Valid cases
+    expect(isValidId(IDS.documentA)).toBe(true)
+    expect(isValidId(IDS.profileB)).toBe(true)
+    expect(isValidId("clygl3nco0000y81cfxtdtrw1")).toBe(true)
+
+    // Invalid cases
     expect(isValidId("c1234")).toBe(false) // too short
-    expect(isValidId("12345678901234567890123456")).toBe(false) // doesn't start with c
-    expect(isValidId("c012345678901234567890123456789012345")).toBe(false) // too long
-    expect(isValidId("c012345678901234567890123_")).toBe(false) // invalid character
+    expect(isValidId("clygl3nco0000y81cfxtdtrw123")).toBe(false) // too long
+    expect(isValidId("1lygl3nco0000y81cfxtdtrw1")).toBe(false) // doesn't start with c
+    expect(isValidId("Clygl3nco0000y81cfxtdtrw1")).toBe(false) // uppercase C
+    expect(isValidId("clygl3nco0000Y81cfxtdtrw1")).toBe(false) // uppercase chars
+    expect(isValidId("clygl3nco0000y81cfxtdtrw ")).toBe(false) // contains whitespace
+    expect(isValidId("clygl-nco0000y81cfxtdtrw1")).toBe(false) // contains hyphen
+    expect(isValidId("clygl_nco0000y81cfxtdtrw1")).toBe(false) // contains underscore
+    expect(isValidId("")).toBe(false) // empty string
     expect(isValidId(null)).toBe(false)
     expect(isValidId(undefined)).toBe(false)
+    expect(isValidId(123 as any)).toBe(false) // not string
   })
 
-  // Test findOwnedApplicationDocumentPair helper
-  test("findOwnedApplicationDocumentPair succeeds for matching user app/doc, throws for crossed users", async () => {
-    const token = await createSessionToken(IDS.accountA)
-    mockCookieValue = token
-    const actor = await requireActor()
+  // ============================================================================
+  // 3. EXHAUSTIVE SAFE HTTP ERROR MAPPING
+  // ============================================================================
 
-    const pair = await findOwnedApplicationDocumentPair(IDS.applicationA, IDS.documentA, actor)
-    expect(pair.applicationId).toBe(IDS.applicationA)
-    expect(pair.documentId).toBe(IDS.documentA)
+  test("handleAuthorizationError maps errors to exact HTTP response shapes", async () => {
+    const cases: { code: any; status: number; errorStr: string }[] = [
+      { code: "UNAUTHORIZED", status: 401, errorStr: "unauthorized" },
+      { code: "FORBIDDEN", status: 403, errorStr: "forbidden" },
+      { code: "NOT_FOUND", status: 404, errorStr: "not-found" },
+      { code: "BAD_REQUEST", status: 400, errorStr: "invalid-id" },
+      { code: "CONFLICT", status: 409, errorStr: "conflict" },
+    ]
 
-    // Crossed user documents
-    expect(findOwnedApplicationDocumentPair(IDS.applicationA, IDS.documentB, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
-    expect(findOwnedApplicationDocumentPair(IDS.applicationB, IDS.documentA, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
+    for (const c of cases) {
+      const err = new AuthorizationError(c.code, "Secret internal error message detail")
+      const resp = handleAuthorizationError(err)
+      expect(resp.status).toBe(c.status)
+      expect(resp.headers.get("content-type")).toContain("application/json")
+      const body = await resp.json()
+      expect(body).toEqual({ error: c.errorStr })
+      // Verify no extra/message fields leaked
+      expect(Object.keys(body)).toEqual(["error"])
+    }
+
+    // Non-AuthorizationError test
+    const genericErr = new Error("Database query failed: unique constraint at row 42")
+    const genericResp = handleAuthorizationError(genericErr)
+    expect(genericResp.status).toBe(500)
+    const genericBody = await genericResp.json()
+    expect(genericBody).toEqual({ error: "internal-server-error" })
+    expect(Object.keys(genericBody)).toEqual(["error"])
+  })
+
+  // ============================================================================
+  // 4. RESOURCE LOADERS COMPREHENSIVE COVERAGE
+  // ============================================================================
+
+  const loaders = [
+    { name: "findOwnedDocument", fn: (id: string, actor: any) => findOwnedDocument(id, actor), validId: () => IDS.documentA, foreignId: () => IDS.documentB },
+    { name: "findOwnedApplication", fn: (id: string, actor: any) => findOwnedApplication(id, actor), validId: () => IDS.applicationA, foreignId: () => IDS.applicationB },
+    { name: "findOwnedInterviewSet", fn: (id: string, actor: any) => findOwnedInterviewSet(id, actor), validId: () => IDS.setA, foreignId: () => IDS.setB },
+    { name: "findOwnedEnglishSession", fn: (id: string, actor: any) => findOwnedEnglishSession(id, actor), validId: () => IDS.sessionA, foreignId: () => IDS.sessionB },
+    { name: "findOwnedEnglishCertificate", fn: (id: string, actor: any) => findOwnedEnglishCertificate(id, actor), validId: () => IDS.certA, foreignId: () => IDS.certB },
+  ]
+
+  for (const loader of loaders) {
+    describe(loader.name, () => {
+      test("succeeds for owner", async () => {
+        const token = await createSessionToken(IDS.accountA)
+        mockCookieValue = token
+        const actor = await requireActor()
+
+        const resource = await loader.fn(loader.validId(), actor)
+        expect(resource.id).toBe(loader.validId())
+      })
+
+      test("throws NOT_FOUND for foreign valid ID", async () => {
+        const token = await createSessionToken(IDS.accountA)
+        mockCookieValue = token
+        const actor = await requireActor()
+
+        expect(loader.fn(loader.foreignId(), actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
+      })
+
+      test("throws NOT_FOUND for syntactically valid missing ID", async () => {
+        const token = await createSessionToken(IDS.accountA)
+        mockCookieValue = token
+        const actor = await requireActor()
+
+        const missingId = getNonexistentId(loader.validId())
+        expect(loader.fn(missingId, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
+      })
+
+      test("throws BAD_REQUEST for malformed ID", async () => {
+        const token = await createSessionToken(IDS.accountA)
+        mockCookieValue = token
+        const actor = await requireActor()
+
+        const malformedId = "clygl3nco" // too short
+        expect(loader.fn(malformedId, actor)).rejects.toThrow(new AuthorizationError("BAD_REQUEST"))
+      })
+
+      test("exhibits narrow projection without account fields, passwordHash, session details, or role leakage", async () => {
+        const token = await createSessionToken(IDS.accountA)
+        mockCookieValue = token
+        const actor = await requireActor()
+
+        const resource = await loader.fn(loader.validId(), actor)
+        expect(resource).not.toHaveProperty("passwordHash")
+        expect(resource).not.toHaveProperty("accountId")
+        expect(resource).not.toHaveProperty("email")
+        if (loader.name !== "findOwnedInterviewSet") {
+          expect(resource).not.toHaveProperty("role")
+        }
+        expect(resource).not.toHaveProperty("account")
+        expect(resource).not.toHaveProperty("userProfile")
+      })
+
+      test("denies access to admin / owner role actors", async () => {
+        // Admin C cannot bypass owner checks to query User A's resource
+        const token = await createSessionToken(IDS.adminC)
+        mockCookieValue = token
+        const actor = await requireActor()
+        expect(actor.role).toBe("admin")
+
+        expect(loader.fn(loader.validId(), actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
+      })
+    })
+  }
+
+  // ============================================================================
+  // 5. NESTED RESOURCE LOADERS COVERAGE
+  // ============================================================================
+
+  describe("findOwnedInterviewQuestion", () => {
+    test("succeeds for matching parent + child belonging to owner", async () => {
+      const token = await createSessionToken(IDS.accountA)
+      mockCookieValue = token
+      const actor = await requireActor()
+
+      const q = await findOwnedInterviewQuestion(IDS.questionA, IDS.setA, actor)
+      expect(q.id).toBe(IDS.questionA)
+      expect(q.interviewSetId).toBe(IDS.setA)
+      expect(q.question).toBe(CANARIES.questionA)
+    })
+
+    test("throws NOT_FOUND for Set A + Question B (wrong child)", async () => {
+      const token = await createSessionToken(IDS.accountA)
+      mockCookieValue = token
+      const actor = await requireActor()
+
+      expect(findOwnedInterviewQuestion(IDS.questionB, IDS.setA, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
+    })
+
+    test("throws NOT_FOUND for Set B + Question A (foreign parent)", async () => {
+      const token = await createSessionToken(IDS.accountA)
+      mockCookieValue = token
+      const actor = await requireActor()
+
+      expect(findOwnedInterviewQuestion(IDS.questionA, IDS.setB, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
+    })
+
+    test("throws NOT_FOUND for syntactically valid missing set or question", async () => {
+      const token = await createSessionToken(IDS.accountA)
+      mockCookieValue = token
+      const actor = await requireActor()
+
+      const missingQuestionId = getNonexistentId(IDS.questionA)
+      const missingSetId = getNonexistentId(IDS.setA)
+
+      expect(findOwnedInterviewQuestion(missingQuestionId, IDS.setA, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
+      expect(findOwnedInterviewQuestion(IDS.questionA, missingSetId, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
+    })
+
+    test("throws BAD_REQUEST for malformed parent or child ID", async () => {
+      const token = await createSessionToken(IDS.accountA)
+      mockCookieValue = token
+      const actor = await requireActor()
+
+      expect(findOwnedInterviewQuestion("cshortq", IDS.setA, actor)).rejects.toThrow(new AuthorizationError("BAD_REQUEST"))
+      expect(findOwnedInterviewQuestion(IDS.questionA, "cshortset", actor)).rejects.toThrow(new AuthorizationError("BAD_REQUEST"))
+    })
+
+    test("denies admin/owner access", async () => {
+      const token = await createSessionToken(IDS.adminC)
+      mockCookieValue = token
+      const actor = await requireActor()
+
+      expect(findOwnedInterviewQuestion(IDS.questionA, IDS.setA, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
+    })
+  })
+
+  describe("findOwnedApplicationDocumentPair", () => {
+    test("succeeds for matching App A + Document A owned by caller", async () => {
+      const token = await createSessionToken(IDS.accountA)
+      mockCookieValue = token
+      const actor = await requireActor()
+
+      const pair = await findOwnedApplicationDocumentPair(IDS.applicationA, IDS.documentA, actor)
+      expect(pair.applicationId).toBe(IDS.applicationA)
+      expect(pair.documentId).toBe(IDS.documentA)
+    })
+
+    test("throws NOT_FOUND for App A + Document B (crossed owners)", async () => {
+      const token = await createSessionToken(IDS.accountA)
+      mockCookieValue = token
+      const actor = await requireActor()
+
+      expect(findOwnedApplicationDocumentPair(IDS.applicationA, IDS.documentB, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
+    })
+
+    test("throws NOT_FOUND for App B + Document A (crossed owners)", async () => {
+      const token = await createSessionToken(IDS.accountA)
+      mockCookieValue = token
+      const actor = await requireActor()
+
+      expect(findOwnedApplicationDocumentPair(IDS.applicationB, IDS.documentA, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
+    })
+
+    test("throws NOT_FOUND for valid missing parent/child", async () => {
+      const token = await createSessionToken(IDS.accountA)
+      mockCookieValue = token
+      const actor = await requireActor()
+
+      const missingAppId = getNonexistentId(IDS.applicationA)
+      const missingDocId = getNonexistentId(IDS.documentA)
+
+      expect(findOwnedApplicationDocumentPair(missingAppId, IDS.documentA, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
+      expect(findOwnedApplicationDocumentPair(IDS.applicationA, missingDocId, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
+    })
+
+    test("throws BAD_REQUEST for malformed parent or child ID", async () => {
+      const token = await createSessionToken(IDS.accountA)
+      mockCookieValue = token
+      const actor = await requireActor()
+
+      expect(findOwnedApplicationDocumentPair("cshortapp", IDS.documentA, actor)).rejects.toThrow(new AuthorizationError("BAD_REQUEST"))
+      expect(findOwnedApplicationDocumentPair(IDS.applicationA, "cshortdoc", actor)).rejects.toThrow(new AuthorizationError("BAD_REQUEST"))
+    })
+
+    test("denies admin/owner access", async () => {
+      const token = await createSessionToken(IDS.adminC)
+      mockCookieValue = token
+      const actor = await requireActor()
+
+      expect(findOwnedApplicationDocumentPair(IDS.applicationA, IDS.documentA, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
+    })
   })
 })

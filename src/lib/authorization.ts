@@ -7,19 +7,20 @@ import { db } from "@/lib/db"
  * Any unknown roles default to "user".
  */
 export function normalizeRole(role: string | null | undefined): string {
-  const r = (role || "").trim().toLowerCase()
-  if (r === "admin" || r === "owner") return r
+  if (role === "admin" || role === "owner" || role === "user") {
+    return role
+  }
   return "user"
 }
 
 /**
- * Validates whether an ID matches the standard CUID format.
- * CUIDs start with 'c', consist of lowercase alphanumeric characters,
- * and have a length typically between 20 and 30.
+ * Validates whether an ID matches the standard CUID1 format.
+ * CUID1s start with 'c', consist of 24 lowercase alphanumeric characters,
+ * for a total length of exactly 25.
  */
 export function isValidId(id: string | null | undefined): boolean {
   if (!id || typeof id !== "string") return false
-  const cuidRegex = /^c[a-z0-9]{20,30}$/
+  const cuidRegex = /^c[a-z0-9]{24}$/
   return cuidRegex.test(id)
 }
 
@@ -31,6 +32,28 @@ export class AuthorizationError extends Error {
     this.name = "AuthorizationError"
   }
 }
+
+/**
+ * Centralized, exhaustive HTTP response mapping for authorization errors and unknown errors.
+ */
+export function handleAuthorizationError(error: unknown): Response {
+  if (error instanceof AuthorizationError) {
+    switch (error.code) {
+      case "UNAUTHORIZED":
+        return Response.json({ error: "unauthorized" }, { status: 401 })
+      case "FORBIDDEN":
+        return Response.json({ error: "forbidden" }, { status: 403 })
+      case "NOT_FOUND":
+        return Response.json({ error: "not-found" }, { status: 404 })
+      case "BAD_REQUEST":
+        return Response.json({ error: "invalid-id" }, { status: 400 })
+      case "CONFLICT":
+        return Response.json({ error: "conflict" }, { status: 409 })
+    }
+  }
+  return Response.json({ error: "internal-server-error" }, { status: 500 })
+}
+
 
 export interface ActorContext {
   accountId: string
