@@ -135,8 +135,22 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
       expect(body.users).toBeArray()
     })
 
+    test("Owner can access users list", async () => {
+      mockCookieValue = await createSessionToken(IDS.ownerF)
+      const res = await adminUsersGet()
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.users).toBeArray()
+    })
+
     test("User cannot access users list (returns 403)", async () => {
       mockCookieValue = await createSessionToken(IDS.accountA)
+      const res = await adminUsersGet()
+      expect(res.status).toBe(403)
+    })
+
+    test("Unknown role cannot access users list (returns 403)", async () => {
+      mockCookieValue = await createSessionToken(IDS.unknownD)
       const res = await adminUsersGet()
       expect(res.status).toBe(403)
     })
@@ -154,8 +168,20 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
       expect(res.status).toBe(200)
     })
 
+    test("Owner can list announcements", async () => {
+      mockCookieValue = await createSessionToken(IDS.ownerF)
+      const res = await adminAnnGet()
+      expect(res.status).toBe(200)
+    })
+
     test("User cannot list announcements (returns 403)", async () => {
       mockCookieValue = await createSessionToken(IDS.accountA)
+      const res = await adminAnnGet()
+      expect(res.status).toBe(403)
+    })
+
+    test("Unknown role cannot list announcements (returns 403)", async () => {
+      mockCookieValue = await createSessionToken(IDS.unknownD)
       const res = await adminAnnGet()
       expect(res.status).toBe(403)
     })
@@ -164,6 +190,20 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
   describe("Licenses Admin Route", () => {
     test("Admin can grant license", async () => {
       mockCookieValue = await createSessionToken(IDS.adminC)
+      const req = new Request("http://localhost/api/admin/licenses", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId: IDS.profileA,
+          plan: "pro",
+          status: "active",
+        }),
+      })
+      const res = await adminLicPost(req)
+      expect(res.status).toBe(200)
+    })
+
+    test("Owner can grant license", async () => {
+      mockCookieValue = await createSessionToken(IDS.ownerF)
       const req = new Request("http://localhost/api/admin/licenses", {
         method: "POST",
         body: JSON.stringify({
@@ -188,6 +228,31 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
       const res = await adminLicPost(req)
       expect(res.status).toBe(403)
     })
+
+    test("Unknown role cannot grant license (returns 403)", async () => {
+      mockCookieValue = await createSessionToken(IDS.unknownD)
+      const req = new Request("http://localhost/api/admin/licenses", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId: IDS.profileA,
+          plan: "pro",
+        }),
+      })
+      const res = await adminLicPost(req)
+      expect(res.status).toBe(403)
+    })
+
+    test("Anonymous cannot grant license (returns 401)", async () => {
+      const req = new Request("http://localhost/api/admin/licenses", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId: IDS.profileA,
+          plan: "pro",
+        }),
+      })
+      const res = await adminLicPost(req)
+      expect(res.status).toBe(401)
+    })
   })
 
   describe("Verification Admin Route", () => {
@@ -203,6 +268,113 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
       })
       const res = await adminVerPost(req)
       expect(res.status).toBe(200)
+    })
+
+    test("Owner can verify user profile", async () => {
+      mockCookieValue = await createSessionToken(IDS.ownerF)
+      const req = new Request("http://localhost/api/admin/verification", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId: IDS.profileA,
+          type: "identity",
+          status: "verified",
+        }),
+      })
+      const res = await adminVerPost(req)
+      expect(res.status).toBe(200)
+    })
+  })
+
+  // ============================================================================
+  // PRIVATE-RESOURCE NO-BYPASS
+  // ============================================================================
+  describe("Admin/Owner private-resource no-bypass", () => {
+    let readsGetDocumentsHandler: any
+    let readsGetDocHandler: any
+    let mutsPatchAppHandler: any
+    let mutsDeleteDocHandler: any
+
+    beforeAll(async () => {
+      const readsDocRoute = await import("@/app/api/documents/route")
+      readsGetDocumentsHandler = readsDocRoute.GET
+      const readsDocIdRoute = await import("@/app/api/documents/[id]/route")
+      readsGetDocHandler = readsDocIdRoute.DELETE
+      const mutsAppIdRoute = await import("@/app/api/applications/[id]/route")
+      mutsPatchAppHandler = mutsAppIdRoute.PATCH
+      mutsDeleteDocHandler = readsDocIdRoute.DELETE
+    })
+
+    test("admin cannot read User A private documents through owner-scoped route", async () => {
+      mockCookieValue = await createSessionToken(IDS.adminC)
+      // Force admin's profileId to be User A's profileId via a direct DB read
+      // but the route handler derives identity from session, so admin can only
+      // access their own (profileC) documents.
+      const res = await readsGetDocumentsHandler()
+      // Admin C's profile is profileC. They should see empty or own docs, not A's.
+      if (res.status === 200) {
+        const body = await res.json()
+        // Must not contain User A's documents
+        const docIds = (body.documents || []).map((d: any) => d.id)
+        expect(docIds).not.toContain(IDS.documentA)
+      }
+    })
+
+    test("owner cannot read User A private documents through owner-scoped route", async () => {
+      mockCookieValue = await createSessionToken(IDS.ownerF)
+      const res = await readsGetDocumentsHandler()
+      if (res.status === 200) {
+        const body = await res.json()
+        const docIds = (body.documents || []).map((d: any) => d.id)
+        expect(docIds).not.toContain(IDS.documentA)
+      }
+    })
+
+    test("admin cannot delete User A document", async () => {
+      mockCookieValue = await createSessionToken(IDS.adminC)
+      const req = new Request("http://localhost/api/documents/" + IDS.documentA, {
+        method: "DELETE",
+      })
+      const res = await mutsDeleteDocHandler(req, { params: Promise.resolve({ id: IDS.documentA }) })
+      expect(res.status).toBe(404)
+      // Verify document still exists
+      const doc = await db.document.findUnique({ where: { id: IDS.documentA } })
+      expect(doc).not.toBeNull()
+    })
+
+    test("owner cannot delete User A document", async () => {
+      mockCookieValue = await createSessionToken(IDS.ownerF)
+      const req = new Request("http://localhost/api/documents/" + IDS.documentA, {
+        method: "DELETE",
+      })
+      const res = await mutsDeleteDocHandler(req, { params: Promise.resolve({ id: IDS.documentA }) })
+      expect(res.status).toBe(404)
+      const doc = await db.document.findUnique({ where: { id: IDS.documentA } })
+      expect(doc).not.toBeNull()
+    })
+
+    test("admin cannot update User A application", async () => {
+      mockCookieValue = await createSessionToken(IDS.adminC)
+      const req = new Request("http://localhost/api/applications/" + IDS.applicationA, {
+        method: "PATCH",
+        body: JSON.stringify({ notes: "hacked" }),
+      })
+      const res = await mutsPatchAppHandler(req, { params: Promise.resolve({ id: IDS.applicationA }) })
+      expect(res.status).toBe(404)
+      // Verify data unchanged
+      const app = await db.application.findUnique({ where: { id: IDS.applicationA } })
+      expect(app!.notes).toBe(CANARIES.appA)
+    })
+
+    test("owner cannot update User A application", async () => {
+      mockCookieValue = await createSessionToken(IDS.ownerF)
+      const req = new Request("http://localhost/api/applications/" + IDS.applicationA, {
+        method: "PATCH",
+        body: JSON.stringify({ notes: "hacked" }),
+      })
+      const res = await mutsPatchAppHandler(req, { params: Promise.resolve({ id: IDS.applicationA }) })
+      expect(res.status).toBe(404)
+      const app = await db.application.findUnique({ where: { id: IDS.applicationA } })
+      expect(app!.notes).toBe(CANARIES.appA)
     })
   })
 

@@ -6,45 +6,59 @@ export const IDS = {
   adminC: "",
   unknownD: "",
   accountE: "",
+  ownerF: "",
 
   profileA: "",
   profileB: "",
   profileC: "",
   profileD: "",
+  profileF: "",
 
   documentA: "",
   documentB: "",
+  documentF: "",
 
   applicationA: "",
   applicationB: "",
+  applicationF: "",
 
   setA: "",
   setB: "",
+  setF: "",
 
   questionA: "",
   questionB: "",
+  questionF: "",
 
   sessionA: "",
   sessionB: "",
+  sessionF: "",
 
   certA: "",
   certB: "",
+  certF: "",
 
   appDocA: "",
   appDocB: "",
+  appDocF: "",
 }
 
 export const CANARIES = {
   documentA: "Canary Document Content A",
   documentB: "Canary Document Content B",
+  documentF: "Canary Document Content F",
   appA: "Canary App Notes A",
   appB: "Canary App Notes B",
+  appF: "Canary App Notes F",
   questionA: "Canary Question A",
   questionB: "Canary Question B",
+  questionF: "Canary Question F",
   passageA: "Canary Passage A",
   passageB: "Canary Passage B",
+  passageF: "Canary Passage F",
   certA: "Canary Cert Title A",
   certB: "Canary Cert Title B",
+  certF: "Canary Cert Title F",
 }
 
 export async function cleanDb() {
@@ -108,11 +122,20 @@ export async function seedDb() {
     },
   })
 
+  const ownerF = await db.account.create({
+    data: {
+      email: "owner-f@example.com",
+      passwordHash: "dummy-hash-f",
+      role: "owner",
+    },
+  })
+
   IDS.accountA = accountA.id
   IDS.accountB = accountB.id
   IDS.adminC = adminC.id
   IDS.unknownD = unknownD.id
   IDS.accountE = accountE.id
+  IDS.ownerF = ownerF.id
 
   // 2. Create UserProfiles
   const profileA = await db.userProfile.create({
@@ -148,6 +171,15 @@ export async function seedDb() {
   IDS.profileB = profileB.id
   IDS.profileC = profileC.id
   IDS.profileD = profileD.id
+
+  const profileF = await db.userProfile.create({
+    data: {
+      accountId: IDS.ownerF,
+      fullName: "Owner F",
+      email: "owner-f@example.com",
+    },
+  })
+  IDS.profileF = profileF.id
 
   // 3. Create Documents
   const docA = await db.document.create({
@@ -189,6 +221,25 @@ export async function seedDb() {
   IDS.documentA = docA.id
   IDS.documentB = docB.id
 
+  const docF = await db.document.create({
+    data: {
+      userProfileId: IDS.profileF,
+      type: "cv-ats",
+      title: "CV ATS F",
+      content: CANARIES.documentF,
+      config: "{}",
+    },
+  })
+  await db.documentVersion.create({
+    data: {
+      documentId: docF.id,
+      versionNumber: 1,
+      content: CANARIES.documentF,
+      configSnapshot: "{}",
+    },
+  })
+  IDS.documentF = docF.id
+
   // 4. Create Applications
   const appA = await db.application.create({
     data: {
@@ -212,6 +263,17 @@ export async function seedDb() {
   IDS.applicationA = appA.id
   IDS.applicationB = appB.id
 
+  const appF = await db.application.create({
+    data: {
+      userProfileId: IDS.profileF,
+      type: "work",
+      position: "Software Engineer F",
+      organization: "Org F",
+      notes: CANARIES.appF,
+    },
+  })
+  IDS.applicationF = appF.id
+
   // 5. Create InterviewSets
   const setA = await db.interviewSet.create({
     data: {
@@ -228,6 +290,14 @@ export async function seedDb() {
 
   IDS.setA = setA.id
   IDS.setB = setB.id
+
+  const setF = await db.interviewSet.create({
+    data: {
+      userProfileId: IDS.profileF,
+      title: "Interview Set F",
+    },
+  })
+  IDS.setF = setF.id
 
   // 6. Create InterviewQuestions
   const qA = await db.interviewQuestion.create({
@@ -248,6 +318,15 @@ export async function seedDb() {
   IDS.questionA = qA.id
   IDS.questionB = qB.id
 
+  const qF = await db.interviewQuestion.create({
+    data: {
+      interviewSetId: IDS.setF,
+      question: CANARIES.questionF,
+      order: 1,
+    },
+  })
+  IDS.questionF = qF.id
+
   // 7. Create EnglishSessions
   const sessA = await db.englishSession.create({
     data: {
@@ -266,6 +345,15 @@ export async function seedDb() {
 
   IDS.sessionA = sessA.id
   IDS.sessionB = sessB.id
+
+  const sessF = await db.englishSession.create({
+    data: {
+      userProfileId: IDS.profileF,
+      module: "reading",
+      passage: CANARIES.passageF,
+    },
+  })
+  IDS.sessionF = sessF.id
 
   // 8. Create EnglishCertificates
   const certA = await db.englishCertificate.create({
@@ -304,6 +392,24 @@ export async function seedDb() {
   IDS.certA = certA.id
   IDS.certB = certB.id
 
+  const certF = await db.englishCertificate.create({
+    data: {
+      userProfileId: IDS.profileF,
+      sessionId: IDS.sessionF,
+      certificateId: "cert-id-f",
+      title: CANARIES.certF,
+      testMode: "reading",
+      testSpec: "LARAS_TOEFL_STYLE",
+      rawScore: 95,
+      percentage: 95,
+      confidence: "high",
+      skillBreakdown: "{}",
+      questionCount: 10,
+      disclaimerText: "",
+    },
+  })
+  IDS.certF = certF.id
+
   // 9. Create ApplicationDocument Links
   const appDocA = await db.applicationDocument.create({
     data: {
@@ -320,6 +426,14 @@ export async function seedDb() {
 
   IDS.appDocA = appDocA.id
   IDS.appDocB = appDocB.id
+
+  const appDocF = await db.applicationDocument.create({
+    data: {
+      applicationId: IDS.applicationF,
+      documentId: IDS.documentF,
+    },
+  })
+  IDS.appDocF = appDocF.id
 
   return IDS
 }
