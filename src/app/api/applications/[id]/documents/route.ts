@@ -1,43 +1,121 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import {
+  requireActor,
+  getRequiredProfileId,
+  isValidId,
+  AuthorizationError,
+  handleAuthorizationError,
+} from "@/lib/authorization"
 
 /** Link a document to an application. */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
-  const { id: appId } = await params
-  let body: { documentId?: string }
-  try { body = await request.json() } catch { return NextResponse.json({ error: "invalid-body" }, { status: 400 }) }
+  try {
+    const actor = await requireActor()
+    const profileId = getRequiredProfileId(actor)
 
-  const profile = await db.userProfile.findUnique({ where: { accountId: session.userId }, select: { id: true } })
-  if (!profile) return NextResponse.json({ error: "no-profile" }, { status: 404 })
+    const { id: appId } = await params
+    if (!isValidId(appId)) {
+      throw new AuthorizationError("BAD_REQUEST")
+    }
 
-  const app = await db.application.findFirst({ where: { id: appId, userProfileId: profile.id } })
-  if (!app) return NextResponse.json({ error: "not-found" }, { status: 404 })
-  const doc = await db.document.findFirst({ where: { id: body.documentId, userProfileId: profile.id } })
-  if (!doc) return NextResponse.json({ error: "doc-not-found" }, { status: 404 })
+    let body: { documentId?: string }
+    try {
+      body = await request.json()
+    } catch {
+      throw new AuthorizationError("BAD_REQUEST")
+    }
 
-  const link = await db.applicationDocument.create({
-    data: { applicationId: appId, documentId: body.documentId! },
-  })
-  return NextResponse.json({ ok: true, link })
+    const documentId = body.documentId
+    if (!isValidId(documentId)) {
+      throw new AuthorizationError("BAD_REQUEST")
+    }
+
+    const link = await db.$transaction(async (tx) => {
+      // Verify caller ownership of both parent resources
+      const [app, doc] = await Promise.all([
+        tx.application.findFirst({
+          where: { id: appId, userProfileId: profileId },
+          select: { id: true },
+        }),
+        tx.document.findFirst({
+          where: { id: documentId, userProfileId: profileId },
+          select: { id: true },
+        }),
+      ])
+
+      if (!app || !doc) {
+        throw new AuthorizationError("NOT_FOUND")
+      }
+
+      // Check for duplicate link
+      const existing = await tx.applicationDocument.findFirst({
+        where: { applicationId: appId, documentId },
+      })
+      if (existing) {
+        throw new AuthorizationError("CONFLICT")
+      }
+
+      return tx.applicationDocument.create({
+        data: { applicationId: appId, documentId },
+      })
+    })
+
+    return NextResponse.json({ ok: true, link })
+  } catch (error) {
+    return handleAuthorizationError(error)
+  }
 }
 
 /** Unlink a document from an application. */
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
-  const { id: appId } = await params
-  const { searchParams } = new URL(request.url)
-  const documentId = searchParams.get("documentId")
-  if (!documentId) return NextResponse.json({ error: "missing-documentId" }, { status: 400 })
+  try {
+    const actor = await requireActor()
+    const profileId = getRequiredProfileId(actor)
 
-  const profile = await db.userProfile.findUnique({ where: { accountId: session.userId }, select: { id: true } })
-  if (!profile) return NextResponse.json({ error: "no-profile" }, { status: 404 })
-  const app = await db.application.findFirst({ where: { id: appId, userProfileId: profile.id } })
-  if (!app) return NextResponse.json({ error: "not-found" }, { status: 404 })
+    const { id: appId } = await params
+    if (!isValidId(appId)) {
+      throw new AuthorizationError("BAD_REQUEST")
+    }
 
-  await db.applicationDocument.deleteMany({ where: { applicationId: appId, documentId } })
-  return NextResponse.json({ ok: true })
+    const { searchParams } = new URL(request.url)
+    const documentId = searchParams.get("documentId")
+    if (!isValidId(documentId)) {
+      throw new AuthorizationError("BAD_REQUEST")
+    }
+
+    await db.$transaction(async (tx) => {
+      // Verify caller ownership of both parent resources
+      const [app, doc] = await Promise.all([
+        tx.application.findFirst({
+          where: { id: appId, userProfileId: profileId },
+          select: { id: true },
+        }),
+        tx.document.findFirst({
+          where: { id: documentId, userProfileId: profileId },
+          select: { id: true },
+        }),
+      ])
+
+      if (!app || !doc) {
+        throw new AuthorizationError("NOT_FOUND")
+      }
+
+      // Check if the link exists
+      const existing = await tx.applicationDocument.findFirst({
+        where: { applicationId: appId, documentId },
+      })
+      if (!existing) {
+        throw new AuthorizationError("NOT_FOUND")
+      }
+
+      await tx.applicationDocument.delete({
+        where: { id: existing.id },
+      })
+    })
+
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    return handleAuthorizationError(error)
+  }
 }
