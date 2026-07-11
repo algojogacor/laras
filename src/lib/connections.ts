@@ -164,8 +164,15 @@ export async function areConnected(userAId: string, userBId: string): Promise<bo
  * List all connections for a user, grouped by status. Each entry includes
  * the "other" user's profile summary.
  */
+import { projectPublicProfile } from "@/lib/public-profile"
+
+/**
+ * List all connections for a user, grouped by status. Each entry includes
+ * the "other" user's profile summary.
+ */
 export async function listConnections(
-  userId: string
+  userId: string,
+  viewerAccountId: string
 ): Promise<{
   accepted: ConnectionWithProfile[]
   pendingIncoming: ConnectionWithProfile[]
@@ -173,14 +180,53 @@ export async function listConnections(
 }> {
   const outgoing = await db.connection.findMany({
     where: { requesterId: userId },
-    include: { addressee: { select: { id: true, fullName: true, headline: true, email: true, photoUrl: true } } },
+    include: {
+      addressee: {
+        include: {
+          consentSettings: true,
+          verificationBadges: true,
+        }
+      }
+    },
     orderBy: { updatedAt: "desc" },
   })
   const incoming = await db.connection.findMany({
     where: { addresseeId: userId },
-    include: { requester: { select: { id: true, fullName: true, headline: true, email: true, photoUrl: true } } },
+    include: {
+      requester: {
+        include: {
+          consentSettings: true,
+          verificationBadges: true,
+        }
+      }
+    },
     orderBy: { updatedAt: "desc" },
   })
+
+  const projectOther = (otherProfile: any, connection: any) => {
+    const fullProfile = {
+      ...otherProfile,
+      experiences: [],
+      educations: [],
+      skills: [],
+      certifications: [],
+      languages: [],
+      verificationBadges: otherProfile.verificationBadges || [],
+    }
+    const pDto = projectPublicProfile({
+      profile: fullProfile as any,
+      consentSettings: otherProfile.consentSettings,
+      viewer: { accountId: viewerAccountId, profileId: userId },
+      relationships: [connection],
+    })
+    return {
+      id: otherProfile.id,
+      fullName: pDto.profile.fullName ?? null,
+      headline: otherProfile.headline,
+      email: pDto.profile.email ?? null,
+      photoUrl: otherProfile.photoUrl,
+    }
+  }
 
   const mapOut = (c: typeof outgoing): ConnectionWithProfile[] =>
     c.map((x) => ({
@@ -189,7 +235,7 @@ export async function listConnections(
       message: x.message,
       createdAt: x.createdAt,
       updatedAt: x.updatedAt,
-      other: x.addressee,
+      other: projectOther(x.addressee, x),
       isRequester: true,
     }))
   const mapIn = (c: typeof incoming): ConnectionWithProfile[] =>
@@ -199,7 +245,7 @@ export async function listConnections(
       message: x.message,
       createdAt: x.createdAt,
       updatedAt: x.updatedAt,
-      other: x.requester,
+      other: projectOther(x.requester, x),
       isRequester: false,
     }))
 
@@ -211,11 +257,12 @@ export async function listConnections(
 }
 
 /**
- * Search for users by name or email (for sending connection requests).
+ * Search for users by name (for sending connection requests).
  * Excludes the current user and already-connected/pending users.
+ * Never matches or returns private email.
  */
 export async function searchUsers(
-  currentUserId: string,
+  currentAccountId: string,
   query: string,
   limit = 10
 ): Promise<
@@ -231,29 +278,26 @@ export async function searchUsers(
   const q = query.trim().toLowerCase()
   if (!q) return []
 
-  // Find users whose email or fullName matches
-  const profiles = await db.userProfile.findMany({
-    where: {
-      AND: [
-        { accountId: { not: currentUserId } },
-        {
-          OR: [
-            { email: { contains: q } },
-            { fullName: { contains: q } },
-          ],
-        },
-      ],
-    },
-    select: { id: true, fullName: true, headline: true, email: true, photoUrl: true, accountId: true },
-    take: limit,
-  })
-
-  // For each, check connection status with current user
   const myProfile = await db.userProfile.findUnique({
-    where: { accountId: currentUserId },
+    where: { accountId: currentAccountId },
     select: { id: true },
   })
   if (!myProfile) return []
+
+  // Find users whose fullName matches
+  const profiles = await db.userProfile.findMany({
+    where: {
+      AND: [
+        { accountId: { not: currentAccountId } },
+        { fullName: { contains: q } },
+      ],
+    },
+    include: {
+      consentSettings: true,
+      verificationBadges: true,
+    },
+    take: limit,
+  })
 
   const result: Array<{
     id: string
@@ -272,11 +316,29 @@ export async function searchUsers(
         ],
       },
     })
+
+    const fullProfile = {
+      ...p,
+      experiences: [],
+      educations: [],
+      skills: [],
+      certifications: [],
+      languages: [],
+      verificationBadges: p.verificationBadges || [],
+    }
+
+    const pDto = projectPublicProfile({
+      profile: fullProfile as any,
+      consentSettings: p.consentSettings,
+      viewer: { accountId: currentAccountId, profileId: myProfile.id },
+      relationships: conn ? [conn] : null,
+    })
+
     result.push({
       id: p.id,
-      fullName: p.fullName,
+      fullName: pDto.profile.fullName ?? null,
       headline: p.headline,
-      email: p.email,
+      email: pDto.profile.email ?? null,
       photoUrl: p.photoUrl,
       connectionStatus: (conn?.status as ConnectionStatus) ?? "none",
     })

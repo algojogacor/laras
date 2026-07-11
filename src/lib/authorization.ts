@@ -143,6 +143,14 @@ export async function findOwnedDocument(id: string, actor: ActorContext) {
   return doc
 }
 
+export async function findOwnedDocumentOfType(id: string, type: string, actor: ActorContext) {
+  const doc = await findOwnedDocument(id, actor)
+  if (doc.type !== type) {
+    throw new AuthorizationError("NOT_FOUND")
+  }
+  return doc
+}
+
 export async function findOwnedApplication(id: string, actor: ActorContext) {
   if (!isValidId(id)) {
     throw new AuthorizationError("BAD_REQUEST")

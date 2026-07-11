@@ -8,28 +8,33 @@ import { listConnections, requestConnection, searchUsers } from "@/lib/connectio
  * Returns the current user's connections grouped by status.
  * Optional ?q= for user search.
  */
+import { requireActor, getRequiredProfileId, handleAuthorizationError } from "@/lib/authorization"
+
+/**
+ * GET /api/connections
+ * Returns the current user's connections grouped by status.
+ * Optional ?q= for user search.
+ */
 export async function GET(request: Request) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  try {
+    const actor = await requireActor()
+    const profileId = getRequiredProfileId(actor)
 
-  const profile = await db.userProfile.findUnique({
-    where: { accountId: session.userId },
-    select: { id: true },
-  })
-  if (!profile) return NextResponse.json({ error: "no-profile" }, { status: 404 })
+    const { searchParams } = new URL(request.url)
+    const q = searchParams.get("q")
 
-  const { searchParams } = new URL(request.url)
-  const q = searchParams.get("q")
+    // If searching for users to connect with
+    if (q !== null) {
+      const results = await searchUsers(actor.accountId, q)
+      return NextResponse.json({ results })
+    }
 
-  // If searching for users to connect with
-  if (q !== null) {
-    const results = await searchUsers(session.userId, q)
-    return NextResponse.json({ results })
+    // Otherwise list connections
+    const groups = await listConnections(profileId, actor.accountId)
+    return NextResponse.json(groups)
+  } catch (error) {
+    return handleAuthorizationError(error)
   }
-
-  // Otherwise list connections
-  const groups = await listConnections(profile.id)
-  return NextResponse.json(groups)
 }
 
 /**

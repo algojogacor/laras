@@ -1,26 +1,36 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import {
+  requireActor,
+  findOwnedEnglishCertificate,
+  handleAuthorizationError,
+} from "@/lib/authorization"
 
 /** GET /api/english/certificate/[id] — get certificate by ID (owner only). */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  try {
+    const actor = await requireActor()
+    const { id } = await params
 
-  const { id } = await params
-  const profile = await db.userProfile.findUnique({
-    where: { accountId: session.userId },
-    select: { id: true, fullName: true },
-  })
-  if (!profile) return NextResponse.json({ error: "no-profile" }, { status: 404 })
+    const cert = await findOwnedEnglishCertificate(id, actor)
 
-  const cert = await db.englishCertificate.findFirst({
-    where: { id, userProfileId: profile.id },
-  })
-  if (!cert) return NextResponse.json({ error: "not-found" }, { status: 404 })
+    const profile = await db.userProfile.findUnique({
+      where: { id: cert.userProfileId },
+      select: { fullName: true },
+    })
 
-  return NextResponse.json({ certificate: cert, userName: profile.fullName })
+    return NextResponse.json(
+      { certificate: cert, userName: profile?.fullName ?? null },
+      {
+        headers: {
+          "Cache-Control": "private, no-store",
+        },
+      }
+    )
+  } catch (error) {
+    return handleAuthorizationError(error)
+  }
 }
