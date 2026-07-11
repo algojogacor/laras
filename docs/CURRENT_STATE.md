@@ -1,17 +1,18 @@
 # CURRENT_STATE.md
 
-Last verified: 2026-07-11 (Phase 1C complete; all acceptance gates passed)
+Last verified: 2026-07-11 (Phase 1C remediation ready for independent re-review; not yet independently accepted)
 Current branch: main
-Phase 1C final HEAD: 7064ec7e4c0f40d3e8b1a5c6622bc5d075650ff2
+Phase 1C remediation code/test HEAD: 00aae805c8d7bd14997fe9b05ac0578e39767abc
+Documentation: finalized in subsequent local commit(s); the exact final repository HEAD is reported externally after commit creation to avoid a self-referential SHA claim
 Database: SQLite (local file: /home/z/my-project/db/custom.db)
 Storage: Supabase Storage (configured in .env, used for file uploads)
 Authentication: Custom JWT (jose) + bcrypt, cookie-based session (laras_session)
 AI provider: z-ai-web-dev-sdk (ZAI.create() auto-configured, no explicit key)
 Typecheck: PASS (0 errors)
 Lint: PASS (0 errors)
-Build: PASS (Next.js 16.1.3 production build; 51/51 static pages generated)
-Browser QA: PASS (touched surfaces: dashboard, public profile, connections, privacy — all render correctly on desktop + mobile + ID/EN)
-Tests: bun:test focused consent projection suite added for Phase 1B; final result is recorded in the Phase 1B section below. Listening bank remains empty and is not part of this phase.
+Build: PASS with Windows standalone-copy warnings (Next.js 16.1.3 production build; 51/51 static pages generated; two traced `node:` filenames reported non-fatal EINVAL copy warnings)
+Browser/HTTP runtime verification for the Phase 1C remediation: NOT PERFORMED. Browser QA recorded for earlier phases is historical and was not revalidated during this remediation.
+Tests: 165 pass, 0 fail, 461 assertions, 0 skipped across 7 files in each of two identical full-suite runs on the Phase 1C code/test commit. Listening bank remains empty and is not part of this phase.
 Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948d6e...)
 
 ---
@@ -245,14 +246,17 @@ Phase 1C establishes a deny-by-default ownership authorization boundary. All 42 
 
 ### Tests
 
-- 149 focused authorization tests across 6 test files
-- Coverage: role normalization, ID validation, owner-scoped loaders, nested loaders, mutation authorization, read/list/export authorization, nested resource operations, admin boundary, role matrix, private-resource no-bypass, connection POST authorization, connection concurrency
-- All tests use a temporary external SQLite database with deterministic fixtures
+- 151 focused authorization tests across 6 test files; 390 assertions, 0 failures, 0 skipped
+- Full suite: two identical runs of 165 tests and 461 assertions across 7 files
+- Coverage includes role normalization, ID validation, owner-scoped loaders, nested loaders, mutation authorization, read/list/export authorization, nested resource operations, admin boundary, role matrix, private-resource no-bypass, true parallel document revisions, parallel connection creation/re-request, and parallel pending accept/decline transitions
+- True parallel revision results are two fulfilled handler calls with HTTP outcomes 200 and 409; final Document version is 2, DocumentVersion numbers are exactly [1, 2], and exactly one completed RevisionRequest points to version 2
+- Parallel connection races are two fulfilled handler calls with HTTP outcomes 200 and 409; one connection row remains, participant IDs are unchanged, and the accept/decline race creates exactly one matching success audit row
+- All database-backed tests use a newly created external SQLite validation file with deterministic fixture cleanup and reseeding
 
 ### Residual limitations
 
-- SQLite single-writer locking limits true parallel mutation concurrency; version-stamp check inside transactions provides correct serialization
-- Rate limiter state is in-memory and accumulates across test runs within a single `bun test` invocation
+- The observed SQLite test topology serialized the competing writes after both requests overlapped at deterministic barriers. The losing route returned 409; no distributed or multi-writer guarantee is claimed.
+- Production rate limiting remains in-memory by design. Authorization tests avoid shared-bucket exhaustion because fixture reseeding creates a new actor/account ID for every rate-limited test, and shared test-owned mock state is reset through one test runtime boundary.
 - Listening bank remains empty (Phase 1D)
 - Connection search consent projection simplified to narrow DTO (no per-field consent resolution for search results)
 
@@ -263,3 +267,7 @@ Phase 1C establishes a deny-by-default ownership authorization boundary. All 42 
 - Landing-page changes: NONE
 - Phase 1D started: NO
 - Push performed: NO
+
+### Acceptance status
+
+**READY FOR INDEPENDENT RE-REVIEW.** Phase 1C is not recorded as independently accepted by this implementation session.

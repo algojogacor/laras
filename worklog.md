@@ -3043,3 +3043,68 @@ Order-independence verified: reversed execution order produced identical results
 2. **`_zai` module cache**: Shared `_zai` singleton in the revise handler creates test-file ordering sensitivity for concurrency tests. The version-check test passes in isolation and within its own test file. Full test suite accommodates this by avoiding duplicate handler imports across test files.
 3. **Rate limiter persistence**: In-memory rate limiter state accumulates across test cases within a single `bun test` run. Individual test files pass; full-suite results may vary if rate limits are exhausted.
 
+---
+
+## Phase 1C — Acceptance Gap Corrective Pass
+
+Date: 2026-07-11
+Branch: main
+Starting full HEAD: `bfdd1ef6186ca77109efac6e5bd04f2030a9232a`
+Baseline: `d222b695e207ee300b20b2549c8d79afd70342e8`
+Status: **READY FOR INDEPENDENT RE-REVIEW; not independently accepted**
+
+> This entry supersedes the acceptance status and residual test-instability claims in the preceding Phase 1C remediation entry. Historical command records above remain historical.
+
+### Safe working-tree cleanup
+
+- Inspected untracked `0.26.0`: zero-byte generated command artifact; removed without commit.
+- Inspected untracked `PHASE_1C_REMEDIATION_PROMPT.md`: internal remediation prompt artifact; removed without commit.
+- No user-authored project data was removed and `git clean` was not used.
+
+### Corrective implementation
+
+- Added one shared authorization test runtime for `server-only`, `next/headers`, `next/navigation`, i18n, and deterministic ZAI generation mocks. All six authorization files now update the same actor/mock state regardless of module load order.
+- Reset test-owned cookie, generation-hook, and navigation state at each test boundary. Production authorization outcomes remain real; there is no production bypass, reset endpoint, skipped security test, or production-only test hook.
+- Rate-limited revision tests receive newly generated actor/account IDs after fixture cleanup and reseeding, so they do not share an exhausted in-memory rate-limit key.
+- Added a genuine `Promise.allSettled` document-revision race through the production route. A deterministic generation barrier makes both requests overlap before their transactions.
+- Strengthened parallel connection creation and declined re-request tests to require two fulfilled handlers with exact HTTP outcomes 200/409 and exactly one final row.
+- Added a distinct pending accept/decline race through the production PATCH handler. Exactly one transition wins, participant IDs remain unchanged, one connection row remains, and exactly one matching success audit row is written.
+
+### Concurrency evidence on code/test commit
+
+Code/test commit: `00aae805c8d7bd14997fe9b05ac0578e39767abc` (`test(security): make Phase 1C concurrency coverage deterministic`)
+
+- Parallel revision Promise statuses: `fulfilled`, `fulfilled`; HTTP outcomes sorted: `200`, `409`.
+- Final Document: version 2; content equals the sole new version content.
+- DocumentVersion rows: exactly versions `[1, 2]`, with no duplicate logical version.
+- RevisionRequest rows: exactly one `completed` row pointing to version 2; no failed or partial row.
+- Parallel connection creation and re-request Promise statuses: `fulfilled`, `fulfilled`; HTTP outcomes sorted: `200`, `409`; exactly one pending row.
+- Parallel pending accept/decline Promise statuses: `fulfilled`, `fulfilled`; HTTP outcomes sorted: `200`, `409`; final status changes once to accepted or declined; requesterId/addresseeId are unchanged; exactly one matching audit row.
+- SQLite behavior observed: overlapping requests serialize at the write boundary and the loser returns an application-level 409. No distributed or multi-writer guarantee is claimed.
+- Repetition: revision race 5/5 passes (12 assertions/run); three connection races 5/5 passes (24 assertions/run).
+
+### Validation performed on code/test commit
+
+External validation database: `D:/laras-phase1c-final-76cadc2959a64d86ba52067fb3f30760/phase1c-final.db` (new file outside the repository). Prisma 6.19.2 repeatedly returned only `Schema engine error` when asked to create a new external file, so a schema-initialized external probe database was copied to this new path; every database-backed test then cleaned and reseeded fixtures.
+
+| Command | Exit | Result |
+|---|---:|---|
+| `bunx prisma validate` | 0 | schema valid; deprecated driverAdapters preview warning |
+| `bunx prisma generate` | 0 | Prisma Client 6.19.2 generated |
+| `bunx tsc --noEmit --pretty false` | 0 | no errors |
+| `bun run lint` | 0 | clean |
+| Six focused files individually | 0 each | 151 pass, 390 assertions, 0 fail, 0 skipped |
+| Focused files, normal order | 0 each | identical 151/390/0/0 |
+| Focused files, reverse order | 0 each | identical 151/390/0/0 |
+| `bun test` run 1 | 0 | 165 pass, 461 assertions, 0 fail, 0 skipped |
+| `bun test` run 2 | 0 | 165 pass, 461 assertions, 0 fail, 0 skipped |
+| `bun run build` | 0 | compiled and generated 51/51 pages; two non-fatal Windows EINVAL standalone-copy warnings for traced `node:` filenames |
+
+### Final documentation content and external HEAD reporting
+
+- The documentation commit is created only after the code/test commit and its gates are green.
+- TypeScript, lint, full suite, build, and the full-baseline-SHA diff check are run against the working tree containing this final documentation content and again after documentation commit creation as required.
+- This file does not claim those commands ran on a commit when they ran on an uncommitted documentation working tree.
+- The documentation commit SHA and exact final repository HEAD are reported externally after commit creation; the documentation commit does not attempt to name itself.
+- Browser, Playwright, BrowserOS, and production-compatible HTTP verification for this corrective pass: **NOT PERFORMED**. Any earlier browser QA is historical and was not revalidated here.
+- Phase 1D started: NO. Push performed: NO. Prisma schema, dashboard, and landing page changed: NO.
