@@ -1,28 +1,36 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import {
+  requireActor,
+  isValidId,
+  getRequiredProfileId,
+  AuthorizationError,
+  handleAuthorizationError,
+} from "@/lib/authorization"
 
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  try {
+    const actor = await requireActor()
+    const { id } = await params
+    if (!isValidId(id)) {
+      throw new AuthorizationError("BAD_REQUEST")
+    }
+    const profileId = getRequiredProfileId(actor)
 
-  const { id } = await params
-  const profile = await db.userProfile.findUnique({
-    where: { accountId: session.userId },
-    select: { id: true },
-  })
-  if (!profile) return NextResponse.json({ error: "no-profile" }, { status: 404 })
+    // Atomic delete scoped to owner profile ID
+    const result = await db.document.deleteMany({
+      where: { id, userProfileId: profileId },
+    })
 
-  const doc = await db.document.findFirst({
-    where: { id, userProfileId: profile.id },
-  })
-  if (!doc) return NextResponse.json({ error: "not-found" }, { status: 404 })
+    if (result.count !== 1) {
+      throw new AuthorizationError("NOT_FOUND")
+    }
 
-  // This also cascades to ApplicationDocument links
-  await db.document.delete({ where: { id } })
-
-  return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    return handleAuthorizationError(error)
+  }
 }

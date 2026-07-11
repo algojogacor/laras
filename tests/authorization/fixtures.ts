@@ -159,6 +159,15 @@ export async function seedDb() {
       config: "{}",
     },
   })
+  await db.documentVersion.create({
+    data: {
+      documentId: docA.id,
+      versionNumber: 1,
+      content: CANARIES.documentA,
+      configSnapshot: "{}",
+    },
+  })
+
   const docB = await db.document.create({
     data: {
       userProfileId: IDS.profileB,
@@ -166,6 +175,14 @@ export async function seedDb() {
       title: "CV ATS B",
       content: CANARIES.documentB,
       config: "{}",
+    },
+  })
+  await db.documentVersion.create({
+    data: {
+      documentId: docB.id,
+      versionNumber: 1,
+      content: CANARIES.documentB,
+      configSnapshot: "{}",
     },
   })
 

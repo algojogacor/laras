@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import {
+  requireActor,
+  isValidId,
+  getRequiredProfileId,
+  AuthorizationError,
+  handleAuthorizationError,
+} from "@/lib/authorization"
 import { acceptConnection, declineConnection } from "@/lib/connections"
 
 /**
@@ -12,47 +18,53 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
-
-  const { id } = await params
-
-  let body: { action?: string }
   try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: "invalid-body" }, { status: 400 })
+    const actor = await requireActor()
+    const { id } = await params
+    if (!isValidId(id)) {
+      throw new AuthorizationError("BAD_REQUEST")
+    }
+    const profileId = getRequiredProfileId(actor)
+
+    let body: { action?: string }
+    try {
+      body = await request.json()
+    } catch {
+      throw new AuthorizationError("BAD_REQUEST")
+    }
+
+    let result: { ok: boolean; error?: string }
+    if (body.action === "accept") {
+      result = await acceptConnection(id, profileId)
+    } else if (body.action === "decline") {
+      result = await declineConnection(id, profileId)
+    } else {
+      throw new AuthorizationError("BAD_REQUEST")
+    }
+
+    if (!result.ok) {
+      if (result.error === "not-found") {
+        throw new AuthorizationError("NOT_FOUND")
+      }
+      if (result.error === "conflict") {
+        throw new AuthorizationError("CONFLICT")
+      }
+      throw new AuthorizationError("BAD_REQUEST")
+    }
+
+    // Audit log
+    await db.auditLog.create({
+      data: {
+        userProfileId: profileId,
+        action: `connection.${body.action}`,
+        resourceType: "Connection",
+        resourceId: id,
+        metadata: JSON.stringify({ by: actor.email }),
+      },
+    })
+
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    return handleAuthorizationError(error)
   }
-
-  const myProfile = await db.userProfile.findUnique({
-    where: { accountId: session.userId },
-    select: { id: true },
-  })
-  if (!myProfile) return NextResponse.json({ error: "no-profile" }, { status: 404 })
-
-  let result: { ok: boolean; error?: string }
-  if (body.action === "accept") {
-    result = await acceptConnection(id, myProfile.id)
-  } else if (body.action === "decline") {
-    result = await declineConnection(id, myProfile.id)
-  } else {
-    return NextResponse.json({ error: "invalid action" }, { status: 400 })
-  }
-
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 400 })
-  }
-
-  // Audit log
-  await db.auditLog.create({
-    data: {
-      userProfileId: myProfile.id,
-      action: `connection.${body.action}`,
-      resourceType: "Connection",
-      resourceId: id,
-      metadata: JSON.stringify({ by: session.email }),
-    },
-  })
-
-  return NextResponse.json({ ok: true })
 }

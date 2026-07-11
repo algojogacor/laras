@@ -1,29 +1,55 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import {
+  requireActor,
+  isValidId,
+  getRequiredProfileId,
+  AuthorizationError,
+  handleAuthorizationError,
+} from "@/lib/authorization"
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
-  const { id } = await params
-  const profile = await db.userProfile.findUnique({ where: { accountId: session.userId }, select: { id: true } })
-  if (!profile) return NextResponse.json({ error: "no-profile" }, { status: 404 })
-  const set = await db.interviewSet.findFirst({
-    where: { id, userProfileId: profile.id },
-    include: { questions: { orderBy: { order: "asc" } } },
-  })
-  if (!set) return NextResponse.json({ error: "not-found" }, { status: 404 })
-  return NextResponse.json({ set })
+  try {
+    const actor = await requireActor()
+    const { id } = await params
+    if (!isValidId(id)) {
+      throw new AuthorizationError("BAD_REQUEST")
+    }
+    const profileId = getRequiredProfileId(actor)
+
+    const set = await db.interviewSet.findFirst({
+      where: { id, userProfileId: profileId },
+      include: { questions: { orderBy: { order: "asc" } } },
+    })
+    if (!set) {
+      throw new AuthorizationError("NOT_FOUND")
+    }
+    return NextResponse.json({ set })
+  } catch (error) {
+    return handleAuthorizationError(error)
+  }
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
-  const { id } = await params
-  const profile = await db.userProfile.findUnique({ where: { accountId: session.userId }, select: { id: true } })
-  if (!profile) return NextResponse.json({ error: "no-profile" }, { status: 404 })
-  const existing = await db.interviewSet.findFirst({ where: { id, userProfileId: profile.id } })
-  if (!existing) return NextResponse.json({ error: "not-found" }, { status: 404 })
-  await db.interviewSet.delete({ where: { id } })
-  return NextResponse.json({ ok: true })
+  try {
+    const actor = await requireActor()
+    const { id } = await params
+    if (!isValidId(id)) {
+      throw new AuthorizationError("BAD_REQUEST")
+    }
+    const profileId = getRequiredProfileId(actor)
+
+    // Atomic delete scoped to owner profile ID
+    const result = await db.interviewSet.deleteMany({
+      where: { id, userProfileId: profileId },
+    })
+
+    if (result.count !== 1) {
+      throw new AuthorizationError("NOT_FOUND")
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    return handleAuthorizationError(error)
+  }
 }

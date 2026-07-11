@@ -80,13 +80,33 @@ export async function acceptConnection(
   connectionId: string,
   currentUserId: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const conn = await db.connection.findUnique({ where: { id: connectionId } })
-  if (!conn) return { ok: false, error: "not-found" }
-  if (conn.addresseeId !== currentUserId) return { ok: false, error: "not-addressee" }
-  if (conn.status !== "pending") return { ok: false, error: "not-pending" }
+  const result = await db.connection.updateMany({
+    where: {
+      id: connectionId,
+      addresseeId: currentUserId,
+      status: "pending",
+    },
+    data: {
+      status: "accepted",
+    },
+  })
 
-  await db.connection.update({ where: { id: connectionId }, data: { status: "accepted" } })
-  return { ok: true }
+  if (result.count === 1) {
+    return { ok: true }
+  }
+
+  const existing = await db.connection.findFirst({
+    where: {
+      id: connectionId,
+      addresseeId: currentUserId,
+    },
+  })
+
+  if (!existing) {
+    return { ok: false, error: "not-found" }
+  }
+
+  return { ok: false, error: "conflict" }
 }
 
 /**
@@ -96,13 +116,33 @@ export async function declineConnection(
   connectionId: string,
   currentUserId: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const conn = await db.connection.findUnique({ where: { id: connectionId } })
-  if (!conn) return { ok: false, error: "not-found" }
-  if (conn.addresseeId !== currentUserId) return { ok: false, error: "not-addressee" }
-  if (conn.status !== "pending") return { ok: false, error: "not-pending" }
+  const result = await db.connection.updateMany({
+    where: {
+      id: connectionId,
+      addresseeId: currentUserId,
+      status: "pending",
+    },
+    data: {
+      status: "declined",
+    },
+  })
 
-  await db.connection.update({ where: { id: connectionId }, data: { status: "declined" } })
-  return { ok: true }
+  if (result.count === 1) {
+    return { ok: true }
+  }
+
+  const existing = await db.connection.findFirst({
+    where: {
+      id: connectionId,
+      addresseeId: currentUserId,
+    },
+  })
+
+  if (!existing) {
+    return { ok: false, error: "not-found" }
+  }
+
+  return { ok: false, error: "conflict" }
 }
 
 /**
