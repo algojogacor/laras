@@ -1,8 +1,8 @@
 # CURRENT_STATE.md
 
-Last verified: 2026-07-11 (Phase 1B complete; all acceptance checks passed)
+Last verified: 2026-07-11 (Phase 1C complete; all acceptance gates passed)
 Current branch: main
-Phase 1B starting commit: 561589cac5d8080283e92fb50b6a5df05b2732b1
+Phase 1C final HEAD: 7064ec7e4c0f40d3e8b1a5c6622bc5d075650ff2
 Database: SQLite (local file: /home/z/my-project/db/custom.db)
 Storage: Supabase Storage (configured in .env, used for file uploads)
 Authentication: Custom JWT (jose) + bcrypt, cookie-based session (laras_session)
@@ -130,7 +130,7 @@ Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948
 ## 8. Security risks
 
 1. **RESOLVED IN PHASE 1B — Public profile data leak**: `/u/[profileId]` now selects a narrow source shape and projects it through one server-only DTO before any serialization boundary. Unauthorized properties are omitted, not blanked or hidden in CSS/React.
-2. **HIGH — No server-side authorization for non-admin APIs**: Most APIs check only `getSession()` (authenticated), not ownership or relationship. E.g., `/api/documents/[id]` doesn't verify the document belongs to the caller; `/api/connections/[id]` PATCH checks addressee but other resource APIs may not check ownership.
+2. **RESOLVED IN PHASE 1C — Resource ownership authorization**: All 42 API route handlers now enforce owner-scoped reads and mutations through `requireActor()`, owner-scoped Prisma predicates, and transaction-based revalidation. Admin and owner roles receive no private-resource bypass. Foreign/missing resources return equivalent 404 responses. Connection transitions are participant/status scoped with atomic transitions.
 3. **HIGH — No MFA, no session assurance**: Sessions are 30-day JWTs with no MFA, no step-up auth for sensitive operations.
 4. **MEDIUM — Owner bootstrap is insecure**: The owner role is set via DB script (`bun -e "db.account.update..."`), not a secure bootstrap mechanism. Anyone with DB access can self-promote.
 5. **MEDIUM — No rate limiting on connection requests / privacy changes**: `applyRateLimit` exists for generation endpoints but not for connections, privacy, or admin APIs.
@@ -212,3 +212,54 @@ The canonical field-by-field matrix is recorded in `docs/DECISIONS.md` under D7.
 - Consent applies only to the ten existing ConsentSetting fields. Summary remains owner-only until a future approved phase defines explicit consent semantics.
 - Profile URLs still expose the existing profile ID as the route locator; it is no longer duplicated inside the public DTO.
 - Consent history, public-profile preview modes, search visibility, resource ownership/IDOR, verification semantics, entitlement atomicity, and the empty listening bank remain outside Phase 1B.
+
+## 13. Phase 1C — Resource Ownership Authorization
+
+### Implementation summary
+
+Phase 1C establishes a deny-by-default ownership authorization boundary. All 42 database-backed API route handlers now enforce explicit ownership policy before returning or mutating data.
+
+### Authorization architecture
+
+- **Actor boundary**: `requireActor()` resolves `ActorContext` (accountId, profileId, email, normalized role) from the verified JWT session and current database rows. No identity is derived from request input.
+- **Role normalization**: Only `user`, `admin`, and `owner` are recognized. Unknown roles default to `user` scope (fail-closed).
+- **Owner-scoped reads**: `findOwnedDocument`, `findOwnedApplication`, `findOwnedInterviewSet`, `findOwnedEnglishSession`, `findOwnedEnglishCertificate` — all validate CUID format, then scope to `{ id, userProfileId: profileId }`.
+- **Owner-scoped mutations**: All PATCH/DELETE operations use `updateMany`/`deleteMany` with ownership predicates, or equivalent `$transaction`-based revalidation.
+- **Nested ownership**: Child resources authorize through their complete parent chain (e.g., interview question → interview set → userProfileId).
+- **Connection privacy**: `requestConnection` uses atomic `$transaction` with participant/status-scoped predicates. `requesterId` and `addresseeId` are never reassigned during a state transition. Error responses are generic and do not expose relationship state.
+- **Cache isolation**: All authenticated sensitive JSON responses include `Cache-Control: private, no-store` via the shared `safeNextResponse()` helper and updated `handleAuthorizationError()`.
+- **Admin boundary**: `requireCurrentAdmin` permits admin/owner for named admin-route operations. Admin and owner receive no automatic override for private user-owned resources.
+- **Search bounds**: Connection search enforces fixed input bounds (min 2, max 128 chars, max 20 results) and returns only a narrow projected DTO.
+- **Profile PUT validation**: Complete payload validation before any database write with per-collection size limits, per-child type checks, and protected-field stripping.
+
+### Error/enumeration policy
+
+| Code | Meaning |
+|------|---------|
+| 400 | Malformed ID or invalid input shape |
+| 401 | Unauthenticated |
+| 403 | Authenticated but insufficient role |
+| 404 | Private resource denial / missing / foreign (indistinguishable) |
+| 409 | Authorized conflict (e.g., duplicate connection) |
+| 500 | Unhandled internal error (generic response) |
+
+### Tests
+
+- 149 focused authorization tests across 6 test files
+- Coverage: role normalization, ID validation, owner-scoped loaders, nested loaders, mutation authorization, read/list/export authorization, nested resource operations, admin boundary, role matrix, private-resource no-bypass, connection POST authorization, connection concurrency
+- All tests use a temporary external SQLite database with deterministic fixtures
+
+### Residual limitations
+
+- SQLite single-writer locking limits true parallel mutation concurrency; version-stamp check inside transactions provides correct serialization
+- Rate limiter state is in-memory and accumulates across test runs within a single `bun test` invocation
+- Listening bank remains empty (Phase 1D)
+- Connection search consent projection simplified to narrow DTO (no per-field consent resolution for search results)
+
+### Deployment and scope
+
+- Schema changes: NONE
+- Dashboard changes: NONE
+- Landing-page changes: NONE
+- Phase 1D started: NO
+- Push performed: NO

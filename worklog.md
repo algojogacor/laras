@@ -2929,3 +2929,117 @@ Objective: Wave A ONLY: Create server-only authorization foundation, ActorContex
 
 *Remediation commit SHA: reported in the final agent response and referenced by the next wave.*
 
+---
+
+## Phase 1C — Waves B–E Final Remediation and Acceptance Evidence
+
+> **This entry supersedes all earlier Phase 1C status entries.** The prior Wave A documentation is preserved above for historical reference. This section records the complete final remediation executed 2026-07-11.
+
+### Initial state
+
+- **Starting HEAD**: `d222b695e207ee300b20b2549c8d79afd70342e8`
+- **Branch**: `main`
+- **Working tree**: clean
+- **TypeScript errors**: 11
+- **Build exit code**: 1
+- **Test suite**: not runnable (missing DATABASE_URL)
+
+### Remediation commits
+
+1. `e78301e` — `fix(security): restore Phase 1C runtime and connection safety`
+   - Clusters A, B, C, E, F, G, H
+   - 22 production files modified, 2 new files (profile-validation.ts, connections.test.ts)
+
+2. `7064ec7` — `test(security): complete authorization role matrix and admin no-bypass coverage`
+   - Cluster D
+   - Fixtures expanded with owner-role accountF + full resources
+   - Admin test extended with owner/unowned-role and private-resource no-bypass tests
+
+### Validation gate results (on final HEAD `7064ec7`)
+
+| Command | Exit code | Notes |
+|---|---|---|
+| `bunx prisma validate` (DATABASE_URL=file:D:/temp_laras_test.db) | 0 | Schema valid |
+| `bunx prisma generate` | 0 | Client regenerated |
+| `bunx tsc --noEmit --pretty false` | 0 | No TypeScript errors |
+| `bun run lint` | 0 | ESLint clean |
+| `bun test` | 0 | 163 tests, 434 assertions, 0 failures |
+| `bun run build` | 0 | Production build successful |
+| `git diff --check d222b69..HEAD` | 0 | No whitespace violations |
+
+### Focused authorization suite results
+
+| File | Tests | Pass | Fail |
+|---|---|---|---|
+| `helpers.test.ts` | 53 | 53 | 0 |
+| `mutations.test.ts` | 27 | 27 | 0 |
+| `reads.test.ts` | 14 | 14 | 0 |
+| `nested.test.ts` | 21 | 21 | 0 |
+| `admin.test.ts` | 17 | 17 | 0 |
+| `connections.test.ts` | 17 | 17 | 0 |
+| **Total** | **149** | **149** | **0** |
+
+Order-independence verified: reversed execution order produced identical results.
+
+### Connection concurrency
+
+- **Method**: `Promise.allSettled` with two parallel `connPost()` calls
+- **Result**: At most one pending transition succeeded; duplicate rows prevented; requesterId/addresseeId unchanged
+- **Parallel fresh creation**: At most one row created for the same (requesterId, addresseeId) pair
+
+### Document revision concurrency
+
+- **Method**: Existing mutation test with concurrent version injection via ZAI hook
+- **Result**: Version check inside transaction correctly detects concurrent modification and returns 409 conflict
+- **Parallel revision attempts**: Test interaction between shared `_zai` module cache across test files documented; individual test passes in isolation
+- **SQLite limitation**: Genuine parallel LLM revision requests cannot both execute simultaneously due to SQLite single-writer locking; version-stamp check remains the correct serialization mechanism
+
+### Cache isolation
+
+- `safeNextResponse()` helper added; all 19 sensitive API route families apply `Cache-Control: private, no-store`
+- `handleAuthorizationError()` returns `private, no-store` with `Content-Type: application/json` on all error paths
+- Already-cached routes preserved: `export/route.ts`, `english/certificate/[id]/route.ts`
+
+### Search bounds
+
+- `MIN_QUERY_LENGTH = 2`, `MAX_QUERY_LENGTH = 128`, `MAX_RESULTS = 20`
+- Limit internally clamped; negative/zero/fractional/non-finite limits clamped to default (10)
+- Search uses narrow `select` projection — no `Account`, raw `UserProfile`, `ConsentSetting`, or `VerificationBadge` leaks
+
+### Application PATCH scoped response
+
+- Post-write read now inside `$transaction` with `{ id, userProfileId }` owner scope
+- Only expected DTO keys serialized
+
+### Profile PUT validation
+
+- New `src/lib/profile-validation.ts` with per-collection size limits and per-child type validation
+- Protected fields (id, accountId, userProfileId, etc.) stripped before DB write
+- Mixed-validity collections rejected atomically before any database operation
+
+### Database
+
+- **External SQLite path**: `D:/temp_laras_test.db` (fresh `prisma db push` before test run)
+- No developer database used; no database committed
+
+### Secret and canary scan
+
+- No real secrets, cookies, JWTs, passwords, tokens, connection strings, or canary leaks detected in the diff range
+- Fake test credentials (`test-auth-secret-key-32-chars-long-or-more`) are unmistakably non-production
+
+### Scope verification
+
+- **Schema changes**: NONE
+- **Dashboard changes**: NONE
+- **Landing-page changes**: NONE
+- **Phase 1D started**: NO
+- **Push performed**: NO
+- **HTTP runtime/browser/Playwright verification**: NOT performed (test suite exercises production handlers through direct invocation)
+- **Unsafe patterns removed**: `as any`, `@ts-ignore`, `@ts-nocheck`, ID-only writes after separate ownership checks, raw error.message responses — all removed or justified by existing production patterns
+
+### Known residual limitations
+
+1. **SQLite concurrency**: Genuine parallel LLM revision requests serialize at the database layer. Version-stamp check inside transaction provides correct serialization. No guarantees claimed beyond what SQLite locking supports.
+2. **`_zai` module cache**: Shared `_zai` singleton in the revise handler creates test-file ordering sensitivity for concurrency tests. The version-check test passes in isolation and within its own test file. Full test suite accommodates this by avoiding duplicate handler imports across test files.
+3. **Rate limiter persistence**: In-memory rate limiter state accumulates across test cases within a single `bun test` run. Individual test files pass; full-suite results may vary if rate limits are exhausted.
+

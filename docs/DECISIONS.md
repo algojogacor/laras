@@ -185,3 +185,45 @@ Record of architecture and product decisions — valid, superseded, and requirin
 
 ### C7. No payment gateway
 - The brief (§25) explicitly prohibits payment gateways, credit-card checkout, and auto-renewal. The license-code system is the monetization mechanism. Do not add payment processing.
+
+---
+
+## Phase 1C — Durable Security Decisions
+
+These decisions were established during the Phase 1C resource ownership authorization implementation and remediation (2026-07-11). They must not be casually reversed, weakened, or bypassed.
+
+### D8. Actor identity derives from verified session plus current Account/Profile rows
+- `requireActor()` reads the JWT session, loads the Account by ID (throwing UNAUTHORIZED if missing), and loads the UserProfile by accountId. No identity field (accountId, profileId, role, email) is ever trusted from request input (body, query, params, or headers).
+
+### D9. Exact role normalization
+- Only `user`, `admin`, and `owner` are recognized role strings. Any unknown or malformed role string (including `moderator`, `superadmin`, empty, null, undefined) is normalized to `user` scope. `requireCurrentAdmin` allows only `admin` or `owner`. There is no wildcard, prefix, or regex-based role matching.
+
+### D10. Fail-closed unknown roles
+- An account with an unrecognized role string receives ordinary user ownership scope for private resources and is denied from admin routes. Unknown roles never receive elevated access.
+
+### D11. Admin/owner have no private ownership bypass
+- `requireCurrentAdmin` grants access to admin-namespace routes (`/api/admin/*`) only. It does NOT grant access to another user's private documents, applications, interview sets, English sessions, certificates, or profile data through owner-scoped routes. Admin and owner can only access their own private resources through owner-scoped endpoints.
+
+### D12. Foreign/missing private resources use equivalent responses
+- A request for a resource owned by another user returns 404 `{ error: "not-found" }`. A request for a syntactically valid but nonexistent resource returns the same 404 response with the same body. The responses are indistinguishable in status code, exact JSON body, exact keys, content type, and cache headers. This prevents existence oracles.
+
+### D13. Mutations use owner/relationship-scoped predicates or same-transaction revalidation
+- All PATCH/DELETE operations use `updateMany`/`deleteMany` with `{ id, userProfileId }` in the where clause, or equivalent `$transaction`-based owner revalidation before write. No mutation performs an ID-only `update({ where: { id } })` or `delete({ where: { id } })` after a separate ownership check. "Check-then-act" is prohibited.
+
+### D14. Connection transitions are participant/status scoped
+- `requestConnection` uses `$transaction` with a full participant predicate `{ requesterId, addresseeId, status }` for re-request transitions. `acceptConnection` and `declineConnection` use `updateMany` with `{ id, addresseeId, status: "pending" }`. No connection transition uses an ID-only write.
+
+### D15. Requester/addressee are never reassigned during transition
+- When a declined connection is re-requested, only `status` and `message` are updated. `requesterId` and `addresseeId` are present in the where clause but never in the data clause. They are immutable for the lifetime of the connection row.
+
+### D16. Authenticated sensitive JSON uses private/no-store
+- All authenticated JSON responses that contain user data, resource data, or authorization decisions must include `Cache-Control: private, no-store`. This is enforced through the shared `safeNextResponse()` helper and the updated `handleAuthorizationError()`. Public certificate verification and unauthenticated error responses are exempt from this requirement.
+
+### D17. Nested ownership follows complete parent chains
+- Child resources (interview questions, application-document links, document versions, revision requests) authorize through their complete parent chain. The parent resource is verified against the actor's profileId before any child access. A child resource with a mismatched parent owner is indistinguishable from a missing resource.
+
+### D18. Connection search has fixed input and result bounds
+- `MIN_QUERY_LENGTH = 2`, `MAX_QUERY_LENGTH = 128`, `MAX_RESULTS = 20`. These are named constants in `src/lib/connections.ts`. Empty, whitespace-only, too-short, and too-long queries return empty results. The limit parameter is internally clamped: negative, zero, fractional, non-finite, and excessive values are clamped to safe defaults. Search never matches or returns private email, phone, consent settings, verification evidence, or raw profile data beyond the narrow projected DTO.
+
+### D19. Accepted residual concurrency limitation
+- SQLite's single-writer locking model means truly parallel mutation requests (e.g., simultaneous document revisions, simultaneous connection requests) serialize at the database layer. Version-stamp checks inside transactions provide correct serialization semantics. No distributed-lock or multi-writer guarantees are claimed. This limitation is documented and must be re-evaluated when migrating to a multi-writer database (Postgres, Turso).
