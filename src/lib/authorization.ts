@@ -3,15 +3,48 @@ import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import { db } from "@/lib/db"
 
+// ============================================================================
+// CANONICAL ROLE MODEL — Phase 1D
+// ============================================================================
+
+/** Exact four-role union. Every code path must use this set. */
+export const CANONICAL_ROLES = ["owner", "admin", "moderator", "user"] as const
+export type CanonicalRole = (typeof CANONICAL_ROLES)[number]
+
 /**
- * Normalizes the user's role to a known subset: "user", "admin", "owner".
- * Any unknown roles default to "user".
+ * Fail-closed role normalization.
+ *
+ * Only exact lowercase matches against the canonical four-role set are
+ * recognised.  Unknown, malformed, empty, null, legacy, uppercase, and
+ * whitespace-padded values all fail closed to "user".
+ *
+ * This function MUST NOT use prefix, substring, regex, truthy, or numeric
+ * matching.  Role changes take effect on the next request because every
+ * request reloads the current Account row — the JWT carries no role claim.
  */
-export function normalizeRole(role: string | null | undefined): string {
-  if (role === "admin" || role === "owner" || role === "user") {
+export function normalizeRole(role: string | null | undefined): CanonicalRole {
+  if (
+    role === "owner" ||
+    role === "admin" ||
+    role === "moderator" ||
+    role === "user"
+  ) {
     return role
   }
   return "user"
+}
+
+/** Returns true ONLY for the exact canonical "owner" role. */
+export function isOwnerRole(role: string | null | undefined): role is "owner" {
+  return role === "owner"
+}
+
+/**
+ * Returns true for owner OR admin.  Moderator, user, unknown, and anonymous
+ * all return false.  This is the gate for the existing /api/admin/* surface.
+ */
+export function isAdminRole(role: string | null | undefined): boolean {
+  return role === "owner" || role === "admin"
 }
 
 /**
@@ -96,7 +129,7 @@ export interface ActorContext {
   accountId: string
   profileId: string | null
   email: string
-  role: string // normalized
+  role: CanonicalRole // normalized
 }
 
 /**
@@ -132,10 +165,22 @@ export async function requireActor(): Promise<ActorContext> {
 
 /**
  * Enforces that the actor has admin or owner privileges.
+ * Moderator, user, unknown role, and anonymous all receive FORBIDDEN.
  * Throws FORBIDDEN if the actor does not have the required role.
  */
 export function requireCurrentAdmin(actor: ActorContext): void {
-  if (actor.role !== "admin" && actor.role !== "owner") {
+  if (!isAdminRole(actor.role)) {
+    throw new AuthorizationError("FORBIDDEN")
+  }
+}
+
+/**
+ * Enforces that the actor has the exact owner role.
+ * Admin, moderator, user, unknown role, and anonymous all receive FORBIDDEN.
+ * Throws FORBIDDEN if the actor is not the owner.
+ */
+export function requireCurrentOwner(actor: ActorContext): void {
+  if (!isOwnerRole(actor.role)) {
     throw new AuthorizationError("FORBIDDEN")
   }
 }

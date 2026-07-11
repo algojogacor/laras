@@ -51,7 +51,11 @@ export async function getSession(): Promise<{ userId: string; email: string; rol
   return { userId: account.id, email: account.email, role: account.role }
 }
 
-/** Returns true if the session belongs to an admin or owner. */
+/**
+ * Returns true ONLY for owner or admin. Moderator, user, unknown, and
+ * anonymous all return false.  This is the gate for the admin UI page and
+ * any code path that cannot import the server-only authorization module.
+ */
 export function isAdminRole(role: string | undefined | null): boolean {
   return role === "admin" || role === "owner"
 }
