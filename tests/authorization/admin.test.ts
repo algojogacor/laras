@@ -1,72 +1,8 @@
 /// <reference types="bun-types" />
 
-import { mock, beforeAll, beforeEach, describe, expect, test } from "bun:test"
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { db } from "@/lib/db"
-
-// Mock server-only and next/navigation
-mock.module("server-only", () => ({}))
-
-let mockNotFoundTriggered = false
-mock.module("next/navigation", () => {
-  return {
-    notFound: () => {
-      mockNotFoundTriggered = true
-      throw new Error("NEXT_NOT_FOUND")
-    },
-  }
-})
-
-// Control session token
-let mockCookieValue: string | undefined = undefined
-
-mock.module("next/headers", () => {
-  return {
-    cookies: async () => {
-      return {
-        get: (name: string) => {
-          if (name === "laras_session" && mockCookieValue) {
-            return { name: "laras_session", value: mockCookieValue }
-          }
-          return undefined
-        },
-      }
-    },
-  }
-})
-
-// Mock i18n
-mock.module("@/lib/i18n", () => {
-  return {
-    getLocale: async () => "id",
-    getLocaleAndDict: async () => ({
-      t: {
-        publicProfile: {
-          title: "Profil",
-          back: "Kembali",
-          connectToView: "Hubungkan",
-          privateField: "Privat",
-          connectionsOnly: "Koneksi saja",
-          editProfile: "Edit",
-          headline: "Headline",
-          summary: "Summary",
-          experience: "Experience",
-          education: "Education",
-          skills: "Skills",
-          certifications: "Certifications",
-          languages: "Languages",
-          location: "Location",
-          links: "Links",
-          noExperience: "No exp",
-          noEducation: "No edu",
-          noSkills: "No skills",
-          connectButton: "Connect",
-          verifiedBadges: "Badges",
-          memberSince: "Member",
-        },
-      },
-    }),
-  }
-})
+import { resetTestRuntime, testRuntime } from "./test-runtime"
 
 // Import route handlers dynamically
 let adminUsersGet: any
@@ -113,8 +49,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
   })
 
   beforeEach(async () => {
-    mockCookieValue = undefined
-    mockNotFoundTriggered = false
+    resetTestRuntime()
     await cleanDb()
     await seedDb()
   })
@@ -128,7 +63,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
   // ============================================================================
   describe("GET /api/admin/users", () => {
     test("Admin can access users list", async () => {
-      mockCookieValue = await createSessionToken(IDS.adminC)
+      testRuntime.cookieValue = await createSessionToken(IDS.adminC)
       const res = await adminUsersGet()
       expect(res.status).toBe(200)
       const body = await res.json()
@@ -136,7 +71,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
     })
 
     test("Owner can access users list", async () => {
-      mockCookieValue = await createSessionToken(IDS.ownerF)
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
       const res = await adminUsersGet()
       expect(res.status).toBe(200)
       const body = await res.json()
@@ -144,13 +79,13 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
     })
 
     test("User cannot access users list (returns 403)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const res = await adminUsersGet()
       expect(res.status).toBe(403)
     })
 
     test("Unknown role cannot access users list (returns 403)", async () => {
-      mockCookieValue = await createSessionToken(IDS.unknownD)
+      testRuntime.cookieValue = await createSessionToken(IDS.unknownD)
       const res = await adminUsersGet()
       expect(res.status).toBe(403)
     })
@@ -163,25 +98,25 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
 
   describe("Announcements Admin Route", () => {
     test("Admin can list announcements", async () => {
-      mockCookieValue = await createSessionToken(IDS.adminC)
+      testRuntime.cookieValue = await createSessionToken(IDS.adminC)
       const res = await adminAnnGet()
       expect(res.status).toBe(200)
     })
 
     test("Owner can list announcements", async () => {
-      mockCookieValue = await createSessionToken(IDS.ownerF)
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
       const res = await adminAnnGet()
       expect(res.status).toBe(200)
     })
 
     test("User cannot list announcements (returns 403)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const res = await adminAnnGet()
       expect(res.status).toBe(403)
     })
 
     test("Unknown role cannot list announcements (returns 403)", async () => {
-      mockCookieValue = await createSessionToken(IDS.unknownD)
+      testRuntime.cookieValue = await createSessionToken(IDS.unknownD)
       const res = await adminAnnGet()
       expect(res.status).toBe(403)
     })
@@ -189,7 +124,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
 
   describe("Licenses Admin Route", () => {
     test("Admin can grant license", async () => {
-      mockCookieValue = await createSessionToken(IDS.adminC)
+      testRuntime.cookieValue = await createSessionToken(IDS.adminC)
       const req = new Request("http://localhost/api/admin/licenses", {
         method: "POST",
         body: JSON.stringify({
@@ -203,7 +138,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
     })
 
     test("Owner can grant license", async () => {
-      mockCookieValue = await createSessionToken(IDS.ownerF)
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
       const req = new Request("http://localhost/api/admin/licenses", {
         method: "POST",
         body: JSON.stringify({
@@ -217,7 +152,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
     })
 
     test("User cannot grant license (returns 403)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/admin/licenses", {
         method: "POST",
         body: JSON.stringify({
@@ -230,7 +165,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
     })
 
     test("Unknown role cannot grant license (returns 403)", async () => {
-      mockCookieValue = await createSessionToken(IDS.unknownD)
+      testRuntime.cookieValue = await createSessionToken(IDS.unknownD)
       const req = new Request("http://localhost/api/admin/licenses", {
         method: "POST",
         body: JSON.stringify({
@@ -257,7 +192,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
 
   describe("Verification Admin Route", () => {
     test("Admin can verify user profile", async () => {
-      mockCookieValue = await createSessionToken(IDS.adminC)
+      testRuntime.cookieValue = await createSessionToken(IDS.adminC)
       const req = new Request("http://localhost/api/admin/verification", {
         method: "POST",
         body: JSON.stringify({
@@ -271,7 +206,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
     })
 
     test("Owner can verify user profile", async () => {
-      mockCookieValue = await createSessionToken(IDS.ownerF)
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
       const req = new Request("http://localhost/api/admin/verification", {
         method: "POST",
         body: JSON.stringify({
@@ -305,7 +240,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
     })
 
     test("admin cannot read User A private documents through owner-scoped route", async () => {
-      mockCookieValue = await createSessionToken(IDS.adminC)
+      testRuntime.cookieValue = await createSessionToken(IDS.adminC)
       // Force admin's profileId to be User A's profileId via a direct DB read
       // but the route handler derives identity from session, so admin can only
       // access their own (profileC) documents.
@@ -320,7 +255,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
     })
 
     test("owner cannot read User A private documents through owner-scoped route", async () => {
-      mockCookieValue = await createSessionToken(IDS.ownerF)
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
       const res = await readsGetDocumentsHandler()
       if (res.status === 200) {
         const body = await res.json()
@@ -330,7 +265,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
     })
 
     test("admin cannot delete User A document", async () => {
-      mockCookieValue = await createSessionToken(IDS.adminC)
+      testRuntime.cookieValue = await createSessionToken(IDS.adminC)
       const req = new Request("http://localhost/api/documents/" + IDS.documentA, {
         method: "DELETE",
       })
@@ -342,7 +277,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
     })
 
     test("owner cannot delete User A document", async () => {
-      mockCookieValue = await createSessionToken(IDS.ownerF)
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
       const req = new Request("http://localhost/api/documents/" + IDS.documentA, {
         method: "DELETE",
       })
@@ -353,7 +288,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
     })
 
     test("admin cannot update User A application", async () => {
-      mockCookieValue = await createSessionToken(IDS.adminC)
+      testRuntime.cookieValue = await createSessionToken(IDS.adminC)
       const req = new Request("http://localhost/api/applications/" + IDS.applicationA, {
         method: "PATCH",
         body: JSON.stringify({ notes: "hacked" }),
@@ -366,7 +301,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
     })
 
     test("owner cannot update User A application", async () => {
-      mockCookieValue = await createSessionToken(IDS.ownerF)
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
       const req = new Request("http://localhost/api/applications/" + IDS.applicationA, {
         method: "PATCH",
         body: JSON.stringify({ notes: "hacked" }),
@@ -384,7 +319,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
   describe("Public Profile Consent Controls", () => {
     test("Stranger sees public fields but not connections/private fields", async () => {
       // Current user is stranger A viewing B
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
 
       // B has default settings:
       // fullName is public, email is private, location is connections
@@ -413,7 +348,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
       } catch (e: any) {
         expect(e.message).toBe("NEXT_NOT_FOUND")
       }
-      expect(mockNotFoundTriggered).toBe(true)
+      expect(testRuntime.notFoundTriggered).toBe(true)
     })
   })
 })

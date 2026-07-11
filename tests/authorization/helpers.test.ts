@@ -1,29 +1,8 @@
 /// <reference types="bun-types" />
 
-import { mock, beforeAll, beforeEach, describe, expect, test } from "bun:test"
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { db } from "@/lib/db"
-
-// Mock "server-only" to bypass client component runtime check in Bun tests
-mock.module("server-only", () => ({}))
-
-// State variables to control mock return values dynamically in tests
-let mockCookieValue: string | undefined = undefined
-
-// Mock Next.js "next/headers" cookie API
-mock.module("next/headers", () => {
-  return {
-    cookies: async () => {
-      return {
-        get: (name: string) => {
-          if (name === "laras_session" && mockCookieValue) {
-            return { name: "laras_session", value: mockCookieValue }
-          }
-          return undefined
-        },
-      }
-    },
-  }
-})
+import { resetTestRuntime, testRuntime } from "./test-runtime"
 
 // Declare dynamic imports
 let createSessionToken: any
@@ -80,7 +59,7 @@ describe("Authorization Foundation Remediation Tests", () => {
   })
 
   beforeEach(async () => {
-    mockCookieValue = undefined
+    resetTestRuntime()
     // Reset Account A and Admin C roles back to their default seed roles
     await db.account.update({
       where: { id: IDS.accountA },
@@ -98,7 +77,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
   test("requireActor resolves Account/Profile A from trusted session token", async () => {
     const token = await createSessionToken(IDS.accountA)
-    mockCookieValue = token
+    testRuntime.cookieValue = token
 
     const actor = await requireActor()
     expect(actor.accountId).toBe(IDS.accountA)
@@ -109,7 +88,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
   test("exact DB value 'admin' matches admin normalized role", async () => {
     const token = await createSessionToken(IDS.adminC) // Role: "admin"
-    mockCookieValue = token
+    testRuntime.cookieValue = token
     const actor = await requireActor()
     expect(actor.role).toBe("admin")
     expect(() => requireCurrentAdmin(actor)).not.toThrow()
@@ -122,7 +101,7 @@ describe("Authorization Foundation Remediation Tests", () => {
       data: { role: "owner" },
     })
     const token = await createSessionToken(IDS.adminC)
-    mockCookieValue = token
+    testRuntime.cookieValue = token
     const actor = await requireActor()
     expect(actor.role).toBe("owner")
     expect(() => requireCurrentAdmin(actor)).not.toThrow()
@@ -130,7 +109,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
   test("exact DB value 'user' matches user normalized role", async () => {
     const token = await createSessionToken(IDS.accountA) // Role: "user"
-    mockCookieValue = token
+    testRuntime.cookieValue = token
     const actor = await requireActor()
     expect(actor.role).toBe("user")
     expect(() => requireCurrentAdmin(actor)).toThrow(new AuthorizationError("FORBIDDEN"))
@@ -152,7 +131,7 @@ describe("Authorization Foundation Remediation Tests", () => {
         data: { role: r },
       })
       const token = await createSessionToken(IDS.accountA)
-      mockCookieValue = token
+      testRuntime.cookieValue = token
       const actor = await requireActor()
       expect(actor.role).toBe("user")
       expect(() => requireCurrentAdmin(actor)).toThrow(new AuthorizationError("FORBIDDEN"))
@@ -161,7 +140,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
   test("role comes from database lookup, not trusted from session token", async () => {
     const token = await createSessionToken(IDS.accountA)
-    mockCookieValue = token
+    testRuntime.cookieValue = token
 
     // Initially "user"
     let actor = await requireActor()
@@ -180,13 +159,13 @@ describe("Authorization Foundation Remediation Tests", () => {
 
   test("missing account from DB fails closed with UNAUTHORIZED", async () => {
     const token = await createSessionToken("cdeletedaccount0000000000a")
-    mockCookieValue = token
+    testRuntime.cookieValue = token
     expect(requireActor()).rejects.toThrow(new AuthorizationError("UNAUTHORIZED"))
   })
 
   test("missing profile fails closed with NOT_FOUND on owned resource loaders", async () => {
     const token = await createSessionToken(IDS.accountE) // Account E has no profile
-    mockCookieValue = token
+    testRuntime.cookieValue = token
     const actor = await requireActor()
     expect(actor.profileId).toBeNull()
 
@@ -195,7 +174,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
   test("token for Account A cannot produce Account B context", async () => {
     const token = await createSessionToken(IDS.accountA)
-    mockCookieValue = token
+    testRuntime.cookieValue = token
     const actor = await requireActor()
     expect(actor.accountId).not.toBe(IDS.accountB)
     expect(actor.profileId).not.toBe(IDS.profileB)
@@ -275,7 +254,7 @@ describe("Authorization Foundation Remediation Tests", () => {
     describe(loader.name, () => {
       test("succeeds for owner", async () => {
         const token = await createSessionToken(IDS.accountA)
-        mockCookieValue = token
+        testRuntime.cookieValue = token
         const actor = await requireActor()
 
         const resource = await loader.fn(loader.validId(), actor)
@@ -284,7 +263,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
       test("throws NOT_FOUND for foreign valid ID", async () => {
         const token = await createSessionToken(IDS.accountA)
-        mockCookieValue = token
+        testRuntime.cookieValue = token
         const actor = await requireActor()
 
         expect(loader.fn(loader.foreignId(), actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
@@ -292,7 +271,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
       test("throws NOT_FOUND for syntactically valid missing ID", async () => {
         const token = await createSessionToken(IDS.accountA)
-        mockCookieValue = token
+        testRuntime.cookieValue = token
         const actor = await requireActor()
 
         const missingId = getNonexistentId(loader.validId())
@@ -301,7 +280,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
       test("throws BAD_REQUEST for malformed ID", async () => {
         const token = await createSessionToken(IDS.accountA)
-        mockCookieValue = token
+        testRuntime.cookieValue = token
         const actor = await requireActor()
 
         const malformedId = "clygl3nco" // too short
@@ -310,7 +289,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
       test("exhibits narrow projection without account fields, passwordHash, session details, or role leakage", async () => {
         const token = await createSessionToken(IDS.accountA)
-        mockCookieValue = token
+        testRuntime.cookieValue = token
         const actor = await requireActor()
 
         const resource = await loader.fn(loader.validId(), actor)
@@ -327,7 +306,7 @@ describe("Authorization Foundation Remediation Tests", () => {
       test("denies access to admin / owner role actors", async () => {
         // Admin C cannot bypass owner checks to query User A's resource
         const token = await createSessionToken(IDS.adminC)
-        mockCookieValue = token
+        testRuntime.cookieValue = token
         const actor = await requireActor()
         expect(actor.role).toBe("admin")
 
@@ -343,7 +322,7 @@ describe("Authorization Foundation Remediation Tests", () => {
   describe("findOwnedInterviewQuestion", () => {
     test("succeeds for matching parent + child belonging to owner", async () => {
       const token = await createSessionToken(IDS.accountA)
-      mockCookieValue = token
+      testRuntime.cookieValue = token
       const actor = await requireActor()
 
       const q = await findOwnedInterviewQuestion(IDS.questionA, IDS.setA, actor)
@@ -354,7 +333,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
     test("throws NOT_FOUND for Set A + Question B (wrong child)", async () => {
       const token = await createSessionToken(IDS.accountA)
-      mockCookieValue = token
+      testRuntime.cookieValue = token
       const actor = await requireActor()
 
       expect(findOwnedInterviewQuestion(IDS.questionB, IDS.setA, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
@@ -362,7 +341,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
     test("throws NOT_FOUND for Set B + Question A (foreign parent)", async () => {
       const token = await createSessionToken(IDS.accountA)
-      mockCookieValue = token
+      testRuntime.cookieValue = token
       const actor = await requireActor()
 
       expect(findOwnedInterviewQuestion(IDS.questionA, IDS.setB, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
@@ -370,7 +349,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
     test("throws NOT_FOUND for syntactically valid missing set or question", async () => {
       const token = await createSessionToken(IDS.accountA)
-      mockCookieValue = token
+      testRuntime.cookieValue = token
       const actor = await requireActor()
 
       const missingQuestionId = getNonexistentId(IDS.questionA)
@@ -382,7 +361,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
     test("throws BAD_REQUEST for malformed parent or child ID", async () => {
       const token = await createSessionToken(IDS.accountA)
-      mockCookieValue = token
+      testRuntime.cookieValue = token
       const actor = await requireActor()
 
       expect(findOwnedInterviewQuestion("cshortq", IDS.setA, actor)).rejects.toThrow(new AuthorizationError("BAD_REQUEST"))
@@ -391,7 +370,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
     test("denies admin/owner access", async () => {
       const token = await createSessionToken(IDS.adminC)
-      mockCookieValue = token
+      testRuntime.cookieValue = token
       const actor = await requireActor()
 
       expect(findOwnedInterviewQuestion(IDS.questionA, IDS.setA, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
@@ -401,7 +380,7 @@ describe("Authorization Foundation Remediation Tests", () => {
   describe("findOwnedApplicationDocumentPair", () => {
     test("succeeds for matching App A + Document A owned by caller", async () => {
       const token = await createSessionToken(IDS.accountA)
-      mockCookieValue = token
+      testRuntime.cookieValue = token
       const actor = await requireActor()
 
       const pair = await findOwnedApplicationDocumentPair(IDS.applicationA, IDS.documentA, actor)
@@ -411,7 +390,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
     test("throws NOT_FOUND for App A + Document B (crossed owners)", async () => {
       const token = await createSessionToken(IDS.accountA)
-      mockCookieValue = token
+      testRuntime.cookieValue = token
       const actor = await requireActor()
 
       expect(findOwnedApplicationDocumentPair(IDS.applicationA, IDS.documentB, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
@@ -419,7 +398,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
     test("throws NOT_FOUND for App B + Document A (crossed owners)", async () => {
       const token = await createSessionToken(IDS.accountA)
-      mockCookieValue = token
+      testRuntime.cookieValue = token
       const actor = await requireActor()
 
       expect(findOwnedApplicationDocumentPair(IDS.applicationB, IDS.documentA, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))
@@ -427,7 +406,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
     test("throws NOT_FOUND for valid missing parent/child", async () => {
       const token = await createSessionToken(IDS.accountA)
-      mockCookieValue = token
+      testRuntime.cookieValue = token
       const actor = await requireActor()
 
       const missingAppId = getNonexistentId(IDS.applicationA)
@@ -439,7 +418,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
     test("throws BAD_REQUEST for malformed parent or child ID", async () => {
       const token = await createSessionToken(IDS.accountA)
-      mockCookieValue = token
+      testRuntime.cookieValue = token
       const actor = await requireActor()
 
       expect(findOwnedApplicationDocumentPair("cshortapp", IDS.documentA, actor)).rejects.toThrow(new AuthorizationError("BAD_REQUEST"))
@@ -448,7 +427,7 @@ describe("Authorization Foundation Remediation Tests", () => {
 
     test("denies admin/owner access", async () => {
       const token = await createSessionToken(IDS.adminC)
-      mockCookieValue = token
+      testRuntime.cookieValue = token
       const actor = await requireActor()
 
       expect(findOwnedApplicationDocumentPair(IDS.applicationA, IDS.documentA, actor)).rejects.toThrow(new AuthorizationError("NOT_FOUND"))

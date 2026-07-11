@@ -1,28 +1,8 @@
 /// <reference types="bun-types" />
 
-import { mock, beforeAll, beforeEach, describe, expect, test } from "bun:test"
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { db } from "@/lib/db"
-
-// Mock server-only
-mock.module("server-only", () => ({}))
-
-// Control session token
-let mockCookieValue: string | undefined = undefined
-
-mock.module("next/headers", () => {
-  return {
-    cookies: async () => {
-      return {
-        get: (name: string) => {
-          if (name === "laras_session" && mockCookieValue) {
-            return { name: "laras_session", value: mockCookieValue }
-          }
-          return undefined
-        },
-      }
-    },
-  }
-})
+import { resetTestRuntime, testRuntime } from "./test-runtime"
 
 // Import route handlers dynamically
 let docsGet: any
@@ -84,7 +64,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
   })
 
   beforeEach(async () => {
-    mockCookieValue = undefined
+    resetTestRuntime()
     await cleanDb()
     await seedDb()
   })
@@ -96,7 +76,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
   // ============================================================================
   describe("GET /api/documents", () => {
     test("User A can list their own documents", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const res = await docsGet()
       expect(res.status).toBe(200)
       const body = await res.json()
@@ -111,7 +91,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
   // ============================================================================
   describe("GET /api/applications", () => {
     test("User A can list their own applications", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const res = await appsGet()
       expect(res.status).toBe(200)
       const body = await res.json()
@@ -126,7 +106,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
   // ============================================================================
   describe("GET /api/interview-sets", () => {
     test("User A can list their own interview sets", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const res = await setsGet()
       expect(res.status).toBe(200)
       const body = await res.json()
@@ -141,7 +121,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
   // ============================================================================
   describe("GET /api/english/certificates and [id]", () => {
     test("User A can list their own certificates", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const res = await certsGet()
       expect(res.status).toBe(200)
       const body = await res.json()
@@ -151,7 +131,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
     })
 
     test("User A can read their own certificate detail with private cache headers", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/english/certificate/" + IDS.certA)
       const res = await certDetailGet(req, { params: makeParams(IDS.certA) })
       expect(res.status).toBe(200)
@@ -161,7 +141,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
     })
 
     test("User A cannot read User B's certificate detail (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/english/certificate/" + IDS.certB)
       const res = await certDetailGet(req, { params: makeParams(IDS.certB) })
       expect(res.status).toBe(404)
@@ -173,7 +153,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
   // ============================================================================
   describe("GET Document Exports", () => {
     test("User A can export their own bio with private cache headers", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       await db.document.update({
         where: { id: IDS.documentA },
         data: {
@@ -190,7 +170,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
     })
 
     test("User A can export their own essay with private cache headers", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       await db.document.update({
         where: { id: IDS.documentA },
         data: {
@@ -206,7 +186,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
     })
 
     test("User A can export their own cv-ats with private cache headers", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       await db.document.update({
         where: { id: IDS.documentA },
         data: {
@@ -227,7 +207,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
     })
 
     test("User A can export their own cover-letter with private cache headers", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       await db.document.update({
         where: { id: IDS.documentA },
         data: {
@@ -243,7 +223,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
     })
 
     test("User A can export their own deck with private cache headers", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/documents/deck/export")
       const res = await deckExportGet(req)
       expect(res.status).toBe(200)
@@ -252,7 +232,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
     })
 
     test("User A cannot export User B's bio (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       await db.document.update({ where: { id: IDS.documentB }, data: { type: "bio" } })
 
       const req = new Request("http://localhost/api/documents/bio/" + IDS.documentB + "/export")
@@ -261,7 +241,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
     })
 
     test("User A cannot export their own document if type mismatch (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       // docA is type cv-ats, so exporting as bio should fail
       const req = new Request("http://localhost/api/documents/bio/" + IDS.documentA + "/export")
       const res = await bioExportGet(req, { params: makeParams(IDS.documentA) })
@@ -269,7 +249,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
     })
 
     test("User A can export their own profile data as JSON with private cache headers", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const res = await profileExportGet()
       expect(res.status).toBe(200)
       expect(res.headers.get("Cache-Control")).toBe("private, no-store")
@@ -283,7 +263,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
   // ============================================================================
   describe("GET /api/connections and search", () => {
     test("User A can search other users by name (excluding self, matching name, ignoring email)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
 
       // Search matching "User B"
       let req = new Request("http://localhost/api/connections?q=User%20B")
@@ -307,7 +287,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
     })
 
     test("Search results hide private emails for strangers", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/connections?q=User%20B")
       const res = await connsGet(req)
       const body = await res.json()
@@ -326,7 +306,7 @@ describe("Wave C Reads and Exports Authorization Tests", () => {
         },
       })
 
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       let res = await connsGet(new Request("http://localhost/api/connections"))
       let body = await res.json()
 

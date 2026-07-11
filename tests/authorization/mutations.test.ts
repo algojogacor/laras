@@ -1,58 +1,8 @@
 /// <reference types="bun-types" />
 
-import { mock, beforeAll, beforeEach, describe, expect, test } from "bun:test"
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { db } from "@/lib/db"
-import ZAI from "z-ai-web-dev-sdk"
-
-// Mock server-only
-mock.module("server-only", () => ({}))
-
-// Control session token
-let mockCookieValue: string | undefined = undefined
-let zaiCompletionsHook: (() => Promise<void>) | undefined = undefined
-
-mock.module("next/headers", () => {
-  return {
-    cookies: async () => {
-      return {
-        get: (name: string) => {
-          if (name === "laras_session" && mockCookieValue) {
-            return { name: "laras_session", value: mockCookieValue }
-          }
-          return undefined
-        },
-      }
-    },
-  }
-})
-
-// Directly override ZAI.create to bypass module caching issues in Bun test runner
-ZAI.create = async () => {
-  return {
-    chat: {
-      completions: {
-        create: async () => {
-          if (zaiCompletionsHook) {
-            await zaiCompletionsHook()
-          }
-          return {
-            choices: [
-              {
-                message: {
-                  content: JSON.stringify({
-                    fullName: "User A Revised",
-                    experiences: [],
-                    warnings: [],
-                  }),
-                },
-              },
-            ],
-          }
-        },
-      },
-    },
-  } as any
-}
+import { resetTestRuntime, testRuntime } from "./test-runtime"
 
 // Import route handlers dynamically
 let appPatch: any
@@ -107,8 +57,7 @@ describe("Wave B Mutations Authorization Tests", () => {
   })
 
   beforeEach(async () => {
-    mockCookieValue = undefined
-    zaiCompletionsHook = undefined
+    resetTestRuntime()
     await cleanDb()
     await seedDb()
   })
@@ -121,7 +70,7 @@ describe("Wave B Mutations Authorization Tests", () => {
   // ============================================================================
   describe("PATCH /api/applications/[id]", () => {
     test("User A can update their own application", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/applications/" + IDS.applicationA, {
         method: "PATCH",
         body: JSON.stringify({ position: "Updated Dev" }),
@@ -134,7 +83,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("User A cannot update User B's application (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/applications/" + IDS.applicationB, {
         method: "PATCH",
         body: JSON.stringify({ position: "Hacked Dev" }),
@@ -149,7 +98,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("Admin role cannot update User B's application (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.adminC)
+      testRuntime.cookieValue = await createSessionToken(IDS.adminC)
       const req = new Request("http://localhost/api/applications/" + IDS.applicationB, {
         method: "PATCH",
         body: JSON.stringify({ position: "Admin Dev" }),
@@ -168,7 +117,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("Malformed ID returns 400", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/applications/invalid-id", {
         method: "PATCH",
         body: JSON.stringify({ position: "Invalid Dev" }),
@@ -180,7 +129,7 @@ describe("Wave B Mutations Authorization Tests", () => {
 
   describe("DELETE /api/applications/[id]", () => {
     test("User A can delete their own application", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/applications/" + IDS.applicationA, { method: "DELETE" })
       const res = await appDelete(req, { params: makeParams(IDS.applicationA) })
       expect(res.status).toBe(200)
@@ -190,7 +139,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("User A cannot delete User B's application (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/applications/" + IDS.applicationB, { method: "DELETE" })
       const res = await appDelete(req, { params: makeParams(IDS.applicationB) })
       expect(res.status).toBe(404)
@@ -205,7 +154,7 @@ describe("Wave B Mutations Authorization Tests", () => {
   // ============================================================================
   describe("DELETE /api/documents/[id]", () => {
     test("User A can delete their own document", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/documents/" + IDS.documentA, { method: "DELETE" })
       const res = await docDelete(req, { params: makeParams(IDS.documentA) })
       expect(res.status).toBe(200)
@@ -215,7 +164,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("User A cannot delete User B's document (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/documents/" + IDS.documentB, { method: "DELETE" })
       const res = await docDelete(req, { params: makeParams(IDS.documentB) })
       expect(res.status).toBe(404)
@@ -230,7 +179,7 @@ describe("Wave B Mutations Authorization Tests", () => {
   // ============================================================================
   describe("POST /api/documents/[id]/revise", () => {
     test("User A can revise their own document (creates new version, revisions)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/documents/" + IDS.documentA + "/revise", {
         method: "POST",
         body: JSON.stringify({ instruction: "make it sound more technical" }),
@@ -253,7 +202,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("User A cannot revise User B's document (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/documents/" + IDS.documentB + "/revise", {
         method: "POST",
         body: JSON.stringify({ instruction: "hack document" }),
@@ -262,11 +211,74 @@ describe("Wave B Mutations Authorization Tests", () => {
       expect(res.status).toBe(404)
     })
 
+    test("parallel revisions advance one logical version without partial rows", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
+
+      let arrivals = 0
+      let releaseBarrier!: () => void
+      const barrier = new Promise<void>((resolve) => {
+        releaseBarrier = resolve
+      })
+      testRuntime.zaiCompletionsHook = async () => {
+        arrivals += 1
+        if (arrivals === 2) releaseBarrier()
+        await barrier
+      }
+
+      const makeRevisionRequest = (instruction: string) =>
+        new Request(`http://localhost/api/documents/${IDS.documentA}/revise`, {
+          method: "POST",
+          body: JSON.stringify({ instruction }),
+        })
+
+      const results = await Promise.allSettled([
+        docRevisePost(makeRevisionRequest("parallel edit alpha"), {
+          params: makeParams(IDS.documentA),
+        }),
+        docRevisePost(makeRevisionRequest("parallel edit beta"), {
+          params: makeParams(IDS.documentA),
+        }),
+      ])
+
+      expect(arrivals).toBe(2)
+      expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled"])
+
+      const responses = results.map((result) => {
+        if (result.status !== "fulfilled") throw result.reason
+        return result.value as Response
+      })
+      expect(responses.map((response) => response.status).sort()).toEqual([200, 409])
+
+      const finalDocument = await db.document.findUnique({
+        where: { id: IDS.documentA },
+      })
+      const versions = await db.documentVersion.findMany({
+        where: { documentId: IDS.documentA },
+        orderBy: { versionNumber: "asc" },
+      })
+      const revisions = await db.revisionRequest.findMany({
+        where: { documentId: IDS.documentA },
+        orderBy: { createdAt: "asc" },
+      })
+
+      expect(finalDocument?.version).toBe(2)
+      expect(versions.map((version) => version.versionNumber)).toEqual([1, 2])
+      expect(new Set(versions.map((version) => version.versionNumber)).size).toBe(2)
+      expect(revisions).toHaveLength(1)
+      expect(revisions[0]?.status).toBe("completed")
+      expect(revisions[0]?.resultVersionId).toBe(versions[1]?.id)
+      expect(["parallel edit alpha", "parallel edit beta"]).toContain(
+        revisions[0]?.instruction,
+      )
+      expect(versions[1]?.revisionInstruction).toBe(revisions[0]?.instruction)
+      expect(finalDocument?.content).toBe(versions[1]?.content)
+    })
+
     test("Concurrent edits return 409 conflict", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
 
       // Set hook to update database version concurrently during LLM execution
-      zaiCompletionsHook = async () => {
+      testRuntime.zaiCompletionsHook = async () => {
         await db.document.update({
           where: { id: IDS.documentA },
           data: { version: 99 },
@@ -288,7 +300,7 @@ describe("Wave B Mutations Authorization Tests", () => {
   // ============================================================================
   describe("DELETE /api/interview-sets/[id]", () => {
     test("User A can delete their own interview set", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/interview-sets/" + IDS.setA, { method: "DELETE" })
       const res = await setDelete(req, { params: makeParams(IDS.setA) })
       expect(res.status).toBe(200)
@@ -298,7 +310,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("User A cannot delete User B's interview set (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/interview-sets/" + IDS.setB, { method: "DELETE" })
       const res = await setDelete(req, { params: makeParams(IDS.setB) })
       expect(res.status).toBe(404)
@@ -307,7 +319,7 @@ describe("Wave B Mutations Authorization Tests", () => {
 
   describe("POST /api/interview-sets/[id]/feedback", () => {
     test("User A can submit answer and get feedback for their own question", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/interview-sets/" + IDS.setA + "/feedback", {
         method: "POST",
         body: JSON.stringify({ questionId: IDS.questionA, answer: "My starter answer" }),
@@ -321,7 +333,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("User A cannot submit feedback for Set A + Question B (mismatched child, returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/interview-sets/" + IDS.setA + "/feedback", {
         method: "POST",
         body: JSON.stringify({ questionId: IDS.questionB, answer: "Hacked answer" }),
@@ -331,7 +343,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("User A cannot submit feedback for Set B + Question A (foreign parent, returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/interview-sets/" + IDS.setB + "/feedback", {
         method: "POST",
         body: JSON.stringify({ questionId: IDS.questionA, answer: "Hacked answer" }),
@@ -346,7 +358,7 @@ describe("Wave B Mutations Authorization Tests", () => {
   // ============================================================================
   describe("POST /api/english/submit", () => {
     test("User A can submit answers for their own English session", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/english/submit", {
         method: "POST",
         body: JSON.stringify({ sessionId: IDS.sessionA, answers: { "q1": 1 } }),
@@ -359,7 +371,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("User A cannot submit answers for User B's English session (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/english/submit", {
         method: "POST",
         body: JSON.stringify({ sessionId: IDS.sessionB, answers: { "q1": 1 } }),
@@ -376,7 +388,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("User A can create certificate for completed scored session", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       // First score the session
       await db.englishSession.update({
         where: { id: IDS.sessionA },
@@ -396,7 +408,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("User A cannot create certificate for non-scored session (returns 400)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/english/certificates", {
         method: "POST",
         body: JSON.stringify({ sessionId: IDS.sessionA }),
@@ -406,7 +418,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("User A cannot create duplicate certificates for the same session (returns 409)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       await db.englishSession.update({
         where: { id: IDS.sessionA },
         data: { score: 80, questions: JSON.stringify([{ id: "q1", answer: 1 }]) },
@@ -430,7 +442,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("User A cannot mint certificate from User B's session (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       await db.englishSession.update({
         where: { id: IDS.sessionB },
         data: { score: 80 },
@@ -464,7 +476,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("Pending addressee (User A) can accept request", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/connections/" + pendingConnId, {
         method: "PATCH",
         body: JSON.stringify({ action: "accept" }),
@@ -477,7 +489,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("Pending requester (User B) cannot accept request (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountB)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountB)
       const req = new Request("http://localhost/api/connections/" + pendingConnId, {
         method: "PATCH",
         body: JSON.stringify({ action: "accept" }),
@@ -490,7 +502,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("Accepting an already accepted connection returns 409", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
 
       // Accept it first
       const req1 = new Request("http://localhost/api/connections/" + pendingConnId, {
@@ -511,7 +523,7 @@ describe("Wave B Mutations Authorization Tests", () => {
     })
 
     test("Accepting a nonexistent connection ID returns 404", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const nonexistentId = getNonexistentId(pendingConnId)
       const req = new Request("http://localhost/api/connections/" + nonexistentId, {
         method: "PATCH",

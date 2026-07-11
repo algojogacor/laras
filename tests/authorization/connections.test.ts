@@ -1,27 +1,7 @@
 /// <reference types="bun-types" />
 
-import { mock, beforeAll, beforeEach, describe, expect, test } from "bun:test"
-
-// Mock server-only BEFORE any module that may import it
-mock.module("server-only", () => ({}))
-
-// Control session token
-let mockCookieValue: string | undefined = undefined
-
-mock.module("next/headers", () => {
-  return {
-    cookies: async () => {
-      return {
-        get: (name: string) => {
-          if (name === "laras_session" && mockCookieValue) {
-            return { name: "laras_session", value: mockCookieValue }
-          }
-          return undefined
-        },
-      }
-    },
-  }
-})
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test"
+import { resetTestRuntime, testRuntime } from "./test-runtime"
 
 // Dynamic handler imports - set in beforeAll
 let connPost: any
@@ -34,17 +14,18 @@ let createSessionToken: any, isValidId: any
 let db: any
 
 async function setActor(accountId: string) {
-  mockCookieValue = await createSessionToken(accountId)
+  testRuntime.cookieValue = await createSessionToken(accountId)
 }
 
 async function clearActor() {
-  mockCookieValue = undefined
+  testRuntime.cookieValue = undefined
 }
 
 function makeParams(id: string): Promise<{ id: string }> {
   return Promise.resolve({ id })
 }
 
+describe.serial("Connection integration tests", () => {
 describe("Connection POST Authorization Tests", () => {
   beforeAll(async () => {
     process.env.AUTH_SECRET = "test-auth-secret-key-32-chars-long-or-more"
@@ -73,7 +54,7 @@ describe("Connection POST Authorization Tests", () => {
   })
 
   beforeEach(async () => {
-    mockCookieValue = undefined
+    resetTestRuntime()
     await cleanDb()
     await seedDb()
   })
@@ -445,7 +426,7 @@ describe("Connection POST Concurrency Tests", () => {
   })
 
   beforeEach(async () => {
-    mockCookieValue = undefined
+    resetTestRuntime()
     await cleanDb()
     await seedDb()
   })
@@ -482,19 +463,18 @@ describe("Connection POST Concurrency Tests", () => {
     })
     const results = await Promise.allSettled([connPost(req1), connPost(req2)])
 
-    // At least one should succeed
-    const responses = results
-      .filter((r) => r.status === "fulfilled")
-      .map((r: any) => r.value)
-    expect(responses.length).toBeGreaterThan(0)
+    expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled"])
+    const responses = results.map((result) => {
+      if (result.status !== "fulfilled") throw result.reason
+      return result.value as Response
+    })
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409])
 
-    // Final state: exactly one row, status is either pending (re-request succeeded)
-    // or declined (if the re-request transition failed)
     const final = await db.connection.findUnique({ where: { id: conn!.id } })
     expect(final).not.toBeNull()
-    // At most one succeeded in changing the status
-    const statusOk = final!.status === "pending" || final!.status === "declined"
-    expect(statusOk).toBe(true)
+    expect(final!.status).toBe("pending")
+    expect(final!.requesterId).toBe(IDS.profileA)
+    expect(final!.addresseeId).toBe(IDS.profileB)
 
     // Exactly one row total for this pair
     const count = await db.connection.count({
@@ -521,8 +501,12 @@ describe("Connection POST Concurrency Tests", () => {
     })
     const results = await Promise.allSettled([connPost(req1), connPost(req2)])
 
-    const fulfilled = results.filter((r) => r.status === "fulfilled")
-    expect(fulfilled.length).toBeGreaterThan(0)
+    expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled"])
+    const responses = results.map((result) => {
+      if (result.status !== "fulfilled") throw result.reason
+      return result.value as Response
+    })
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409])
 
     // At most one row for this profile pair
     const count = await db.connection.count({
@@ -531,15 +515,72 @@ describe("Connection POST Concurrency Tests", () => {
         addresseeId: IDS.profileB,
       },
     })
-    expect(count).toBeLessThanOrEqual(1)
-    // If a row exists, its IDs are correct
-    if (count > 0) {
-      const row = await db.connection.findFirst({
-        where: { requesterId: IDS.profileA, addresseeId: IDS.profileB },
-      })
-      expect(row!.requesterId).toBe(IDS.profileA)
-      expect(row!.addresseeId).toBe(IDS.profileB)
-      expect(row!.status).toBe("pending")
-    }
+    expect(count).toBe(1)
+    const row = await db.connection.findFirst({
+      where: { requesterId: IDS.profileA, addresseeId: IDS.profileB },
+    })
+    expect(row!.requesterId).toBe(IDS.profileA)
+    expect(row!.addresseeId).toBe(IDS.profileB)
+    expect(row!.status).toBe("pending")
   })
+
+  test("parallel pending accept and decline permit exactly one audited transition", async () => {
+    await setActor(IDS.accountA)
+    const createResponse = await connPost(new Request("http://localhost/api/connections", {
+      method: "POST",
+      body: JSON.stringify({ addresseeId: IDS.profileB }),
+    }))
+    expect(createResponse.status).toBe(200)
+
+    const initial = await db.connection.findFirst({
+      where: { requesterId: IDS.profileA, addresseeId: IDS.profileB },
+    })
+    expect(initial?.status).toBe("pending")
+
+    await setActor(IDS.accountB)
+    const makeTransitionRequest = (action: "accept" | "decline") =>
+      new Request(`http://localhost/api/connections/${initial!.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ action }),
+      })
+
+    const results = await Promise.allSettled([
+      connPatch(makeTransitionRequest("accept"), { params: makeParams(initial!.id) }),
+      connPatch(makeTransitionRequest("decline"), { params: makeParams(initial!.id) }),
+    ])
+
+    expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled"])
+    const responses = results.map((result) => {
+      if (result.status !== "fulfilled") throw result.reason
+      return result.value as Response
+    })
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409])
+
+    const final = await db.connection.findUnique({ where: { id: initial!.id } })
+    expect(["accepted", "declined"]).toContain(final?.status)
+    expect(final?.requesterId).toBe(initial?.requesterId)
+    expect(final?.addresseeId).toBe(initial?.addresseeId)
+
+    const auditRows = await db.auditLog.findMany({
+      where: {
+        resourceType: "Connection",
+        resourceId: initial!.id,
+        action: { in: ["connection.accept", "connection.decline"] },
+      },
+    })
+    expect(auditRows).toHaveLength(1)
+    expect(auditRows[0]?.userProfileId).toBe(IDS.profileB)
+    expect(auditRows[0]?.action).toBe(`connection.${final?.status === "accepted" ? "accept" : "decline"}`)
+
+    const pairRows = await db.connection.findMany({
+      where: {
+        OR: [
+          { requesterId: IDS.profileA, addresseeId: IDS.profileB },
+          { requesterId: IDS.profileB, addresseeId: IDS.profileA },
+        ],
+      },
+    })
+    expect(pairRows).toHaveLength(1)
+  }, 15_000)
+})
 })

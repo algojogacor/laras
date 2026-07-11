@@ -1,28 +1,8 @@
 /// <reference types="bun-types" />
 
-import { mock, beforeAll, beforeEach, describe, expect, test } from "bun:test"
+import { beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { db } from "@/lib/db"
-
-// Mock server-only
-mock.module("server-only", () => ({}))
-
-// Control session token
-let mockCookieValue: string | undefined = undefined
-
-mock.module("next/headers", () => {
-  return {
-    cookies: async () => {
-      return {
-        get: (name: string) => {
-          if (name === "laras_session" && mockCookieValue) {
-            return { name: "laras_session", value: mockCookieValue }
-          }
-          return undefined
-        },
-      }
-    },
-  }
-})
+import { resetTestRuntime, testRuntime } from "./test-runtime"
 
 // Import route handlers dynamically
 let appDocPost: any
@@ -49,7 +29,7 @@ describe("Wave D Nested Resources and All-or-Nothing Authorization Tests", () =>
   })
 
   beforeEach(async () => {
-    mockCookieValue = undefined
+    resetTestRuntime()
     await cleanDb()
     await seedDb()
   })
@@ -66,7 +46,7 @@ describe("Wave D Nested Resources and All-or-Nothing Authorization Tests", () =>
         where: { applicationId: IDS.applicationA, documentId: IDS.documentA },
       })
 
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/applications/" + IDS.applicationA + "/documents", {
         method: "POST",
         body: JSON.stringify({ documentId: IDS.documentA }),
@@ -84,7 +64,7 @@ describe("Wave D Nested Resources and All-or-Nothing Authorization Tests", () =>
     })
 
     test("User A cannot link User B's document to User A's application (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/applications/" + IDS.applicationA + "/documents", {
         method: "POST",
         body: JSON.stringify({ documentId: IDS.documentB }),
@@ -94,7 +74,7 @@ describe("Wave D Nested Resources and All-or-Nothing Authorization Tests", () =>
     })
 
     test("User A cannot link User A's document to User B's application (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/applications/" + IDS.applicationB + "/documents", {
         method: "POST",
         body: JSON.stringify({ documentId: IDS.documentA }),
@@ -104,7 +84,7 @@ describe("Wave D Nested Resources and All-or-Nothing Authorization Tests", () =>
     })
 
     test("Linking same document twice returns 409 conflict", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       // The link already exists due to seeding, so POST directly
 
       const req = new Request("http://localhost/api/applications/" + IDS.applicationA + "/documents", {
@@ -116,7 +96,7 @@ describe("Wave D Nested Resources and All-or-Nothing Authorization Tests", () =>
     })
 
     test("User A can unlink their own document from their own application", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       // Use the pre-seeded link directly
 
       const req = new Request("http://localhost/api/applications/" + IDS.applicationA + "/documents?documentId=" + IDS.documentA, {
@@ -131,7 +111,7 @@ describe("Wave D Nested Resources and All-or-Nothing Authorization Tests", () =>
     })
 
     test("User A cannot delete a link belonging to User B (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
 
       const req = new Request("http://localhost/api/applications/" + IDS.applicationB + "/documents?documentId=" + IDS.documentB, {
         method: "DELETE",
@@ -145,7 +125,7 @@ describe("Wave D Nested Resources and All-or-Nothing Authorization Tests", () =>
     })
 
     test("User A cannot unlink a document they own from an application they do not own (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       // Manually seed link between B's application and A's document
       const link = await db.applicationDocument.create({
         data: { applicationId: IDS.applicationB, documentId: IDS.documentA },
@@ -164,7 +144,7 @@ describe("Wave D Nested Resources and All-or-Nothing Authorization Tests", () =>
   // ============================================================================
   describe("GET /api/documents/[id]/versions", () => {
     test("User A can load versions of their own document", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/documents/" + IDS.documentA + "/versions")
       const res = await docVersionsGet(req, { params: makeParams(IDS.documentA) })
       expect(res.status).toBe(200)
@@ -173,7 +153,7 @@ describe("Wave D Nested Resources and All-or-Nothing Authorization Tests", () =>
     })
 
     test("User A cannot load versions of User B's document (returns 404)", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/documents/" + IDS.documentB + "/versions")
       const res = await docVersionsGet(req, { params: makeParams(IDS.documentB) })
       expect(res.status).toBe(404)
@@ -185,7 +165,7 @@ describe("Wave D Nested Resources and All-or-Nothing Authorization Tests", () =>
   // ============================================================================
   describe("PUT /api/profile", () => {
     test("Client-supplied custom userProfileId in payload is ignored and caller profileId is used", async () => {
-      mockCookieValue = await createSessionToken(IDS.accountA)
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
 
       const req = new Request("http://localhost/api/profile", {
         method: "PUT",
