@@ -6,6 +6,7 @@ import {
   handleAuthorizationError,
   AuthorizationError,
   isValidId,
+  safeNextResponse
 } from "@/lib/authorization"
 import type { Plan, LicenseStatus } from "@/lib/entitlement"
 
@@ -31,7 +32,7 @@ export async function GET() {
       take: 100,
     })
 
-    return NextResponse.json({
+    return safeNextResponse({
       licenses: licenses.map((l) => ({
         id: l.id,
         plan: l.plan,
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
       },
     })
 
-    return NextResponse.json({ ok: true, license })
+    return safeNextResponse({ ok: true, license })
   } catch (error) {
     return handleAuthorizationError(error)
   }
@@ -165,7 +166,7 @@ export async function PATCH(request: Request) {
 
     const license = await db.license.update({ where: { id: licenseId }, data })
 
-    return NextResponse.json({ ok: true, license })
+    return safeNextResponse({ ok: true, license })
   } catch (error) {
     return handleAuthorizationError(error)
   }

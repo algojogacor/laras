@@ -1,4 +1,5 @@
 import "server-only"
+import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import { db } from "@/lib/db"
 
@@ -18,7 +19,7 @@ export function normalizeRole(role: string | null | undefined): string {
  * CUID1s start with 'c', consist of 24 lowercase alphanumeric characters,
  * for a total length of exactly 25.
  */
-export function isValidId(id: string | null | undefined): boolean {
+export function isValidId(id: string | null | undefined): id is string {
   if (!id || typeof id !== "string") return false
   const cuidRegex = /^c[a-z0-9]{24}$/
   return cuidRegex.test(id)
@@ -34,24 +35,60 @@ export class AuthorizationError extends Error {
 }
 
 /**
+ * Response helper that always applies Cache-Control: private, no-store
+ * to prevent authenticated sensitive responses from being cached.
+ */
+export function safeNextResponse(
+  body: unknown,
+  init?: ResponseInit
+): NextResponse {
+  const headers = new Headers(init?.headers)
+  headers.set("Cache-Control", "private, no-store")
+  return NextResponse.json(body, { ...init, headers })
+}
+
+/**
  * Centralized, exhaustive HTTP response mapping for authorization errors and unknown errors.
+ * All responses include Cache-Control: private, no-store.
  */
 export function handleAuthorizationError(error: unknown): Response {
+  const defaultHeaders = {
+    "Content-Type": "application/json",
+    "Cache-Control": "private, no-store",
+  }
   if (error instanceof AuthorizationError) {
     switch (error.code) {
       case "UNAUTHORIZED":
-        return Response.json({ error: "unauthorized" }, { status: 401 })
+        return new Response(JSON.stringify({ error: "unauthorized" }), {
+          status: 401,
+          headers: defaultHeaders,
+        })
       case "FORBIDDEN":
-        return Response.json({ error: "forbidden" }, { status: 403 })
+        return new Response(JSON.stringify({ error: "forbidden" }), {
+          status: 403,
+          headers: defaultHeaders,
+        })
       case "NOT_FOUND":
-        return Response.json({ error: "not-found" }, { status: 404 })
+        return new Response(JSON.stringify({ error: "not-found" }), {
+          status: 404,
+          headers: defaultHeaders,
+        })
       case "BAD_REQUEST":
-        return Response.json({ error: "invalid-id" }, { status: 400 })
+        return new Response(JSON.stringify({ error: "invalid-id" }), {
+          status: 400,
+          headers: defaultHeaders,
+        })
       case "CONFLICT":
-        return Response.json({ error: "conflict" }, { status: 409 })
+        return new Response(JSON.stringify({ error: "conflict" }), {
+          status: 409,
+          headers: defaultHeaders,
+        })
     }
   }
-  return Response.json({ error: "internal-server-error" }, { status: 500 })
+  return new Response(JSON.stringify({ error: "internal-server-error" }), {
+    status: 500,
+    headers: defaultHeaders,
+  })
 }
 
 

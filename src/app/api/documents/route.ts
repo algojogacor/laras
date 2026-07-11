@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { requireActor, handleAuthorizationError } from "@/lib/authorization"
+import { requireActor, handleAuthorizationError,
+  safeNextResponse
+} from "@/lib/authorization"
 
 export async function GET() {
   try {
     const actor = await requireActor()
     if (!actor.profileId) {
-      return NextResponse.json({ documents: [] })
+      return safeNextResponse({ documents: [] })
     }
 
     const documents = await db.document.findMany({
@@ -23,7 +25,7 @@ export async function GET() {
       },
     })
 
-    return NextResponse.json({
+    return safeNextResponse({
       documents: documents.map((d) => ({
         ...d,
         config: d.config ? JSON.parse(d.config) : {},

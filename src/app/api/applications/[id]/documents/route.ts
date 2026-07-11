@@ -6,6 +6,7 @@ import {
   isValidId,
   AuthorizationError,
   handleAuthorizationError,
+  safeNextResponse
 } from "@/lib/authorization"
 
 /** Link a document to an application. */
@@ -61,7 +62,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       })
     })
 
-    return NextResponse.json({ ok: true, link })
+    return safeNextResponse({ ok: true, link })
   } catch (error) {
     return handleAuthorizationError(error)
   }
@@ -114,7 +115,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       })
     })
 
-    return NextResponse.json({ ok: true })
+    return safeNextResponse({ ok: true })
   } catch (error) {
     return handleAuthorizationError(error)
   }

@@ -10,6 +10,7 @@ import {
   AuthorizationError,
   handleAuthorizationError,
   findOwnedInterviewQuestion,
+  safeNextResponse
 } from "@/lib/authorization"
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -83,7 +84,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       })
     } catch (e) {
       console.error("[interview-feedback] LLM failed:", (e as Error).message)
-      return NextResponse.json({ error: "feedback-failed" }, { status: 502 })
+      return safeNextResponse({ error: "feedback-failed" }, { status: 502 })
     }
 
     // Save feedback with ownership verified in the predicate
@@ -104,7 +105,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       throw new AuthorizationError("NOT_FOUND")
     }
 
-    return NextResponse.json({ ok: true, feedback })
+    return safeNextResponse({ ok: true, feedback })
   } catch (error) {
     return handleAuthorizationError(error)
   }

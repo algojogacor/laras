@@ -4,6 +4,7 @@ import {
   requireActor,
   requireCurrentAdmin,
   handleAuthorizationError,
+  safeNextResponse
 } from "@/lib/authorization"
 
 /**
@@ -51,7 +52,7 @@ export async function GET() {
       badges: a.profile?.verificationBadges ?? [],
     }))
 
-    return NextResponse.json({ users })
+    return safeNextResponse({ users })
   } catch (error) {
     return handleAuthorizationError(error)
   }

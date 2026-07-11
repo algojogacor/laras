@@ -6,6 +6,7 @@ import {
   handleAuthorizationError,
   AuthorizationError,
   isValidId,
+  safeNextResponse
 } from "@/lib/authorization"
 import type { VerificationType, VerificationStatus } from "@/lib/verification"
 
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
       create: { userProfileId: profileId, type, status, verifiedAt, note },
     })
 
-    return NextResponse.json({ ok: true, badge })
+    return safeNextResponse({ ok: true, badge })
   } catch (error) {
     return handleAuthorizationError(error)
   }

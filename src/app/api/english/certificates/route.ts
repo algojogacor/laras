@@ -8,6 +8,7 @@ import {
   AuthorizationError,
   handleAuthorizationError,
   findOwnedEnglishSession,
+  safeNextResponse
 } from "@/lib/authorization"
 
 /** POST /api/english/certificate — generate certificate from a completed session. */
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
       },
     })
 
-    return NextResponse.json({ ok: true, certificate: cert })
+    return safeNextResponse({ ok: true, certificate: cert })
   } catch (error) {
     return handleAuthorizationError(error)
   }
@@ -93,7 +94,7 @@ export async function GET() {
       orderBy: { issuedAt: "desc" },
     })
 
-    return NextResponse.json({ certificates: certs })
+    return safeNextResponse({ certificates: certs })
   } catch (error) {
     return handleAuthorizationError(error)
   }

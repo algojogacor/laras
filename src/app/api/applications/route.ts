@@ -4,13 +4,14 @@ import {
   requireActor,
   getRequiredProfileId,
   handleAuthorizationError,
+  safeNextResponse
 } from "@/lib/authorization"
 
 export async function GET() {
   try {
     const actor = await requireActor()
     if (!actor.profileId) {
-      return NextResponse.json({ applications: [] })
+      return safeNextResponse({ applications: [] })
     }
 
     const [applications, appDocs] = await Promise.all([
@@ -30,7 +31,7 @@ export async function GET() {
       linkedMap[ad.applicationId].push(ad.documentId)
     }
 
-    return NextResponse.json({
+    return safeNextResponse({
       applications: applications.map((a) => ({
         ...a,
         id: a.id,
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
     try {
       body = await request.json()
     } catch {
-      return NextResponse.json({ error: "invalid-body" }, { status: 400 })
+      return safeNextResponse({ error: "invalid-body" }, { status: 400 })
     }
 
     const count = await db.application.count({ where: { userProfileId: profileId } })
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
         order: count,
       },
     })
-    return NextResponse.json({ ok: true, application: app })
+    return safeNextResponse({ ok: true, application: app })
   } catch (error) {
     return handleAuthorizationError(error)
   }

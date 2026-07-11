@@ -6,6 +6,7 @@ import {
   getRequiredProfileId,
   AuthorizationError,
   handleAuthorizationError,
+  safeNextResponse
 } from "@/lib/authorization"
 
 export async function DELETE(
@@ -29,7 +30,7 @@ export async function DELETE(
       throw new AuthorizationError("NOT_FOUND")
     }
 
-    return NextResponse.json({ ok: true })
+    return safeNextResponse({ ok: true })
   } catch (error) {
     return handleAuthorizationError(error)
   }

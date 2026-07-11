@@ -5,6 +5,7 @@ import {
   requireCurrentAdmin,
   handleAuthorizationError,
   AuthorizationError,
+  safeNextResponse
 } from "@/lib/authorization"
 
 const VALID_AUDIENCES = ["all", "free", "pro", "admin"]
@@ -25,7 +26,7 @@ export async function GET() {
       take: 100,
     })
 
-    return NextResponse.json({ announcements })
+    return safeNextResponse({ announcements })
   } catch (error) {
     return handleAuthorizationError(error)
   }
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
       data: { title, body: content, audience, priority, status, publishedAt },
     })
 
-    return NextResponse.json({ ok: true, announcement })
+    return safeNextResponse({ ok: true, announcement })
   } catch (error) {
     return handleAuthorizationError(error)
   }
@@ -137,7 +138,7 @@ export async function PATCH(request: Request) {
     }
 
     const announcement = await db.announcement.update({ where: { id }, data })
-    return NextResponse.json({ ok: true, announcement })
+    return safeNextResponse({ ok: true, announcement })
   } catch (error) {
     return handleAuthorizationError(error)
   }
@@ -164,7 +165,7 @@ export async function DELETE(request: Request) {
     }
 
     await db.announcement.delete({ where: { id } })
-    return NextResponse.json({ ok: true })
+    return safeNextResponse({ ok: true })
   } catch (error) {
     return handleAuthorizationError(error)
   }

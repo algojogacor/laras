@@ -4,6 +4,7 @@ import {
   requireActor,
   findOwnedDocument,
   handleAuthorizationError,
+  safeNextResponse
 } from "@/lib/authorization"
 
 /** GET /api/documents/[id]/versions — list all versions of a document. */
@@ -29,7 +30,7 @@ export async function GET(
       },
     })
 
-    return NextResponse.json({ versions })
+    return safeNextResponse({ versions })
   } catch (error) {
     return handleAuthorizationError(error)
   }

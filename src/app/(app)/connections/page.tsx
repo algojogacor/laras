@@ -16,7 +16,7 @@ export default async function ConnectionsPage() {
   if (!profile) redirect("/onboarding")
 
   const { t } = await getLocaleAndDict()
-  const groups = await listConnections(profile.id)
+  const groups = await listConnections(profile.id, session.userId)
 
   return (
     <div className="space-y-6 animate-rise">

@@ -8,6 +8,7 @@ import {
   AuthorizationError,
   handleAuthorizationError,
   findOwnedEnglishSession,
+  safeNextResponse
 } from "@/lib/authorization"
 
 export async function POST(request: Request) {
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
       throw new AuthorizationError("NOT_FOUND")
     }
 
-    return NextResponse.json({
+    return safeNextResponse({
       ok: true,
       score,
       correct,

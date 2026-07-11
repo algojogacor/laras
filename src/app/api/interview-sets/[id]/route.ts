@@ -6,6 +6,7 @@ import {
   getRequiredProfileId,
   AuthorizationError,
   handleAuthorizationError,
+  safeNextResponse
 } from "@/lib/authorization"
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -24,7 +25,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     if (!set) {
       throw new AuthorizationError("NOT_FOUND")
     }
-    return NextResponse.json({ set })
+    return safeNextResponse({ set })
   } catch (error) {
     return handleAuthorizationError(error)
   }
@@ -48,7 +49,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       throw new AuthorizationError("NOT_FOUND")
     }
 
-    return NextResponse.json({ ok: true })
+    return safeNextResponse({ ok: true })
   } catch (error) {
     return handleAuthorizationError(error)
   }

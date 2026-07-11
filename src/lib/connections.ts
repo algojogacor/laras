@@ -1,4 +1,5 @@
 import { db } from "@/lib/db"
+import { AuthorizationError } from "@/lib/authorization"
 
 // ---------------------------------------------------------------------------
 // Relationship / Network Engine — Brief §9.3 (Network Graph)
@@ -34,43 +35,60 @@ export interface ConnectionWithProfile {
 }
 
 /**
- * Request a connection from the current user to the addressee.
- * Prevents self-requests, duplicate requests, and requests to blocked users.
+ * Request a connection from requester to addressee.
+ *
+ * - Prevents self-requests.
+ * - Prevents duplicate requests (any direction, any status) with a generic
+ *   conflict.
+ * - Allows atomic re-request of a declined connection scoped to the original
+ *   participants — never reassigns requesterId or addresseeId.
+ * - All errors are generic; relationship state is never exposed.
  */
 export async function requestConnection(
   requesterId: string,
   addresseeId: string,
   message?: string
-): Promise<{ ok: boolean; error?: string }> {
-  if (requesterId === addresseeId) return { ok: false, error: "self" }
-
-  // Check for existing connection in either direction
-  const existing = await db.connection.findFirst({
-    where: {
-      OR: [
-        { requesterId, addresseeId },
-        { requesterId: addresseeId, addresseeId: requesterId },
-      ],
-    },
-  })
-  if (existing) {
-    if (existing.status === "accepted") return { ok: false, error: "already-connected" }
-    if (existing.status === "blocked") return { ok: false, error: "blocked" }
-    if (existing.status === "pending") return { ok: false, error: "already-pending" }
-    if (existing.status === "declined") {
-      // Allow re-request after a decline: reset to pending
-      await db.connection.update({
-        where: { id: existing.id },
-        data: { status: "pending", message: message ?? null, requesterId, addresseeId },
-      })
-      return { ok: true }
-    }
+): Promise<{ id: string }> {
+  if (requesterId === addresseeId) {
+    throw new AuthorizationError("BAD_REQUEST")
   }
 
-  await db.connection.create({
-    data: { requesterId, addresseeId, message: message ?? null },
+  return await db.$transaction(async (tx) => {
+    const existing = await tx.connection.findFirst({
+      where: {
+        OR: [
+          { requesterId, addresseeId },
+          { requesterId: addresseeId, addresseeId: requesterId },
+        ],
+      },
+    })
+
+    if (existing) {
+      // Allow atomic re-request only for same-direction declined rows.
+      // The predicate includes requesterId, addresseeId, and status so we
+      // never accidentally reopen a blocked/accepted/pending connection.
+      if (existing.status === "declined" && existing.requesterId === requesterId) {
+        const result = await tx.connection.updateMany({
+          where: {
+            id: existing.id,
+            requesterId,
+            addresseeId,
+            status: "declined",
+          },
+          data: { status: "pending", message: message ?? null },
+        })
+        if (result.count === 1) return { id: existing.id }
+      }
+
+      // Any other existing state → generic conflict (do not expose status).
+      throw new AuthorizationError("CONFLICT")
+    }
+
+    const created = await tx.connection.create({
+      data: { requesterId, addresseeId, message: message ?? null },
+    })
+    return { id: created.id }
   })
-  return { ok: true }
 }
 
 /**
@@ -256,10 +274,24 @@ export async function listConnections(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Search input bounds (durable security decisions)
+// ---------------------------------------------------------------------------
+const MIN_QUERY_LENGTH = 2
+const MAX_QUERY_LENGTH = 128
+const MAX_RESULTS = 20
+
 /**
  * Search for users by name (for sending connection requests).
  * Excludes the current user and already-connected/pending users.
  * Never matches or returns private email.
+ *
+ * Input bounds:
+ * - Empty or whitespace-only queries return an empty result.
+ * - Queries shorter than MIN_QUERY_LENGTH or longer than MAX_QUERY_LENGTH
+ *   return an empty result.
+ * - The result limit is internally clamped to MAX_RESULTS.
+ * - Negative, zero, fractional, non-finite, or excessive limits are clamped.
  */
 export async function searchUsers(
   currentAccountId: string,
@@ -275,8 +307,15 @@ export async function searchUsers(
     connectionStatus: ConnectionStatus | "none"
   }>
 > {
-  const q = query.trim().toLowerCase()
-  if (!q) return []
+  const q = query.trim()
+  if (!q || q.length < MIN_QUERY_LENGTH || q.length > MAX_QUERY_LENGTH) return []
+
+  // Clamp limit: reject negative, zero, fractional, non-finite, excessive
+  let safeLimit = Math.floor(limit)
+  if (!Number.isFinite(safeLimit) || safeLimit < 1) safeLimit = 10
+  if (safeLimit > MAX_RESULTS) safeLimit = MAX_RESULTS
+
+  const normalized = q.toLowerCase()
 
   const myProfile = await db.userProfile.findUnique({
     where: { accountId: currentAccountId },
@@ -284,26 +323,29 @@ export async function searchUsers(
   })
   if (!myProfile) return []
 
-  // Find users whose fullName matches
+  // Find users whose fullName matches — only directory-eligible name field.
+  // Never search private email.
   const profiles = await db.userProfile.findMany({
     where: {
       AND: [
         { accountId: { not: currentAccountId } },
-        { fullName: { contains: q } },
+        { fullName: { contains: normalized } },
       ],
     },
-    include: {
-      consentSettings: true,
-      verificationBadges: true,
+    select: {
+      id: true,
+      fullName: true,
+      headline: true,
+      photoUrl: true,
     },
-    take: limit,
+    take: safeLimit,
   })
 
   const result: Array<{
     id: string
     fullName: string | null
     headline: string | null
-    email: string | null
+    email: null
     photoUrl: string | null
     connectionStatus: ConnectionStatus | "none"
   }> = []
@@ -317,29 +359,12 @@ export async function searchUsers(
       },
     })
 
-    const fullProfile = {
-      ...p,
-      experiences: [],
-      educations: [],
-      skills: [],
-      certifications: [],
-      languages: [],
-      verificationBadges: p.verificationBadges || [],
-    }
-
-    const pDto = projectPublicProfile({
-      profile: fullProfile as any,
-      consentSettings: p.consentSettings,
-      viewer: { accountId: currentAccountId, profileId: myProfile.id },
-      relationships: conn ? [conn] : null,
-    })
-
     result.push({
       id: p.id,
-      fullName: pDto.profile.fullName ?? null,
-      headline: p.headline,
-      email: pDto.profile.email ?? null,
-      photoUrl: p.photoUrl,
+      fullName: p.fullName ?? null,
+      headline: p.headline ?? null,
+      email: null,
+      photoUrl: p.photoUrl ?? null,
       connectionStatus: (conn?.status as ConnectionStatus) ?? "none",
     })
   }

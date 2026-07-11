@@ -6,13 +6,15 @@ import {
   getRequiredProfileId,
   handleAuthorizationError,
   AuthorizationError,
+  safeNextResponse
 } from "@/lib/authorization"
+import { validateProfilePutPayload } from "@/lib/profile-validation"
 
 export async function GET() {
   try {
     const actor = await requireActor()
     if (!actor.profileId) {
-      return NextResponse.json({ profile: null }, { status: 200 })
+      return safeNextResponse({ profile: null }, { status: 200 })
     }
 
     const profile = (await db.userProfile.findUnique({
@@ -26,8 +28,8 @@ export async function GET() {
       },
     })) as ProfileWithRelations | null
 
-    if (!profile) return NextResponse.json({ profile: null }, { status: 200 })
-    return NextResponse.json({ profile: serializeProfile(profile) })
+    if (!profile) return safeNextResponse({ profile: null }, { status: 200 })
+    return safeNextResponse({ profile: serializeProfile(profile) })
   } catch (error) {
     return handleAuthorizationError(error)
   }
@@ -71,12 +73,19 @@ export async function PUT(request: Request) {
   try {
     const actor = await requireActor()
 
-    let body: any
+    let rawBody: unknown
     try {
-      body = await request.json()
+      rawBody = await request.json()
     } catch {
       throw new AuthorizationError("BAD_REQUEST")
     }
+
+    // Validate the complete payload before any database writes.
+    // This rejects non-arrays, oversized collections, invalid child types,
+    // protected field injection, and mixed-validity collections atomically.
+    const validated = validateProfilePutPayload(rawBody)
+
+    const body = rawBody as Record<string, unknown>
 
     // Ensure profile exists or create it
     let profileId = actor.profileId
@@ -93,7 +102,6 @@ export async function PUT(request: Request) {
     const {
       fullName, headline, summary, email, phone, location, photoUrl, links,
       uiLocale, docLocale, targetRegion, opportunityTypes, preferredTone, urgency, targetExamScore,
-      experiences = [], skills = [], educations = [], certifications = [], languages = [],
     } = body
 
     await db.$transaction(async (tx) => {
@@ -132,73 +140,73 @@ export async function PUT(request: Request) {
       await tx.certification.deleteMany({ where: { userProfileId: profileId! } })
       await tx.languageProficiency.deleteMany({ where: { userProfileId: profileId! } })
 
-      if (experiences.length) {
+      if (validated.experiences.length) {
         await tx.experience.createMany({
-          data: experiences.map((e: RelationInput, i: number) => ({
-            userProfileId: profileId!, // ignore client-supplied IDs
-            type: e.type ?? "work",
-            title: e.title ?? "",
-            organization: e.organization ?? "",
-            startDate: e.startDate ?? null,
-            endDate: e.endDate ?? null,
-            current: e.current ?? false,
-            location: e.location ?? null,
-            description: e.description ?? null,
+          data: validated.experiences.map((e: Record<string, unknown>, i: number) => ({
+            userProfileId: profileId!,
+            type: (e.type as string) ?? "work",
+            title: (e.title as string) ?? "",
+            organization: (e.organization as string) ?? "",
+            startDate: (e.startDate as string) ?? null,
+            endDate: (e.endDate as string) ?? null,
+            current: (e.current as boolean) ?? false,
+            location: (e.location as string) ?? null,
+            description: (e.description as string) ?? null,
             achievements: e.achievements ? JSON.stringify(e.achievements) : null,
-            contextNotes: e.contextNotes ?? null,
-            order: e.order ?? i,
+            contextNotes: (e.contextNotes as string) ?? null,
+            order: (e.order as number) ?? i,
           })),
         })
       }
-      if (skills.length) {
+      if (validated.skills.length) {
         await tx.skill.createMany({
-          data: skills.map((s: RelationInput, i: number) => ({
-            userProfileId: profileId!, // ignore client-supplied IDs
-            name: s.name ?? "",
-            category: s.category ?? null,
-            proficiency: s.proficiency ?? null,
-            context: s.context ?? null,
-            order: s.order ?? i,
+          data: validated.skills.map((s: Record<string, unknown>, i: number) => ({
+            userProfileId: profileId!,
+            name: (s.name as string) ?? "",
+            category: (s.category as string) ?? null,
+            proficiency: (s.proficiency as string) ?? null,
+            context: (s.context as string) ?? null,
+            order: (s.order as number) ?? i,
           })),
         })
       }
-      if (educations.length) {
+      if (validated.educations.length) {
         await tx.education.createMany({
-          data: educations.map((e: RelationInput, i: number) => ({
-            userProfileId: profileId!, // ignore client-supplied IDs
-            institution: e.institution ?? "",
-            degree: e.degree ?? null,
-            field: e.field ?? null,
-            startDate: e.startDate ?? null,
-            endDate: e.endDate ?? null,
-            current: e.current ?? false,
-            gpa: e.gpa ?? null,
-            description: e.description ?? null,
-            order: e.order ?? i,
+          data: validated.educations.map((e: Record<string, unknown>, i: number) => ({
+            userProfileId: profileId!,
+            institution: (e.institution as string) ?? "",
+            degree: (e.degree as string) ?? null,
+            field: (e.field as string) ?? null,
+            startDate: (e.startDate as string) ?? null,
+            endDate: (e.endDate as string) ?? null,
+            current: (e.current as boolean) ?? false,
+            gpa: (e.gpa as string) ?? null,
+            description: (e.description as string) ?? null,
+            order: (e.order as number) ?? i,
           })),
         })
       }
-      if (certifications.length) {
+      if (validated.certifications.length) {
         await tx.certification.createMany({
-          data: certifications.map((c: RelationInput, i: number) => ({
-            userProfileId: profileId!, // ignore client-supplied IDs
-            name: c.name ?? "",
-            issuer: c.issuer ?? null,
-            issueDate: c.issueDate ?? null,
-            expiryDate: c.expiryDate ?? null,
-            credentialId: c.credentialId ?? null,
-            url: c.url ?? null,
-            order: c.order ?? i,
+          data: validated.certifications.map((c: Record<string, unknown>, i: number) => ({
+            userProfileId: profileId!,
+            name: (c.name as string) ?? "",
+            issuer: (c.issuer as string) ?? null,
+            issueDate: (c.issueDate as string) ?? null,
+            expiryDate: (c.expiryDate as string) ?? null,
+            credentialId: (c.credentialId as string) ?? null,
+            url: (c.url as string) ?? null,
+            order: (c.order as number) ?? i,
           })),
         })
       }
-      if (languages.length) {
+      if (validated.languages.length) {
         await tx.languageProficiency.createMany({
-          data: languages.map((l: RelationInput, i: number) => ({
-            userProfileId: profileId!, // ignore client-supplied IDs
-            language: l.language ?? "",
-            level: l.level ?? null,
-            order: l.order ?? i,
+          data: validated.languages.map((l: Record<string, unknown>, i: number) => ({
+            userProfileId: profileId!,
+            language: (l.language as string) ?? "",
+            level: (l.level as string) ?? null,
+            order: (l.order as number) ?? i,
           })),
         })
       }
@@ -222,7 +230,7 @@ export async function PUT(request: Request) {
       data: { profileCompletion: completion },
     })
 
-    return NextResponse.json({ ok: true, profileCompletion: completion })
+    return safeNextResponse({ ok: true, profileCompletion: completion })
   } catch (error) {
     return handleAuthorizationError(error)
   }
@@ -251,7 +259,7 @@ export async function PATCH(request: Request) {
       data,
     })
 
-    return NextResponse.json({ ok: true })
+    return safeNextResponse({ ok: true })
   } catch (error) {
     return handleAuthorizationError(error)
   }

@@ -7,13 +7,14 @@ import {
   requireActor,
   getRequiredProfileId,
   handleAuthorizationError,
+  safeNextResponse
 } from "@/lib/authorization"
 
 export async function GET() {
   try {
     const actor = await requireActor()
     if (!actor.profileId) {
-      return NextResponse.json({ sets: [] })
+      return safeNextResponse({ sets: [] })
     }
 
     const sets = await db.interviewSet.findMany({
@@ -22,7 +23,7 @@ export async function GET() {
       include: { _count: { select: { questions: true } } },
     })
 
-    return NextResponse.json({
+    return safeNextResponse({
       sets: sets.map((s) => ({ ...s, questionCount: s._count.questions })),
     })
   } catch (error) {
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     try {
       body = await request.json()
     } catch {
-      return NextResponse.json({ error: "invalid-body" }, { status: 400 })
+      return safeNextResponse({ error: "invalid-body" }, { status: 400 })
     }
 
     const profile = await db.userProfile.findUnique({
@@ -51,13 +52,13 @@ export async function POST(request: Request) {
       select: { id: true, docLocale: true },
     })
     if (!profile) {
-      return NextResponse.json({ error: "no-profile" }, { status: 404 })
+      return safeNextResponse({ error: "no-profile" }, { status: 404 })
     }
 
     // Entitlement gate: free tier capped at 3 interview sets (Brief §9.4)
     const interviewEntitlement = await canCreateInterviewSet(profile)
     if (!interviewEntitlement.allowed) {
-      return NextResponse.json(
+      return safeNextResponse(
         {
           error: "entitlement-limit",
           reason: interviewEntitlement.reason,
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
       console.error("[interview-sets] LLM failed:", (e as Error).message)
       // Clean up the empty set we just created
       await db.interviewSet.delete({ where: { id: set.id } })
-      return NextResponse.json({ error: "generation-failed" }, { status: 502 })
+      return safeNextResponse({ error: "generation-failed" }, { status: 502 })
     }
 
     if (questions.length > 0) {
@@ -109,7 +110,7 @@ export async function POST(request: Request) {
       where: { id: set.id },
       include: { questions: { orderBy: { order: "asc" } } },
     })
-    return NextResponse.json({ ok: true, set: fullSet })
+    return safeNextResponse({ ok: true, set: fullSet })
   } catch (error) {
     return handleAuthorizationError(error)
   }

@@ -6,6 +6,7 @@ import {
   getRequiredProfileId,
   AuthorizationError,
   handleAuthorizationError,
+  safeNextResponse
 } from "@/lib/authorization"
 import { acceptConnection, declineConnection } from "@/lib/connections"
 
@@ -63,7 +64,7 @@ export async function PATCH(
       },
     })
 
-    return NextResponse.json({ ok: true })
+    return safeNextResponse({ ok: true })
   } catch (error) {
     return handleAuthorizationError(error)
   }
