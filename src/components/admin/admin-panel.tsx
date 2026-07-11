@@ -77,6 +77,10 @@ interface AdminLabels {
   roleUser: string
   roleAdmin: string
   roleOwner: string
+  roleModerator: string
+  changeRole: string
+  roleChanged: string
+  roleChangeError: string
   verified: string
   pending: string
   rejected: string
@@ -122,7 +126,7 @@ const STATUS_STYLE: Record<BadgeStatus, { dot: string; text: string; icon: Lucid
   expired: { dot: "bg-chart-4", text: "text-chart-4", icon: Clock },
 }
 
-export function AdminPanel({ labels }: { labels: AdminLabels }) {
+export function AdminPanel({ labels, currentUserRole }: { labels: AdminLabels; currentUserRole: string }) {
   const [users, setUsers] = useState<User[]>([])
   const [loaded, setLoaded] = useState(false)
   const [loadError, setLoadError] = useState(false)
@@ -132,7 +136,10 @@ export function AdminPanel({ labels }: { labels: AdminLabels }) {
   const [badgeStatus, setBadgeStatus] = useState<BadgeStatus>("verified")
   const [note, setNote] = useState("")
   const [saving, startSave] = useTransition()
+  const [roleSaving, startRoleSave] = useTransition()
   const router = useRouter()
+
+  const isOwner = currentUserRole === "owner"
 
   // Load users once
   if (!loaded) {
@@ -170,7 +177,13 @@ export function AdminPanel({ labels }: { labels: AdminLabels }) {
     })[s]
 
   const labelForRole = (r: string): string =>
-    r === "owner" ? labels.roleOwner : r === "admin" ? labels.roleAdmin : labels.roleUser
+    r === "owner"
+      ? labels.roleOwner
+      : r === "admin"
+        ? labels.roleAdmin
+        : r === "moderator"
+          ? labels.roleModerator
+          : labels.roleUser
 
   const filtered = users.filter((u) => {
     const q = search.toLowerCase().trim()
@@ -190,6 +203,27 @@ export function AdminPanel({ labels }: { labels: AdminLabels }) {
     (sum, u) => sum + u.badges.filter((b) => b.status === "pending").length,
     0
   )
+
+  const handleRoleChange = (targetId: string, newRole: string) => {
+    startRoleSave(async () => {
+      try {
+        const res = await fetch("/api/admin/users", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ targetId, role: newRole }),
+        })
+        if (!res.ok) throw new Error("failed")
+        const data = await res.json()
+        setUsers((prev) =>
+          prev.map((u) => (u.id === targetId ? { ...u, role: data.role } : u))
+        )
+        toast.success(labels.roleChanged)
+        router.refresh()
+      } catch {
+        toast.error(labels.roleChangeError)
+      }
+    })
+  }
 
   const handleSave = () => {
     if (!managingUser?.profileId) return
@@ -309,18 +343,41 @@ export function AdminPanel({ labels }: { labels: AdminLabels }) {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span
-                          className={cn(
-                            "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
-                            u.role === "owner"
-                              ? "bg-primary/15 text-primary"
-                              : u.role === "admin"
+                        {isOwner && u.role !== "owner" ? (
+                          <select
+                            value={u.role}
+                            onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                            disabled={roleSaving}
+                            aria-label={`${labels.changeRole} — ${u.fullName || u.email}`}
+                            className={cn(
+                              "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border-0 bg-muted text-muted-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/50",
+                              u.role === "admin"
                                 ? "bg-chart-1/15 text-chart-1"
-                                : "bg-muted text-muted-foreground"
-                          )}
-                        >
-                          {labelForRole(u.role)}
-                        </span>
+                                : u.role === "moderator"
+                                  ? "bg-chart-4/15 text-chart-4"
+                                  : "bg-muted text-muted-foreground"
+                            )}
+                          >
+                            <option value="user">{labels.roleUser}</option>
+                            <option value="moderator">{labels.roleModerator}</option>
+                            <option value="admin">{labels.roleAdmin}</option>
+                          </select>
+                        ) : (
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
+                              u.role === "owner"
+                                ? "bg-primary/15 text-primary"
+                                : u.role === "admin"
+                                  ? "bg-chart-1/15 text-chart-1"
+                                  : u.role === "moderator"
+                                    ? "bg-chart-4/15 text-chart-4"
+                                    : "bg-muted text-muted-foreground"
+                            )}
+                          >
+                            {labelForRole(u.role)}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">

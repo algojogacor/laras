@@ -8,6 +8,7 @@ import { AnnouncementsPanel } from "@/components/admin/announcements-panel"
 import { cn } from "@/lib/utils"
 
 interface AdminTabsProps {
+  currentUserRole: string
   verificationLabels: React.ComponentProps<typeof AdminPanel>["labels"]
   licenseLabels: React.ComponentProps<typeof LicensePanel>["labels"]
   announcementLabels: React.ComponentProps<typeof AnnouncementsPanel>["labels"]
@@ -15,6 +16,7 @@ interface AdminTabsProps {
 }
 
 export function AdminTabs({
+  currentUserRole,
   verificationLabels,
   licenseLabels,
   announcementLabels,
@@ -47,7 +49,7 @@ export function AdminTabs({
       </div>
 
       {tab === "verification" ? (
-        <AdminPanel labels={verificationLabels} />
+        <AdminPanel labels={verificationLabels} currentUserRole={currentUserRole} />
       ) : tab === "licenses" ? (
         <LicensePanel labels={licenseLabels} />
       ) : (

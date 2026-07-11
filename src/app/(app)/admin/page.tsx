@@ -47,6 +47,7 @@ export default async function AdminPage() {
       </div>
 
       <AdminTabs
+        currentUserRole={session.role}
         verificationLabels={{
           title: t.admin.title,
           subtitle: t.admin.subtitle,
@@ -62,6 +63,10 @@ export default async function AdminPage() {
           roleUser: t.admin.roleUser,
           roleAdmin: t.admin.roleAdmin,
           roleOwner: t.admin.roleOwner,
+          roleModerator: t.admin.roleModerator,
+          changeRole: t.admin.changeRole,
+          roleChanged: t.admin.roleChanged,
+          roleChangeError: t.admin.roleChangeError,
           verified: t.admin.verified,
           pending: t.admin.pending,
           rejected: t.admin.rejected,
