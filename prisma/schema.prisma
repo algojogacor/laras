@@ -702,10 +702,11 @@ model QuotaLedger {
   capability     String   // e.g. "documents.create", "interview.create", "english.generate"
   consumedAt     DateTime @default(now())
   amount         Int      @default(1)
-  idempotencyKey String   @unique // client-supplied unique key per operation
+  idempotencyKey String   // client-supplied unique key per operation (scoped to user)
   metadata       String?  // JSON: { resourceType, resourceId }
   refundedAt     DateTime? // non-null means the consumption was refunded
 
+  @@unique([userProfileId, idempotencyKey])
   @@index([userProfileId])
   @@index([capability])
   @@index([consumedAt])

@@ -32,9 +32,14 @@ export async function consumeQuota(
 ): Promise<ConsumeResult> {
   try {
     return await db.$transaction(async (tx) => {
-      // 1. Check for existing idempotency key (non-refunded)
+      // 1. Check for existing idempotency key (non-refunded, scoped to user)
       const existing = await tx.quotaLedger.findUnique({
-        where: { idempotencyKey },
+        where: {
+          userProfileId_idempotencyKey: {
+            userProfileId,
+            idempotencyKey,
+          },
+        },
         select: { id: true, refundedAt: true },
       })
 

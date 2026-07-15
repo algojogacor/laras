@@ -172,8 +172,12 @@ export async function canCreateDocument(
     return { allowed: true, used: result.consumed ?? 0, limit }
   }
 
-  // Fallback: stateless count (legacy, non-atomic)
-  const used = await db.document.count({ where: { userProfileId: profile.id } })
+  // Fallback: stateless count + ledger consumption (legacy, non-atomic)
+  // Sum both sources to prevent bypass via mixed consumption paths
+  const docsCount = await db.document.count({ where: { userProfileId: profile.id } })
+  const { getCurrentConsumption } = await import("@/lib/quota-ledger")
+  const ledgerCount = await getCurrentConsumption(profile.id, "documents.create")
+  const used = docsCount + ledgerCount
   if (used >= limit) {
     return { allowed: false, reason: "document-limit", used, limit }
   }
