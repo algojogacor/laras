@@ -92,6 +92,17 @@ model UserProfile {
   connectionsOutgoing Connection[] @relation("ConnectionRequester")
   connectionsIncoming Connection[] @relation("ConnectionAddressee")
   reports            Report[]       @relation("ReporterReports")
+  conversationParticipants ConversationParticipant[]
+  sentMessages              Message[]
+  sentMessageRequests       MessageRequest[] @relation("MessageRequestSender")
+  receivedMessageRequests   MessageRequest[] @relation("MessageRequestRecipient")
+  blockedUsers              Block[]          @relation("BlockBlocker")
+  blockedBy                 Block[]          @relation("BlockBlocked")
+  organizationMemberships   OrganizationMembership[]
+  circleMemberships         CircleMembership[]
+  mentorshipProfile         MentorshipProfile?
+  mentorshipRequestsAsMentor MentorshipRequest[] @relation("MentorshipMentor")
+  mentorshipRequestsAsMentee MentorshipRequest[] @relation("MentorshipMentee")
 }
 
 // --- Riwayat pengalaman (Section 4) — contextNotes is the anti-generic foundation ---
@@ -732,6 +743,7 @@ model LicenseCode {
   currentRedemptions Int   @default(0)
   batchId         String?  // groups codes into batches/campaigns
   campaignId      String?  // links to a campaign for overrides
+  campaign        Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   createdById     String   // Account.id of the admin who created it
   isActive        Boolean  @default(true)
   startsAt        DateTime @default(now())
@@ -858,4 +870,235 @@ model ScopedAssignment {
 
   @@index([accountId])
   @@index([capability])
+}
+
+// ---------------------------------------------------------------------------
+// Campaign — License campaigns and sponsored access (Phase 5B)
+// ---------------------------------------------------------------------------
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  plan        String   // free | plus | pro | max
+  features    String?  // JSON string[] of feature keys
+  maxSeats    Int      @default(100)
+  usedSeats   Int      @default(0)
+  startsAt    DateTime @default(now())
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  createdById String   // Account.id of admin
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  codes       LicenseCode[]
+
+  @@index([isActive])
+}
+
+// ---------------------------------------------------------------------------
+// FeatureFlag — Dynamic feature flags (Phase 5B)
+// ---------------------------------------------------------------------------
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  enabled     Boolean  @default(false)
+  description String?
+  rules       String?  // JSON: { plans: [...], roles: [...], percentage: 0-100 }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// DynamicConfig — Runtime configuration (Phase 5B)
+// ---------------------------------------------------------------------------
+model DynamicConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   // JSON-encoded value
+  description String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Conversation — Professional messaging (Phase 6A)
+// ---------------------------------------------------------------------------
+model Conversation {
+  id          String   @id @default(cuid())
+  title       String?
+  type        String   @default("direct") // direct | group
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  messages    Message[]
+  participants ConversationParticipant[]
+}
+
+model ConversationParticipant {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userProfileId  String
+  userProfile    UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  lastReadAt     DateTime?
+  joinedAt       DateTime @default(now())
+
+  @@unique([conversationId, userProfileId])
+  @@index([userProfileId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         UserProfile @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  body           String
+  editedAt       DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// MessageRequest — Inbound message requests before acceptance (Phase 6A)
+// ---------------------------------------------------------------------------
+model MessageRequest {
+  id             String   @id @default(cuid())
+  senderId       String
+  sender         UserProfile @relation("MessageRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId    String
+  recipient      UserProfile @relation("MessageRequestRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  body           String
+  status         String   @default("pending") // pending | accepted | declined
+  acceptedAt     DateTime?
+  declinedAt     DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([recipientId, status])
+  @@index([senderId])
+}
+
+// ---------------------------------------------------------------------------
+// Block — User blocking (Phase 6A)
+// ---------------------------------------------------------------------------
+model Block {
+  id          String   @id @default(cuid())
+  blockerId   String
+  blocker     UserProfile @relation("BlockBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId   String
+  blocked     UserProfile @relation("BlockBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  reason      String?
+  createdAt   DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+}
+
+// ---------------------------------------------------------------------------
+// Organization — Institution/Organization workspace (Phase 7A)
+// ---------------------------------------------------------------------------
+model Organization {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String?
+  logoUrl         String?
+  website         String?
+  type            String   @default("institution") // institution | company | community | government
+  verificationStatus String @default("unverified") // unverified | pending | verified | rejected
+  verifiedAt      DateTime?
+  createdById     String   // Account.id of founder
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  memberships     OrganizationMembership[]
+}
+
+model OrganizationMembership {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userProfileId  String
+  userProfile    UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  role           String   @default("member") // owner | admin | member
+  joinedAt       DateTime @default(now())
+
+  @@unique([organizationId, userProfileId])
+  @@index([userProfileId])
+}
+
+// ---------------------------------------------------------------------------
+// CareerCircle — Professional communities (Phase 6B)
+// ---------------------------------------------------------------------------
+model CareerCircle {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  type        String   @default("community") // community | study_group | peer_review
+  createdById String   // UserProfile.id
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  memberships CircleMembership[]
+}
+
+model CircleMembership {
+  id          String   @id @default(cuid())
+  circleId    String
+  circle      CareerCircle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  userProfileId String
+  userProfile UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  role        String   @default("member") // admin | moderator | member
+  joinedAt    DateTime @default(now())
+
+  @@unique([circleId, userProfileId])
+  @@index([userProfileId])
+}
+
+// ---------------------------------------------------------------------------
+// MentorshipProfile — Mentorship system (Phase 6C)
+// ---------------------------------------------------------------------------
+model MentorshipProfile {
+  id             String   @id @default(cuid())
+  userProfileId  String   @unique
+  userProfile    UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  isMentor       Boolean  @default(false)
+  isMentee       Boolean  @default(false)
+  mentorTopics   String?  // JSON: ["career", "technical", "leadership"]
+  menteeGoals    String?  // JSON: [{ goal, timeline }]
+  bio            String?
+  availability   String?  // "weekly" | "biweekly" | "monthly"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model MentorshipRequest {
+  id          String   @id @default(cuid())
+  mentorId    String
+  mentor      UserProfile @relation("MentorshipMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  menteeId    String
+  mentee      UserProfile @relation("MentorshipMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+  message     String?
+  goals       String?  // JSON: [{ goal, timeline }]
+  status      String   @default("pending") // pending | accepted | declined
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([mentorId, status])
+  @@index([menteeId])
+}
+
+model MentorshipSession {
+  id          String   @id @default(cuid())
+  requestId   String?
+  mentorId    String
+  menteeId    String
+  title       String?
+  notes       String?
+  scheduledAt DateTime?
+  completedAt DateTime?
+  feedback    String?  // JSON: { rating, comments, goalsProgress }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([mentorId])
+  @@index([menteeId])
 }
