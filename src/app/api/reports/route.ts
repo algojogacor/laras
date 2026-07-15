@@ -92,7 +92,6 @@ export async function POST(request: NextRequest) {
 
     return safeNextResponse({ report })
   } catch (error) {
-    console.error("[reports:POST]", error)
     return handleAuthorizationError(error)
   }
 }
