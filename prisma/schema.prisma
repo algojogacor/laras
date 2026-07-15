@@ -76,6 +76,7 @@ model UserProfile {
   evidences      Evidence[]
   activityEvents ActivityEvent[]
   notifications  Notification[]
+  opportunities  Opportunity[]
   auditLogs      AuditLog[]
   verificationBadges VerificationBadge[]
   licenses       License[]
@@ -635,4 +636,35 @@ model Announcement {
 
   @@index([status, publishedAt])
   @@index([audience])
+}
+
+// ---------------------------------------------------------------------------
+// Opportunity — Opportunity Graph (Phase 3A, Brief §9.1)
+// Jobs, internships, scholarships, ODP, BUMN, CPNS, fellowships, competitions,
+// volunteering, and events. User-created (saved) or discovered.
+// ---------------------------------------------------------------------------
+model Opportunity {
+  id            String   @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  type          String   @default("job") // job | internship | scholarship | fellowship | competition | volunteer | event | odp | bumn | cpns | other
+  title         String
+  organization  String?
+  description   String?
+  requirements  String?  // JSON: { required: [...], preferred: [...], minimumEducation, minimumGPA, maxAge, etc. }
+  deadline      String?  // ISO date string
+  location      String?
+  url           String?  // external listing URL
+  source        String   @default("manual") // manual | scraped | imported
+  status        String   @default("saved") // saved | applied | interviewing | offered | accepted | rejected | archived | expired
+  matchScore    Int?     // 0-100 match against profile (computed)
+  matchDetail   String?  // JSON: { strengths: [...], gaps: [...], readiness }
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userProfileId])
+  @@index([type])
+  @@index([status])
+  @@index([deadline])
 }
