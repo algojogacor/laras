@@ -82,12 +82,18 @@ export async function cleanDb() {
   // Delete in FK-safe order: children first, then parents.
   const tables = [
     "appeal", "moderationCase", "report", "scopedAssignment",
+    "rolePermission", "permission",
+    "messageRequest", "message", "conversationParticipant", "conversation",
+    "mentorshipSession", "mentorshipRequest", "mentorshipProfile",
+    "circleMembership", "careerCircle",
+    "organizationMembership", "organization",
+    "campaign", "featureFlag", "dynamicConfig",
     "applicationDocument", "documentVersion", "revisionRequest",
     "document", "application", "interviewQuestion", "interviewSet",
     "essay", "englishCertificate", "englishSession", "evidence",
     "achievement", "opportunity", "announcementRead", "announcement",
     "licenseCode", "auditLog", "verificationBadge", "license",
-    "quotaLedger", "consentSetting", "connection",
+    "quotaLedger", "consentSetting", "connection", "block",
     "userProfile", "account",
   ]
   for (const t of tables) {
