@@ -2,6 +2,7 @@ import "server-only"
 import { db } from "@/lib/db"
 import { createNotification } from "@/lib/notifications"
 import { AuthorizationError } from "@/lib/authorization"
+import { revokeSessions } from "@/lib/auth"
 
 // ============================================================================
 // Moderation Service — Phase 4B+4C
@@ -221,6 +222,9 @@ export async function createCase(input: CreateCaseInput) {
         suspensionReason: input.reason,
       },
     })
+
+    // Revoke all active sessions for the suspended user
+    await revokeSessions(input.subjectId)
   }
 
   return {
@@ -451,6 +455,10 @@ export async function suspendUser(accountId: string, reason: string, moderatorId
     },
     select: { id: true, email: true, suspended: true, suspendedAt: true, suspensionReason: true },
   })
+
+  // Revoke all active sessions for the suspended user
+  await revokeSessions(accountId)
+
   return {
     ...account,
     suspendedAt: account.suspendedAt?.toISOString() ?? null,

@@ -58,6 +58,8 @@ server.log
 # local sqlite db
 /db/*.db
 /db/*.db-journal
+/prisma/db/*.db
+/prisma/db/*.db-journal
 # Skills directory
 /skills/.env.local
 

@@ -5,6 +5,7 @@ import { db } from "@/lib/db"
 import { resetTestRuntime, testRuntime } from "./test-runtime"
 import { cleanDb, seedDb, IDS } from "./fixtures"
 import { createSessionToken } from "@/lib/auth"
+import { PLAN_RANK, PLAN_FEATURES } from "@/lib/entitlement"
 
 let adminCampaignsGet: any
 let adminCampaignsPost: any
@@ -554,7 +555,6 @@ describe("Phase 5B+5C — Campaigns, Feature Flags & Dynamic Config", () => {
     })
 
     test("PLAN_RANK ordering is correct", () => {
-      const { PLAN_RANK } = require("@/lib/entitlement") as any
       expect(PLAN_RANK.free).toBe(0)
       expect(PLAN_RANK.plus).toBe(1)
       expect(PLAN_RANK.pro).toBe(2)
@@ -562,7 +562,6 @@ describe("Phase 5B+5C — Campaigns, Feature Flags & Dynamic Config", () => {
     })
 
     test("PLAN_FEATURES for each tier", () => {
-      const { PLAN_FEATURES } = require("@/lib/entitlement") as any
 
       // Free has no features
       expect(PLAN_FEATURES.free.length).toBe(0)

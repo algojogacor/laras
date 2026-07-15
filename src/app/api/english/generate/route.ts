@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { applyRateLimit } from "@/lib/rate-limit"
+import { canAccessAdvancedEnglish } from "@/lib/entitlement"
 import { generateReading, generateStructure, generateListening } from "@/lib/content-engine"
 import { generateAudioEdgeTTS } from "@/lib/tts-edge"
 
@@ -21,6 +22,14 @@ export async function POST(request: Request) {
 
   const locale = (body.locale as "id" | "en") || (profile.docLocale as "id" | "en") || "id"
   const difficulty = (body.difficulty as "easy" | "medium" | "hard") || "medium"
+
+  // Enforce entitlement for "hard" difficulty (pro+ only)
+  if (difficulty === "hard") {
+    const hardCheck = await canAccessAdvancedEnglish(profile)
+    if (!hardCheck.allowed) {
+      return NextResponse.json({ error: hardCheck.reason }, { status: 403 })
+    }
+  }
   const mod = body.module || "reading"
 
   if (mod === "reading") {

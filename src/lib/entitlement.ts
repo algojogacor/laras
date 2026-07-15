@@ -103,20 +103,69 @@ export async function getEntitlement(
     (l) => l.status === "active" && (!l.expiresAt || l.expiresAt > now)
   )
 
-  if (active.length === 0) return FREE_ENTITLEMENT
-
-  // Pick the most permissive active license (highest plan rank)
-  let best = active[0]
-  for (const l of active) {
-    if (PLAN_RANK[l.plan as Plan] > PLAN_RANK[best.plan as Plan]) best = l
+  // Determine best license
+  let bestLicense: (typeof active)[number] | null = null
+  if (active.length > 0) {
+    bestLicense = active[0]
+    for (const l of active) {
+      if (PLAN_RANK[l.plan as Plan] > PLAN_RANK[bestLicense.plan as Plan]) bestLicense = l
+    }
   }
 
-  const plan = best.plan as Plan
-  const features = new Set<FeatureKey>(PLAN_FEATURES[plan])
+  // Check campaign membership for plan grants
+  let campaignPlan: Plan | null = null
+  const campaignMemberships = await db.campaignMember.findMany({
+    where: {
+      userProfileId: profile.id,
+      campaign: {
+        isActive: true,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: now } },
+        ],
+      },
+    },
+    select: {
+      campaign: { select: { plan: true } },
+    },
+  })
+
+  for (const m of campaignMemberships) {
+    const p = m.campaign.plan as Plan
+    if (!campaignPlan || PLAN_RANK[p] > PLAN_RANK[campaignPlan]) {
+      campaignPlan = p
+    }
+  }
+
+  // If no license and no campaign, return free entitlement
+  if (!bestLicense && !campaignPlan) return FREE_ENTITLEMENT
+
+  // Determine effective plan: highest of license and campaign
+  let effectivePlan: Plan = "free"
+  let effectiveLicenseId: string | undefined
+  let effectiveExpiresAt: Date | null = null
+
+  if (bestLicense && campaignPlan) {
+    if (PLAN_RANK[campaignPlan] > PLAN_RANK[bestLicense.plan as Plan]) {
+      effectivePlan = campaignPlan
+    } else {
+      effectivePlan = bestLicense.plan as Plan
+      effectiveLicenseId = bestLicense.id
+      effectiveExpiresAt = bestLicense.expiresAt
+    }
+  } else if (campaignPlan) {
+    effectivePlan = campaignPlan
+  } else if (bestLicense) {
+    effectivePlan = bestLicense.plan as Plan
+    effectiveLicenseId = bestLicense.id
+    effectiveExpiresAt = bestLicense.expiresAt
+  }
+
+  const features = new Set<FeatureKey>(PLAN_FEATURES[effectivePlan])
   // Merge license-specific feature overrides
-  if (best.features) {
+  if (bestLicense?.features) {
     try {
-      const extra = JSON.parse(best.features) as string[]
+      const extra = JSON.parse(bestLicense.features) as string[]
       for (const f of extra) features.add(f as FeatureKey)
     } catch {
       /* ignore malformed features */
@@ -124,12 +173,12 @@ export async function getEntitlement(
   }
 
   return {
-    plan,
-    status: best.status as LicenseStatus,
+    plan: effectivePlan,
+    status: bestLicense?.status as LicenseStatus ?? "active",
     features,
-    licenseId: best.id,
-    expiresAt: best.expiresAt,
-    rank: PLAN_RANK[plan],
+    licenseId: effectiveLicenseId ?? null,
+    expiresAt: effectiveExpiresAt,
+    rank: PLAN_RANK[effectivePlan],
   }
 }
 

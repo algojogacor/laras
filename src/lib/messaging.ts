@@ -335,24 +335,24 @@ export async function sendMessage(
     throw new AuthorizationError("FORBIDDEN")
   }
 
-  // Check blocks: sender must not be blocked by any other participant
-  const otherParticipants = await db.conversationParticipant.findMany({
-    where: {
-      conversationId,
-      userProfileId: { not: senderId },
-    },
-    select: { userProfileId: true },
-  })
-
-  for (const p of otherParticipants) {
-    const blocked = await isBlocked(senderId, p.userProfileId)
-    if (blocked) {
-      throw new AuthorizationError("FORBIDDEN")
-    }
-  }
-
-  // Create message and update sender's read state
+  // Create message atomically with block check inside transaction
   const message = await db.$transaction(async (tx) => {
+    // Check blocks: sender must not be blocked by any other participant
+    const otherParticipants = await tx.conversationParticipant.findMany({
+      where: {
+        conversationId,
+        userProfileId: { not: senderId },
+      },
+      select: { userProfileId: true },
+    })
+
+    for (const p of otherParticipants) {
+      const blocked = await isBlocked(senderId, p.userProfileId)
+      if (blocked) {
+        throw new AuthorizationError("FORBIDDEN")
+      }
+    }
+
     const msg = await tx.message.create({
       data: {
         conversationId,
@@ -694,11 +694,12 @@ export async function acceptMessageRequest(
       },
     })
 
-    // Update request status
-    await tx.messageRequest.update({
-      where: { id: requestId },
+    // Update request status atomically — guard against concurrent accept/decline
+    const updated = await tx.messageRequest.updateMany({
+      where: { id: requestId, status: "pending" },
       data: { status: "accepted", acceptedAt: new Date() },
     })
+    if (updated.count === 0) throw new AuthorizationError("CONFLICT")
 
     return conversation
   })
