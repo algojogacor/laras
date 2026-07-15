@@ -148,10 +148,9 @@ export async function cleanDb() {
 
     // Parents last
     "userProfile", "account",
-
-    // Non-Prisma table
-    "peerReview",
   ]
+  // Clean non-Prisma raw-SQL table before parent tables to avoid FK violations
+  try { await db.$executeRawUnsafe("DELETE FROM peer_review") } catch (_) {}
   for (const t of tables) {
     try {
       await (db as any)[t].deleteMany()
