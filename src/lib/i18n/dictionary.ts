@@ -725,6 +725,15 @@ const id = {
     yes: "Ya",
     no: "Tidak",
   },
+  notifications: {
+    title: "Notifikasi",
+    subtitle: "Pemberitahuan dan pembaruan untukmu",
+    empty: "Belum ada notifikasi",
+    markAllRead: "Tandai semua dibaca",
+    markRead: "Baca",
+    connectionRequest: "Permintaan Koneksi Baru",
+    connectionAccepted: "Koneksi Diterima",
+  },
   footer: {
     tagline: "Dibuat untuk mereka yang sedang menyiapkan diri.",
     rights: "Hak cipta dilindungi.",
@@ -1454,6 +1463,15 @@ const en: Dictionary = {
     required: "required",
     yes: "Yes",
     no: "No",
+  },
+  notifications: {
+    title: "Notifications",
+    subtitle: "Updates and alerts for you",
+    empty: "No notifications yet",
+    markAllRead: "Mark all as read",
+    markRead: "Read",
+    connectionRequest: "New Connection Request",
+    connectionAccepted: "Connection Accepted",
   },
   footer: {
     tagline: "Built for those getting ready.",

@@ -1,5 +1,7 @@
 import { db } from "@/lib/db"
 import { listConnections, requestConnection, searchUsers } from "@/lib/connections"
+import { emitEvent } from "@/lib/activity"
+import { createNotification } from "@/lib/notifications"
 import {
   requireActor,
   getRequiredProfileId,
@@ -69,6 +71,23 @@ export async function POST(request: Request) {
     }
 
     await requestConnection(profileId, addresseeId, body.message?.trim() || undefined)
+
+    // Emit activity event for the requester (fire-and-forget)
+    emitEvent({
+      userProfileId: profileId,
+      type: "connection.accept",
+      resourceType: "Connection",
+      metadata: { action: "request_sent" },
+    })
+
+    // Create notification for the addressee
+    createNotification({
+      userProfileId: addresseeId,
+      type: "connection.request",
+      title: "Permintaan Koneksi Baru",
+      body: body.message?.trim() || undefined,
+      resourceType: "Connection",
+    })
 
     return safeNextResponse({ ok: true })
   } catch (error) {

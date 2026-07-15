@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Menu, X, ShieldCheck, Users } from "lucide-react"
+import { Menu, X, ShieldCheck, Users, Bell } from "lucide-react"
 import { Logo } from "@/components/site/logo"
 import { LocaleToggle } from "@/components/site/locale-toggle"
 import { ThemeToggle } from "@/components/site/theme-toggle"
@@ -15,11 +15,13 @@ export function AppHeader({
   locale,
   isAdmin = false,
   pendingConnections = 0,
+  unreadNotifications = 0,
 }: {
   user: { id: string; email: string; name: string | null; fullName: string | null }
   locale: Locale
   isAdmin?: boolean
   pendingConnections?: number
+  unreadNotifications?: number
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
@@ -30,8 +32,8 @@ export function AppHeader({
       : { profile: "Profile", settings: "Settings", logout: "Log out" }
   const navLabels =
     locale === "id"
-      ? { dashboard: "Dasbor", documents: "Dokumen", applications: "Lamaran", interview: "Wawancara", english: "Bahasa Inggris", profile: "Profil", connections: "Koneksi", admin: "Admin" }
-      : { dashboard: "Dashboard", documents: "Documents", applications: "Applications", interview: "Interview", english: "English", profile: "Profile", connections: "Connections", admin: "Admin" }
+      ? { dashboard: "Dasbor", documents: "Dokumen", applications: "Lamaran", interview: "Wawancara", english: "Bahasa Inggris", profile: "Profil", connections: "Koneksi", notifications: "Notifikasi", admin: "Admin" }
+      : { dashboard: "Dashboard", documents: "Documents", applications: "Applications", interview: "Interview", english: "English", profile: "Profile", connections: "Connections", notifications: "Notifications", admin: "Admin" }
 
   const navItems: Array<{ href: string; label: string; isAdmin?: boolean; badge?: number }> = [
     { href: "/dashboard", label: navLabels.dashboard },
@@ -41,6 +43,7 @@ export function AppHeader({
     { href: "/english", label: navLabels.english },
     { href: "/profile", label: navLabels.profile },
     { href: "/connections", label: navLabels.connections, badge: pendingConnections },
+    { href: "/notifications", label: navLabels.notifications, badge: unreadNotifications },
     ...(isAdmin ? [{ href: "/admin", label: navLabels.admin, isAdmin: true }] : []),
   ]
 
