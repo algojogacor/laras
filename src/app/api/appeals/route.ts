@@ -11,7 +11,7 @@ import { fileAppeal, getAppeals, reviewAppeal } from "@/lib/moderation"
 
 /**
  * GET /api/appeals
- * List appeals. Moderator+ or own appeals for users.
+ * List appeals. Moderator+ can see all; users can only see their own.
  * Query: ?appellantId=...&status=...&cursor=...&limit=...
  */
 export async function GET(request: NextRequest) {
@@ -25,12 +25,20 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10) || 20, 50)
 
     // Users can only see their own appeals; moderators+ can see all
-    if (appellantId && appellantId !== actor.accountId) {
+    if (appellantId) {
+      if (appellantId !== actor.accountId) {
+        requireModeratorOrAbove(actor)
+      }
+    } else {
+      // Unfiltered queries require moderator+ (prevents information disclosure)
       requireModeratorOrAbove(actor)
     }
 
+    // Non-moderators can only query their own appeals
+    const resolvedAppellantId = appellantId || actor.accountId
+
     const result = await getAppeals({
-      appellantId,
+      appellantId: resolvedAppellantId,
       status: status as any,
       limit,
       cursor,
@@ -61,8 +69,17 @@ export async function POST(request: NextRequest) {
 
     const { caseId, reason } = body as Record<string, unknown>
 
-    if (typeof caseId !== "string" || typeof reason !== "string" || !reason.trim()) {
+    if (typeof caseId !== "string" || !isValidId(caseId) || typeof reason !== "string" || !reason.trim()) {
       throw new AuthorizationError("BAD_REQUEST")
+    }
+
+    // Verify the case belongs to the appellant (ownership check)
+    const caseRecord = await import("@/lib/db").then(m => m.db.moderationCase.findUnique({
+      where: { id: caseId },
+      select: { subjectId: true },
+    }))
+    if (!caseRecord || caseRecord.subjectId !== actor.accountId) {
+      throw new AuthorizationError("NOT_FOUND")
     }
 
     const appeal = await fileAppeal(caseId, actor.accountId, reason.trim())
