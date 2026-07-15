@@ -15,11 +15,13 @@ import {
   ShieldCheck,
   UserPlus,
   Lock,
+  Flag,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { ReportDialog } from "@/components/shared/report-dialog"
 import type {
   PublicProfileControlledField,
   PublicProfileDTO,
@@ -87,13 +89,22 @@ export function PublicProfileView({
             {labels.back}
           </Link>
         </Button>
-        {isOwner && (
-          <Button asChild variant="outline" size="sm">
-            <Link href="/profile">
-              {labels.editProfile}
-            </Link>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {!isOwner && (
+            <ReportDialog
+              targetType="user"
+              targetId={profile.id}
+              targetLabel="Pengguna"
+            />
+          )}
+          {isOwner && (
+            <Button asChild variant="outline" size="sm">
+              <Link href="/profile">
+                {labels.editProfile}
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Header card */}

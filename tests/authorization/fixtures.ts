@@ -47,6 +47,10 @@ export const IDS = {
   evidenceA: "",
   evidenceB: "",
   evidenceF: "",
+
+  opportunityA: "",
+  opportunityB: "",
+  opportunityF: "",
 }
 
 export const CANARIES = {
@@ -68,30 +72,33 @@ export const CANARIES = {
   evidenceA: "Canary Evidence Title A",
   evidenceB: "Canary Evidence Title B",
   evidenceF: "Canary Evidence Title F",
+
+  oppA: "Canary Opportunity Title A",
+  oppB: "Canary Opportunity Title B",
+  oppF: "Canary Opportunity Title F",
 }
 
 export async function cleanDb() {
-  await db.$transaction([
-    db.applicationDocument.deleteMany(),
-    db.documentVersion.deleteMany(),
-    db.revisionRequest.deleteMany(),
-    db.document.deleteMany(),
-    db.application.deleteMany(),
-    db.interviewQuestion.deleteMany(),
-    db.interviewSet.deleteMany(),
-    db.essay.deleteMany(),
-    db.englishCertificate.deleteMany(),
-    db.englishSession.deleteMany(),
-    db.evidence.deleteMany(),
-    db.achievement.deleteMany(),
-    db.auditLog.deleteMany(),
-    db.verificationBadge.deleteMany(),
-    db.license.deleteMany(),
-    db.consentSetting.deleteMany(),
-    db.connection.deleteMany(),
-    db.userProfile.deleteMany(),
-    db.account.deleteMany(),
-  ])
+  // Delete in FK-safe order: children first, then parents.
+  const tables = [
+    "appeal", "moderationCase", "report", "scopedAssignment",
+    "applicationDocument", "documentVersion", "revisionRequest",
+    "document", "application", "interviewQuestion", "interviewSet",
+    "essay", "englishCertificate", "englishSession", "evidence",
+    "achievement", "opportunity", "announcementRead", "announcement",
+    "licenseCode", "auditLog", "verificationBadge", "license",
+    "quotaLedger", "consentSetting", "connection",
+    "userProfile", "account",
+  ]
+  for (const t of tables) {
+    try {
+      await (db as any)[t].deleteMany()
+    } catch (e: any) {
+      // Some tables may not exist if schema hasn't been pushed yet
+      // or FK constraints may prevent deletion if order is wrong
+      console.error(`[cleanDb] Failed to clean ${t}: ${e.message?.slice(0, 80)}`)
+    }
+  }
 }
 
 export async function seedDb() {
@@ -190,6 +197,40 @@ export async function seedDb() {
   IDS.profileB = profileB.id
   IDS.profileC = profileC.id
   IDS.profileD = profileD.id
+
+  // Seed profile A's skills, experience, education, languages for match analysis
+  await db.skill.createMany({
+    data: [
+      { userProfileId: IDS.profileA, name: "TypeScript", category: "technical", proficiency: "advanced" },
+      { userProfileId: IDS.profileA, name: "React", category: "technical", proficiency: "advanced" },
+      { userProfileId: IDS.profileA, name: "Docker", category: "tool", proficiency: "intermediate" },
+    ],
+  })
+  await db.education.create({
+    data: {
+      userProfileId: IDS.profileA,
+      degree: "Bachelor",
+      field: "Computer Science",
+      institution: "Test University",
+      gpa: "3.5",
+    },
+  })
+  await db.experience.create({
+    data: {
+      userProfileId: IDS.profileA,
+      type: "work",
+      title: "Frontend Developer",
+      organization: "Tech Corp",
+      description: "Built React and TypeScript applications",
+      achievements: JSON.stringify(["Led 3 product launches"]),
+    },
+  })
+  await db.languageProficiency.createMany({
+    data: [
+      { userProfileId: IDS.profileA, language: "English", level: "advanced" },
+      { userProfileId: IDS.profileA, language: "Indonesian", level: "native" },
+    ],
+  })
 
   const profileF = await db.userProfile.create({
     data: {
@@ -500,6 +541,56 @@ export async function seedDb() {
     },
   })
   IDS.evidenceF = evidenceF.id
+
+  // 11. Create Opportunities
+  const opportunityA = await db.opportunity.create({
+    data: {
+      userProfileId: IDS.profileA,
+      type: "job",
+      title: CANARIES.oppA,
+      organization: "Org A",
+      description: "Test opportunity for User A",
+      requirements: JSON.stringify({
+        required: ["typescript", "react"],
+        preferred: ["graphql", "docker"],
+      }),
+      status: "saved",
+    },
+  })
+  const opportunityB = await db.opportunity.create({
+    data: {
+      userProfileId: IDS.profileB,
+      type: "internship",
+      title: CANARIES.oppB,
+      organization: "Org B",
+      description: "Test opportunity for User B",
+      requirements: JSON.stringify({
+        required: ["python", "sql"],
+        preferred: ["machine learning"],
+        minimumEducation: "bachelor",
+      }),
+      status: "applied",
+    },
+  })
+
+  IDS.opportunityA = opportunityA.id
+  IDS.opportunityB = opportunityB.id
+
+  const opportunityF = await db.opportunity.create({
+    data: {
+      userProfileId: IDS.profileF,
+      type: "job",
+      title: CANARIES.oppF,
+      organization: "Org F",
+      description: "Test opportunity for Owner F",
+      requirements: JSON.stringify({
+        required: ["leadership", "strategy"],
+        preferred: ["negotiation"],
+      }),
+      status: "saved",
+    },
+  })
+  IDS.opportunityF = opportunityF.id
 
   return IDS
 }

@@ -2,12 +2,12 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import {
   requireActor,
-  requireCurrentAdmin,
   handleAuthorizationError,
   AuthorizationError,
   isValidId,
   safeNextResponse
 } from "@/lib/authorization"
+import { requireCapability } from "@/lib/permissions"
 import type { Plan, LicenseStatus } from "@/lib/entitlement"
 
 const VALID_PLANS: Plan[] = ["free", "pro", "org"]
@@ -20,7 +20,7 @@ const VALID_STATUSES: LicenseStatus[] = ["active", "expired", "suspended", "canc
 export async function GET() {
   try {
     const actor = await requireActor()
-    requireCurrentAdmin(actor)
+    await requireCapability(actor, "licenses.manage")
 
     const licenses = await db.license.findMany({
       orderBy: { createdAt: "desc" },
@@ -61,7 +61,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const actor = await requireActor()
-    requireCurrentAdmin(actor)
+    await requireCapability(actor, "licenses.manage")
 
     let body: {
       profileId?: string
@@ -128,7 +128,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const actor = await requireActor()
-    requireCurrentAdmin(actor)
+    await requireCapability(actor, "licenses.manage")
 
     let body: {
       licenseId?: string

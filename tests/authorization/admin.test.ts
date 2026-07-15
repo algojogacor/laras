@@ -85,9 +85,13 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
     })
 
     test("Unknown role cannot access users list (returns 403)", async () => {
+      // Set a truly unknown role that normalizes to "user" (fail-closed)
+      await db.account.update({ where: { id: IDS.unknownD }, data: { role: "superadmin" } })
       testRuntime.cookieValue = await createSessionToken(IDS.unknownD)
       const res = await adminUsersGet()
       expect(res.status).toBe(403)
+      // Restore the canonical role
+      await db.account.update({ where: { id: IDS.unknownD }, data: { role: "moderator" } })
     })
 
     test("Unauthenticated cannot access users list (returns 401)", async () => {
@@ -616,9 +620,20 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
   // PHASE 1D — MODERATOR BOUNDARIES
   // ============================================================================
   describe("Moderator admin-route boundaries", () => {
-    test("moderator cannot access GET /api/admin/users (403)", async () => {
+    test("moderator can read users list (has users.read capability)", async () => {
       testRuntime.cookieValue = await createSessionToken(IDS.moderatorG)
       const res = await adminUsersGet()
+      expect(res.status).toBe(200)
+    })
+
+    test("moderator cannot change roles (lacks roles.manage capability)", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.moderatorG)
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        body: JSON.stringify({ targetId: IDS.accountA, role: "admin" }),
+      })
+      const { PATCH } = await import("@/app/api/admin/users/route")
+      const res = await PATCH(req)
       expect(res.status).toBe(403)
     })
 

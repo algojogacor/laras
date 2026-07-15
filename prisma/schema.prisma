@@ -16,14 +16,20 @@ datasource db {
 // Auth (local dev). In production this maps to Supabase Auth (auth.users).
 // ---------------------------------------------------------------------------
 model Account {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  passwordHash String
-  name         String?
-  role         String       @default("user") // user | moderator | admin | owner (canonical 4-role model, Phase 1D)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  profile      UserProfile?
+  id               String       @id @default(cuid())
+  email            String       @unique
+  passwordHash     String
+  name             String?
+  role             String       @default("user") // user | moderator | admin | owner (canonical 4-role model, Phase 1D)
+  suspended        Boolean      @default(false)
+  suspendedAt      DateTime?
+  suspensionReason String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  profile          UserProfile?
+
+  scopedAssignments        ScopedAssignment[]
+  grantedScopedAssignments ScopedAssignment[] @relation("GrantedScopedAssignments")
 }
 
 // ---------------------------------------------------------------------------
@@ -85,6 +91,7 @@ model UserProfile {
   consentSettings ConsentSetting[]
   connectionsOutgoing Connection[] @relation("ConnectionRequester")
   connectionsIncoming Connection[] @relation("ConnectionAddressee")
+  reports            Report[]       @relation("ReporterReports")
 }
 
 // --- Riwayat pengalaman (Section 4) — contextNotes is the anti-generic foundation ---
@@ -735,4 +742,120 @@ model LicenseCode {
   @@index([code])
   @@index([batchId])
   @@index([campaignId])
+}
+
+// ---------------------------------------------------------------------------
+// Report — Moderation report system (Phase 4B)
+// Users can report content, users, connections, messages, etc.
+// ---------------------------------------------------------------------------
+model Report {
+  id             String   @id @default(cuid())
+  reporterId     String   // UserProfile.id who reported
+  reporter       UserProfile @relation("ReporterReports", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetType     String   // "user" | "connection" | "message" | "circle" | "mentorship" | "content"
+  targetId       String   // ID of the reported entity
+  reason         String   // "harassment" | "spam" | "impersonation" | "inappropriate" | "other"
+  description    String?
+  evidence       String?  // JSON: { urls, screenshots }
+  status         String   @default("open") // open | investigating | resolved | dismissed
+  priority       String   @default("normal") // low | normal | high | urgent
+  assignedToId   String?  // Account.id of moderator
+  resolution     String?  // moderator note on resolution
+  resolvedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  moderationCases ModerationCase[]
+
+  @@index([reporterId])
+  @@index([status])
+  @@index([targetType, targetId])
+}
+
+// ---------------------------------------------------------------------------
+// ModerationCase — Moderation actions on users (Phase 4B)
+// Warning, suspension, ban, restriction records.
+// ---------------------------------------------------------------------------
+model ModerationCase {
+  id             String   @id @default(cuid())
+  reportId       String?
+  report         Report?  @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  subjectId      String   // Account.id of subject
+  type           String   // "warning" | "suspension" | "ban" | "restriction"
+  status         String   @default("active") // active | expired | revoked
+  reason         String
+  moderatorId    String   // Account.id of acting moderator
+  duration       String?  // "24h" | "7d" | "30d" | "permanent"
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+  revokedById    String?  // Account.id of revoking moderator
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  appeals        Appeal[]
+
+  @@index([subjectId])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Appeal — User appeals against moderation actions (Phase 4C)
+// ---------------------------------------------------------------------------
+model Appeal {
+  id             String   @id @default(cuid())
+  caseId         String
+  moderationCase ModerationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  appellantId    String   // Account.id
+  reason         String
+  status         String   @default("pending") // pending | reviewed | granted | denied
+  reviewerId     String?  // Account.id of reviewer
+  reviewNote     String?
+  reviewedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([caseId])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Permission — Granular capability definitions (Phase 4A)
+// Each row defines a single atomic capability.
+// ---------------------------------------------------------------------------
+model Permission {
+  id          String   @id @default(cuid())
+  capability  String   @unique // e.g. "users.read", "roles.manage", "moderation.cases"
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// RolePermission — Maps canonical roles to capabilities (Phase 4A)
+// Default grants per role.  "granted: false" explicitly denies.
+// ---------------------------------------------------------------------------
+model RolePermission {
+  id         String  @id @default(cuid())
+  role       String  // owner | admin | moderator | user
+  capability String  // references Permission.capability
+  granted    Boolean @default(true)
+
+  @@unique([role, capability])
+  @@index([role])
+}
+
+// ---------------------------------------------------------------------------
+// ScopedAssignment — Per-account capability grants with optional scope
+// and expiry (Phase 4A).  Checked *before* role-based permissions.
+// ---------------------------------------------------------------------------
+model ScopedAssignment {
+  id          String    @id @default(cuid())
+  accountId   String
+  account     Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  capability  String
+  scope       String?   // e.g. "community:abc123" — restricts to specific resource
+  grantedAt   DateTime  @default(now())
+  expiresAt   DateTime?
+  grantedById String
+  grantedBy   Account   @relation("GrantedScopedAssignments", fields: [grantedById], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([capability])
 }

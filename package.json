@@ -17,7 +17,8 @@
     "listening:generate": "bun run scripts/generate-listening-bank.ts",
     "listening:validate": "bun run scripts/validate-bank.ts",
     "listening:report": "bun run scripts/bank-report.ts",
-    "bootstrap:owner": "bun run scripts/bootstrap-owner.ts"
+    "bootstrap:owner": "bun run scripts/bootstrap-owner.ts",
+    "seed:permissions": "bun run scripts/seed-permissions.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

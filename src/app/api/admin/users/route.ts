@@ -2,13 +2,12 @@ import { NextRequest } from "next/server"
 import { db } from "@/lib/db"
 import {
   requireActor,
-  requireCurrentAdmin,
-  requireCurrentOwner,
   handleAuthorizationError,
   safeNextResponse,
   isValidId,
   AuthorizationError,
 } from "@/lib/authorization"
+import { requireCapability } from "@/lib/permissions"
 
 // Roles that can be assigned through the governance API (owner excluded).
 const ALLOWED_TARGET_ROLES = ["user", "admin", "moderator"] as const
@@ -21,7 +20,7 @@ const ALLOWED_TARGET_ROLES = ["user", "admin", "moderator"] as const
 export async function GET() {
   try {
     const actor = await requireActor()
-    requireCurrentAdmin(actor)
+    await requireCapability(actor, "users.read")
 
     const accounts = await db.account.findMany({
       orderBy: { createdAt: "desc" },
@@ -77,7 +76,7 @@ export async function PATCH(request: NextRequest) {
     const actor = await requireActor()
 
     // 2. Owner-only gate — BEFORE any target lookup
-    requireCurrentOwner(actor)
+    await requireCapability(actor, "roles.manage")
 
     // 3. Parse and validate the request body
     let body: unknown

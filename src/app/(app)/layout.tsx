@@ -15,6 +15,12 @@ export default async function AppLayout({
   const session = await getSession()
   if (!session) redirect("/login")
 
+  // Suspension gate: redirect suspended users to the suspension notice page.
+  // The suspended page is outside the (app) group so this won't create a loop.
+  if (session.suspended) {
+    redirect("/suspended")
+  }
+
   const account = await db.account.findUnique({
     where: { id: session.userId },
     include: {

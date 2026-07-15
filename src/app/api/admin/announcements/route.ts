@@ -2,11 +2,11 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import {
   requireActor,
-  requireCurrentAdmin,
   handleAuthorizationError,
   AuthorizationError,
   safeNextResponse
 } from "@/lib/authorization"
+import { requireCapability } from "@/lib/permissions"
 
 const VALID_AUDIENCES = ["all", "free", "pro", "admin"]
 const VALID_PRIORITIES = ["low", "normal", "high", "urgent"]
@@ -19,7 +19,7 @@ const VALID_STATUSES = ["draft", "published", "archived"]
 export async function GET() {
   try {
     const actor = await requireActor()
-    requireCurrentAdmin(actor)
+    await requireCapability(actor, "announcements.manage")
 
     const announcements = await db.announcement.findMany({
       orderBy: { createdAt: "desc" },
@@ -39,7 +39,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const actor = await requireActor()
-    requireCurrentAdmin(actor)
+    await requireCapability(actor, "announcements.manage")
 
     let body: {
       title?: string
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const actor = await requireActor()
-    requireCurrentAdmin(actor)
+    await requireCapability(actor, "announcements.manage")
 
     let body: {
       id?: string
@@ -151,7 +151,7 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const actor = await requireActor()
-    requireCurrentAdmin(actor)
+    await requireCapability(actor, "announcements.manage")
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get("id")?.trim()

@@ -6,6 +6,7 @@ import { serializeProfile, type ProfileWithRelations } from "@/lib/profile"
 import { getEntitlement } from "@/lib/entitlement"
 import { SettingsForm } from "@/components/settings/settings-form"
 import { LicenseCard } from "@/components/settings/license-card"
+import { RedeemCode } from "@/components/settings/redeem-code"
 
 export default async function SettingsPage() {
   const session = await getSession()
@@ -43,6 +44,22 @@ export default async function SettingsPage() {
           locked: t.admin.locked,
           expiresAt: t.admin.expiresAt,
           noExpiry: t.admin.noExpiry,
+        }}
+      />
+      <RedeemCode
+        labels={{
+          redeemTitle: t.licenses.redeemTitle,
+          redeemDesc: t.licenses.redeemDesc,
+          redeemCode: t.licenses.redeemCode,
+          codePlaceholder: t.licenses.codePlaceholder,
+          redeemButton: t.licenses.redeemButton,
+          redeeming: t.licenses.redeeming,
+          redeemSuccess: t.licenses.redeemSuccess,
+          redeemError: t.licenses.redeemError,
+          redeemNotFound: t.licenses.redeemNotFound,
+          redeemExpired: t.licenses.redeemExpired,
+          redeemUsedUp: t.licenses.redeemUsedUp,
+          redeemDuplicate: t.licenses.redeemDuplicate,
         }}
       />
       <SettingsForm initialProfile={serializeProfile(profile)} />

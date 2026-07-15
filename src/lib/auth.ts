@@ -37,7 +37,7 @@ export async function verifySessionToken(token: string): Promise<{ sub: string }
   }
 }
 
-export async function getSession(): Promise<{ userId: string; email: string; role: string } | null> {
+export async function getSession(): Promise<{ userId: string; email: string; role: string; suspended: boolean } | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get(COOKIE_NAME)?.value
   if (!token) return null
@@ -45,10 +45,10 @@ export async function getSession(): Promise<{ userId: string; email: string; rol
   if (!payload) return null
   const account = await db.account.findUnique({
     where: { id: payload.sub },
-    select: { id: true, email: true, role: true },
+    select: { id: true, email: true, role: true, suspended: true },
   })
   if (!account) return null
-  return { userId: account.id, email: account.email, role: account.role }
+  return { userId: account.id, email: account.email, role: account.role, suspended: account.suspended }
 }
 
 /**

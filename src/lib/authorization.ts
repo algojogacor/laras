@@ -144,7 +144,7 @@ export async function requireActor(): Promise<ActorContext> {
 
   const account = await db.account.findUnique({
     where: { id: session.userId },
-    select: { id: true, email: true, role: true },
+    select: { id: true, email: true, role: true, suspended: true },
   })
   if (!account) {
     throw new AuthorizationError("UNAUTHORIZED")
@@ -231,6 +231,32 @@ export async function findOwnedDocumentOfType(id: string, type: string, actor: A
     throw new AuthorizationError("NOT_FOUND")
   }
   return doc
+}
+
+// ============================================================================
+// MODERATION & SUSPENSION GUARDS — Phase 4B+4C
+// ============================================================================
+
+/**
+ * Enforces that the actor has moderator, admin, or owner privileges.
+ * User, unknown role, and anonymous all receive FORBIDDEN.
+ */
+export function requireModeratorOrAbove(actor: ActorContext): void {
+  if (actor.role !== "moderator" && actor.role !== "admin" && actor.role !== "owner") {
+    throw new AuthorizationError("FORBIDDEN")
+  }
+}
+
+/**
+ * Enforces that the current user is not suspended.
+ * Redirect-safety: throws FORBIDDEN so the layout can catch it.
+ */
+export async function requireUnsuspended(): Promise<void> {
+  const session = await getSession()
+  if (!session) return // Not authenticated is handled separately
+  if (session.suspended) {
+    throw new AuthorizationError("FORBIDDEN")
+  }
 }
 
 export async function findOwnedApplication(id: string, actor: ActorContext) {

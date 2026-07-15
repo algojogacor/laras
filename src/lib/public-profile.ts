@@ -95,6 +95,7 @@ export type PublicProfileDTO = {
   viewerClass: PublicProfileViewerClass
   omittedFields: PublicProfileControlledField[]
   profile: {
+    id: string
     fullName?: string | null
     headline: string | null
     summary?: string | null
@@ -249,6 +250,7 @@ export function projectPublicProfile(
   const consent = resolveConsent(input.consentSettings)
   const omittedFields: PublicProfileControlledField[] = []
   const projected: PublicProfileDTO["profile"] = {
+    id: profile.id,
     headline: profile.headline,
     photoUrl: profile.photoUrl,
     memberSince: profile.createdAt.toISOString(),

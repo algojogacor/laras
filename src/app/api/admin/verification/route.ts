@@ -2,12 +2,12 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import {
   requireActor,
-  requireCurrentAdmin,
   handleAuthorizationError,
   AuthorizationError,
   isValidId,
   safeNextResponse
 } from "@/lib/authorization"
+import { requireCapability } from "@/lib/permissions"
 import type { VerificationType, VerificationStatus } from "@/lib/verification"
 
 const VALID_TYPES: VerificationType[] = [
@@ -37,7 +37,7 @@ const VALID_STATUSES: VerificationStatus[] = [
 export async function POST(request: Request) {
   try {
     const actor = await requireActor()
-    requireCurrentAdmin(actor)
+    await requireCapability(actor, "verification.manage")
 
     let body: { profileId?: string; type?: string; status?: string; note?: string }
     try {
