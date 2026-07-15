@@ -49,14 +49,19 @@ describe("Phase 7A+7B — Organization Workspaces", () => {
     getUserOrganizations = orgLib.getUserOrganizations
     requestVerification = orgLib.requestVerification
 
+    // Attempt a full clean + seed. If the DB is clean, this works.
+    // If there are leftover org records, clean those first.
+    try { await db.organizationMembership.deleteMany() } catch {}
+    try { await db.organization.deleteMany() } catch {}
     await cleanDb()
     await seedDb()
   })
 
   beforeEach(async () => {
     resetTestRuntime()
-    await cleanDb()
-    await seedDb()
+    // Clean only organization-related tables to avoid FK issues with the base fixtures
+    try { await db.organizationMembership.deleteMany() } catch {}
+    try { await db.organization.deleteMany() } catch {}
   })
 
   // ============================================================================
