@@ -74,6 +74,8 @@ model UserProfile {
   certificates   EnglishCertificate[]
   achievements   Achievement[]
   evidences      Evidence[]
+  activityEvents ActivityEvent[]
+  notifications  Notification[]
   auditLogs      AuditLog[]
   verificationBadges VerificationBadge[]
   licenses       License[]
@@ -415,6 +417,44 @@ model Evidence {
   @@index([experienceId])
   @@index([skillId])
   @@index([achievementId])
+}
+
+// ---------------------------------------------------------------------------
+// ActivityEvent — Durable activity event store (Phase 2B, Brief §9.1)
+// Replaces on-the-fly activity computation. Append-only, owner-scoped reads.
+// ---------------------------------------------------------------------------
+model ActivityEvent {
+  id            String   @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  type          String   // document.create | application.create | interview.create | english.complete | profile.update | connection.accept | evidence.create
+  resourceType  String?  // "Document", "Application", "InterviewSet", etc.
+  resourceId    String?  // ID of the affected resource
+  metadata      String?  // JSON: { title, type, summary }
+  createdAt     DateTime @default(now())
+
+  @@index([userProfileId, createdAt])
+  @@index([type])
+}
+
+// ---------------------------------------------------------------------------
+// Notification — Durable notification store (Phase 2C, Brief §9.1)
+// Replaces per-request count queries. Recipient-scoped, with read state.
+// ---------------------------------------------------------------------------
+model Notification {
+  id            String   @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  type          String   // connection.request | connection.accepted | announcement | system
+  title         String
+  body          String?
+  resourceType  String?  // "Connection", "Announcement", etc.
+  resourceId    String?  // ID for deeplinking
+  readAt        DateTime? // null = unread
+  createdAt     DateTime @default(now())
+
+  @@index([userProfileId, readAt, createdAt])
+  @@index([userProfileId, createdAt])
 }
 
 // ---------------------------------------------------------------------------
