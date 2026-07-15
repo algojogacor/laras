@@ -78,6 +78,7 @@ model UserProfile {
   notifications  Notification[]
   opportunities  Opportunity[]
   announcementsRead AnnouncementRead[]
+  quotaEntries    QuotaLedger[]
   auditLogs      AuditLog[]
   verificationBadges VerificationBadge[]
   licenses       License[]
@@ -688,4 +689,49 @@ model Opportunity {
   @@index([type])
   @@index([status])
   @@index([deadline])
+}
+
+// ---------------------------------------------------------------------------
+// QuotaLedger — Atomic entitlement consumption (Phase 3C, Brief §24)
+// Replaces stateless count-based caps with idempotent, auditable consumption.
+// ---------------------------------------------------------------------------
+model QuotaLedger {
+  id             String   @id @default(cuid())
+  userProfileId  String
+  userProfile    UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  capability     String   // e.g. "documents.create", "interview.create", "english.generate"
+  consumedAt     DateTime @default(now())
+  amount         Int      @default(1)
+  idempotencyKey String   @unique // client-supplied unique key per operation
+  metadata       String?  // JSON: { resourceType, resourceId }
+  refundedAt     DateTime? // non-null means the consumption was refunded
+
+  @@index([userProfileId])
+  @@index([capability])
+  @@index([consumedAt])
+}
+
+// ---------------------------------------------------------------------------
+// LicenseCode — Code-based license redemption (Phase 5A, Brief §25)
+// Supports individual, batch, and campaign code generation.
+// ---------------------------------------------------------------------------
+model LicenseCode {
+  id              String   @id @default(cuid())
+  code            String   @unique // the redemption code (hashed for storage)
+  plan            String   // free | pro | org
+  features        String?  // JSON string[] of feature keys
+  maxRedemptions  Int      @default(1) // 1 = individual, >1 = batch
+  currentRedemptions Int   @default(0)
+  batchId         String?  // groups codes into batches/campaigns
+  campaignId      String?  // links to a campaign for overrides
+  createdById     String   // Account.id of the admin who created it
+  isActive        Boolean  @default(true)
+  startsAt        DateTime @default(now())
+  expiresAt       DateTime? // optional expiry
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([code])
+  @@index([batchId])
+  @@index([campaignId])
 }

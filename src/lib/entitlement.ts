@@ -1,5 +1,6 @@
 import { db } from "@/lib/db"
 import type { UserProfile } from "@prisma/client"
+import { consumeQuota, refundQuota } from "@/lib/quota-ledger"
 
 // ---------------------------------------------------------------------------
 // Entitlement & License Engine — Brief §9.4 (monetization/entitlement)
@@ -138,16 +139,41 @@ export const FREE_TIER_LIMITS = {
 /**
  * Check whether the user can create another document. Free tier is capped;
  * pro/org with documents.unlimited bypass the cap.
+ *
+ * Phase 3C: Uses QuotaLedger for atomic consumption when an idempotencyKey
+ * is provided. Falls back to stateless count for backward compatibility.
  */
 export async function canCreateDocument(
-  profile: Pick<UserProfile, "id">
+  profile: Pick<UserProfile, "id">,
+  idempotencyKey?: string
 ): Promise<{ allowed: boolean; reason?: string; used: number; limit: number | null }> {
   const e = await getEntitlement(profile)
-  const used = await db.document.count({ where: { userProfileId: profile.id } })
+  const limit = FREE_TIER_LIMITS.maxDocuments
+
   if (hasFeature(e, "documents.unlimited")) {
+    // Still count for display purposes
+    let used: number
+    if (idempotencyKey) {
+      const { getCurrentConsumption } = await import("@/lib/quota-ledger")
+      used = await getCurrentConsumption(profile.id, "documents.create")
+    } else {
+      used = await db.document.count({ where: { userProfileId: profile.id } })
+    }
     return { allowed: true, used, limit: null }
   }
-  const limit = FREE_TIER_LIMITS.maxDocuments
+
+  if (idempotencyKey) {
+    // Phase 3C: Atomic consumption via QuotaLedger
+    const result = await consumeQuota(profile.id, "documents.create", idempotencyKey, limit)
+    if (!result.success) {
+      const used = result.consumed ?? limit
+      return { allowed: false, reason: "document-limit", used, limit }
+    }
+    return { allowed: true, used: result.consumed ?? 0, limit }
+  }
+
+  // Fallback: stateless count (legacy, non-atomic)
+  const used = await db.document.count({ where: { userProfileId: profile.id } })
   if (used >= limit) {
     return { allowed: false, reason: "document-limit", used, limit }
   }
