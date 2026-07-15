@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
       type: type as any,
       reason,
       moderatorId: actor.accountId,
+      moderatorRole: actor.role,
       duration: typeof duration === "string" ? (duration as any) : undefined,
       reportId: typeof reportId === "string" ? reportId : undefined,
     })

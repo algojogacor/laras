@@ -64,6 +64,19 @@ const authRateLimitMap = new Map<string, { count: number; resetAt: number }>()
 const AUTH_RATE_LIMIT = 10
 const AUTH_RATE_WINDOW = 60_000 // 1 minute
 
+// Periodic sweep to prevent unbounded memory growth (Edge runtime)
+let _lastSweep = Date.now()
+function sweepRateLimitMap() {
+  const now = Date.now()
+  if (now - _lastSweep < 300_000) return // sweep every 5 minutes
+  _lastSweep = now
+  for (const [key, entry] of authRateLimitMap) {
+    if (entry.resetAt <= now) {
+      authRateLimitMap.delete(key)
+    }
+  }
+}
+
 function checkAuthRateLimit(ip: string): { ok: boolean; retryAfter?: number } {
   const now = Date.now()
   const entry = authRateLimitMap.get(ip)
@@ -91,12 +104,12 @@ function validateCsrfToken(req: NextRequest): boolean {
   if (!cookieToken || !headerToken) return false
   if (cookieToken.length < 32 || headerToken.length < 32) return false
 
-  // Constant-time comparison
+  // Constant-time comparison using Edge-compatible TextEncoder
   try {
-    const a = Buffer.from(cookieToken)
-    const b = Buffer.from(headerToken)
+    const encoder = new TextEncoder()
+    const a = encoder.encode(cookieToken)
+    const b = encoder.encode(headerToken)
     if (a.length !== b.length) return false
-    // timingSafeEqual is not available in Edge runtime; use manual constant-time comparison
     let diff = 0
     for (let i = 0; i < a.length; i++) {
       diff |= a[i] ^ b[i]
@@ -126,6 +139,9 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   const method = req.method.toUpperCase()
 
+  // Periodic sweep of stale rate-limit entries
+  sweepRateLimitMap()
+
   // ------------------------------------------------------------------
   // 1. Set security headers that can't be set via next.config.ts
   // ------------------------------------------------------------------
@@ -136,11 +152,11 @@ export async function middleware(req: NextRequest) {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self'",
-      "connect-src 'self' https:",
+      "connect-src 'self' https://*.supabase.co",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

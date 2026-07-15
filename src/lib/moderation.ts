@@ -1,6 +1,7 @@
 import "server-only"
 import { db } from "@/lib/db"
 import { createNotification } from "@/lib/notifications"
+import { AuthorizationError } from "@/lib/authorization"
 
 // ============================================================================
 // Moderation Service — Phase 4B+4C
@@ -154,6 +155,7 @@ export interface CreateCaseInput {
   type: CaseType
   reason: string
   moderatorId: string // Account.id
+  moderatorRole?: string // Account.role of the acting moderator
   duration?: CaseDuration
   reportId?: string
 }
@@ -192,8 +194,25 @@ export async function createCase(input: CreateCaseInput) {
     },
   })
 
-  // If suspension, update the account
+  // If suspension, verify role hierarchy and update the account
   if (input.type === "suspension") {
+    // Load target account to enforce role hierarchy
+    const targetAccount = await db.account.findUnique({
+      where: { id: input.subjectId },
+      select: { role: true },
+    })
+    if (!targetAccount) {
+      throw new AuthorizationError("NOT_FOUND")
+    }
+    // Moderators cannot suspend admin or owner accounts
+    if (input.moderatorRole === "moderator" && (targetAccount.role === "admin" || targetAccount.role === "owner")) {
+      throw new AuthorizationError("FORBIDDEN")
+    }
+    // No one can suspend the platform owner
+    if (targetAccount.role === "owner") {
+      throw new AuthorizationError("FORBIDDEN")
+    }
+
     await db.account.update({
       where: { id: input.subjectId },
       data: {
