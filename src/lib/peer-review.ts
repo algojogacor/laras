@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { AuthorizationError } from "@/lib/authorization"
 import { emitEvent } from "@/lib/activity"
 import { createNotification } from "@/lib/notifications"
+import crypto from "crypto"
 
 // ============================================================================
 // Peer Review Service — Phase 6B
@@ -123,13 +124,7 @@ async function ensurePeerReviewTable(): Promise<void> {
 }
 
 function generateId(): string {
-  // Simple CUID-like ID
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-  let id = "c"
-  for (let i = 0; i < 24; i++) {
-    id += chars[Math.floor(Math.random() * chars.length)]
-  }
-  return id
+  return crypto.randomUUID()
 }
 
 /**
