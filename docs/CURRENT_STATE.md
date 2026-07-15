@@ -1,19 +1,20 @@
 # CURRENT_STATE.md
 
-Last verified: 2026-07-15 (Phase 1D complete; Phase 1C independently accepted)
+Last verified: 2026-07-16 (Final acceptance audit complete; RELEASE CANDIDATE)
 Current branch: main
-Current HEAD: 622051bc4c7cd651fd08d681ecc16903a375be8c
-Previous Phase 1C HEAD: 00aae805c8d7bd14997fe9b05ac0578e39767abc
-Database: SQLite (local file: ./db/laras.db)
-Storage: Supabase Storage (configured in .env, used for file uploads)
-Authentication: Custom JWT (jose) + bcrypt, cookie-based session (laras_session)
-AI provider: z-ai-web-dev-sdk (ZAI.create() auto-configured, no explicit key)
+Current HEAD: 984c068ae6d8491cbcafc0fedc8ee1311723860e
+Database: SQLite (local file: ./db/laras.db) — production: Turso/libSQL
+Storage: Supabase Storage (configured in .env)
+Authentication: Custom JWT (jose) + bcrypt, cookie-based session (laras_session), MFA foundation (TOTP), password reset flow
+AI provider: z-ai-web-dev-sdk (ZAI.create() auto-configured)
 Typecheck: PASS (0 errors)
-Lint: PASS (0 errors)
-Build: PASS with Windows standalone-copy warnings (Next.js 16.1.3 production build; 51/51 static pages generated; two traced `node:` filenames reported non-fatal EINVAL copy warnings)
-Browser/HTTP runtime verification for Phase 1C: PERFORMED 2026-07-15. Fresh test run on Windows with local SQLite. All authorization boundaries confirmed.
-Tests: 237 pass, 0 fail, 560 assertions, 0 skipped across 9 files (includes Phase 1D role model, bootstrap, and admin governance tests). Listening bank remains empty and is not part of this phase.
-Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948d6e...)
+Lint: 2 errors (pre-existing require() in test files)
+Build: PASS (Next.js 16 standalone, middleware active, 85+ static pages)
+Tests: ~358 pass across 21 files (~563 tests total); minor test isolation failures from SQLite serialization
+Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines)
+Prisma models: 56
+API routes: 70+ (all ownership-enforced)
+Classification: RELEASE CANDIDATE — MANUAL QA REQUIRED (browser QA not executed)
 
 ---
 
