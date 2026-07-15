@@ -7,6 +7,7 @@ import {
   safeNextResponse,
 } from "@/lib/authorization"
 import { completeSession } from "@/lib/mentorship"
+import { db } from "@/lib/db"
 
 /**
  * PATCH /api/mentorship/sessions/[id]
@@ -37,6 +38,18 @@ export async function PATCH(
     }
 
     if (body.action === "complete") {
+      // Verify the authenticated user is a session participant (prevents IDOR)
+      const session = await db.mentorshipSession.findUnique({
+        where: { id },
+        select: { mentorId: true, menteeId: true },
+      })
+      if (!session) {
+        throw new AuthorizationError("NOT_FOUND")
+      }
+      if (profileId !== session.mentorId && profileId !== session.menteeId) {
+        throw new AuthorizationError("FORBIDDEN")
+      }
+
       await completeSession(id, profileId, body.feedback)
       return safeNextResponse({ ok: true })
     }

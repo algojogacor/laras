@@ -60,6 +60,11 @@ export async function POST(request: Request) {
       throw new AuthorizationError("BAD_REQUEST")
     }
 
+    // Verify the authenticated user is one of the participants (prevents IDOR)
+    if (profileId !== body.mentorId && profileId !== body.menteeId) {
+      throw new AuthorizationError("FORBIDDEN")
+    }
+
     const scheduledAt = new Date(body.scheduledAt)
     if (isNaN(scheduledAt.getTime())) {
       throw new AuthorizationError("BAD_REQUEST")
