@@ -633,7 +633,7 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
         body: JSON.stringify({ targetId: IDS.accountA, role: "admin" }),
       })
       const { PATCH } = await import("@/app/api/admin/users/route")
-      const res = await PATCH(req)
+      const res = await PATCH(req as any)
       expect(res.status).toBe(403)
     })
 
