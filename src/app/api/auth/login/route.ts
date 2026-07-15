@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { db } from "@/lib/db"
-import { verifyPassword, createSessionToken, setSessionCookie } from "@/lib/auth"
+import { verifyPassword, createSessionToken, setSessionCookie, createRefreshToken, setRefreshCookie } from "@/lib/auth"
 import { applyRateLimit, getClientIP } from "@/lib/rate-limit"
+import { createCsrfToken } from "@/lib/csrf"
+import { checkMFA } from "@/lib/mfa"
 
 const schema = z.object({
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1).max(128),
+  mfaToken: z.string().length(6).regex(/^\d{6}$/).optional(),
 })
 
 export async function POST(request: Request) {
@@ -27,7 +30,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "errInvalid" }, { status: 400 })
   }
 
-  const { email, password } = parsed.data
+  const { email, password, mfaToken } = parsed.data
   const account = await db.account.findUnique({
     where: { email },
     include: { profile: { select: { onboardingComplete: true, profileCompletion: true } } },
@@ -41,13 +44,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "errInvalid" }, { status: 401 })
   }
 
+  // Check MFA if enabled
+  const mfaResult = await checkMFA(account.id, mfaToken)
+  if (mfaResult.mfaEnabled && !mfaResult.valid) {
+    return NextResponse.json({ error: "mfa-required", message: "MFA token required" }, { status: 401 })
+  }
+
+  // Create session and refresh tokens
   const token = await createSessionToken(account.id)
   await setSessionCookie(token)
+
+  const refreshToken = await createRefreshToken(account.id)
+  await setRefreshCookie(refreshToken)
+
+  // Generate CSRF token for subsequent mutation requests
+  const csrfToken = await createCsrfToken()
 
   return NextResponse.json({
     ok: true,
     user: { id: account.id, email: account.email, name: account.name },
     onboardingComplete: account.profile?.onboardingComplete ?? false,
     profileCompletion: account.profile?.profileCompletion ?? 0,
+    csrfToken,
   })
 }

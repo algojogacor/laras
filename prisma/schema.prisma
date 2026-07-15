@@ -16,17 +16,21 @@ datasource db {
 // Auth (local dev). In production this maps to Supabase Auth (auth.users).
 // ---------------------------------------------------------------------------
 model Account {
-  id               String       @id @default(cuid())
-  email            String       @unique
-  passwordHash     String
-  name             String?
-  role             String       @default("user") // user | moderator | admin | owner (canonical 4-role model, Phase 1D)
-  suspended        Boolean      @default(false)
-  suspendedAt      DateTime?
-  suspensionReason String?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  profile          UserProfile?
+  id                    String       @id @default(cuid())
+  email                 String       @unique
+  passwordHash          String
+  name                  String?
+  role                  String       @default("user") // user | moderator | admin | owner (canonical 4-role model, Phase 1D)
+  suspended             Boolean      @default(false)
+  suspendedAt           DateTime?
+  suspensionReason      String?
+  mfaEnabled            Boolean      @default(false)
+  mfaSecret             String?      // TOTP secret (encrypted at rest in production)
+  sessionVersion        Int          @default(0)    // Incremented to revoke all sessions
+  refreshTokenVersion   Int          @default(0)    // Incremented to revoke refresh tokens
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  profile               UserProfile?
 
   scopedAssignments        ScopedAssignment[]
   grantedScopedAssignments ScopedAssignment[] @relation("GrantedScopedAssignments")
@@ -100,6 +104,7 @@ model UserProfile {
   blockedBy                 Block[]          @relation("BlockBlocked")
   organizationMemberships   OrganizationMembership[]
   circleMemberships         CircleMembership[]
+  campaignMemberships       CampaignMember[]
   mentorshipProfile         MentorshipProfile?
   mentorshipRequestsAsMentor MentorshipRequest[] @relation("MentorshipMentor")
   mentorshipRequestsAsMentee MentorshipRequest[] @relation("MentorshipMentee")
@@ -569,7 +574,7 @@ model License {
   id            String   @id @default(cuid())
   userProfileId String
   userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
-  plan          String   @default("free") // free | pro | org
+  plan          String   @default("free") // free | plus | pro | max
   status        String   @default("active") // active | expired | suspended | cancelled
   features      String?  // JSON string[] of feature keys this license grants (overrides plan defaults if set)
   note          String?  // admin note (reason for grant, promo code, etc.)
@@ -737,7 +742,7 @@ model QuotaLedger {
 model LicenseCode {
   id              String   @id @default(cuid())
   code            String   @unique // the redemption code (hashed for storage)
-  plan            String   // free | pro | org
+  plan            String   // free | plus | pro | max
   features        String?  // JSON string[] of feature keys
   maxRedemptions  Int      @default(1) // 1 = individual, >1 = batch
   currentRedemptions Int   @default(0)
@@ -890,8 +895,25 @@ model Campaign {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   codes       LicenseCode[]
+  members     CampaignMember[]
 
   @@index([isActive])
+}
+
+// ---------------------------------------------------------------------------
+// CampaignMember — Join table for campaign-user membership (Phase 5B)
+// ---------------------------------------------------------------------------
+model CampaignMember {
+  id            String   @id @default(cuid())
+  campaignId    String
+  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  enrolledAt    DateTime @default(now())
+  expiresAt     DateTime?
+
+  @@unique([campaignId, userProfileId])
+  @@index([userProfileId])
 }
 
 // ---------------------------------------------------------------------------

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 import type { FeatureKey } from "@/lib/entitlement"
 
 export interface LicenseCardProps {
-  plan: "free" | "pro" | "org"
+  plan: "free" | "plus" | "pro" | "max"
   status: "active" | "expired" | "suspended" | "cancelled" | "none"
   expiresAt: string | null
   labels: {
@@ -41,7 +41,7 @@ const ALL_FEATURES: { key: FeatureKey; labelKey: keyof LicenseCardProps["labels"
 
 export function LicenseCard({ plan, status, expiresAt, labels }: LicenseCardProps) {
   const isFree = plan === "free"
-  const planDesc = plan === "org" ? labels.planDescOrg : plan === "pro" ? labels.planDescPro : labels.planDesc
+  const planDesc = plan === "max" ? labels.planDescOrg : plan === "pro" ? labels.planDescPro : labels.planDesc
 
   const grantedFeatures = new Set<FeatureKey>(
     plan === "free"
@@ -50,7 +50,7 @@ export function LicenseCard({ plan, status, expiresAt, labels }: LicenseCardProp
   )
 
   const planStyle =
-    plan === "org"
+    plan === "max"
       ? "from-primary/10 to-transparent border-primary/20"
       : plan === "pro"
         ? "from-chart-1/10 to-transparent border-chart-1/20"
@@ -72,7 +72,7 @@ export function LicenseCard({ plan, status, expiresAt, labels }: LicenseCardProp
             variant="outline"
             className={cn(
               "border-0 capitalize",
-              plan === "org"
+              plan === "max"
                 ? "bg-primary/15 text-primary"
                 : plan === "pro"
                   ? "bg-chart-1/15 text-chart-1"

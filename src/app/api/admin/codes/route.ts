@@ -10,7 +10,7 @@ import {
 import { createLicenseCodes, deactivateCode, listCodes } from "@/lib/license-codes"
 import type { Plan } from "@/lib/entitlement"
 
-const VALID_PLANS: Plan[] = ["free", "pro", "org"]
+const VALID_PLANS: Plan[] = ["free", "plus", "pro", "max"]
 
 /**
  * GET /api/admin/codes

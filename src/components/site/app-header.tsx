@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Menu, X, ShieldCheck, Users, Bell } from "lucide-react"
+import { Menu, X, ShieldCheck, Users, Bell, MessageCircle, UserRound, GraduationCap, Building2, InboxIcon } from "lucide-react"
 import { Logo } from "@/components/site/logo"
 import { LocaleToggle } from "@/components/site/locale-toggle"
 import { ThemeToggle } from "@/components/site/theme-toggle"
@@ -32,10 +32,10 @@ export function AppHeader({
       : { profile: "Profile", settings: "Settings", logout: "Log out" }
   const navLabels =
     locale === "id"
-      ? { dashboard: "Dasbor", documents: "Dokumen", applications: "Lamaran", interview: "Wawancara", english: "Bahasa Inggris", profile: "Profil", connections: "Koneksi", notifications: "Notifikasi", admin: "Admin" }
-      : { dashboard: "Dashboard", documents: "Documents", applications: "Applications", interview: "Interview", english: "English", profile: "Profile", connections: "Connections", notifications: "Notifications", admin: "Admin" }
+      ? { dashboard: "Dasbor", documents: "Dokumen", applications: "Lamaran", interview: "Wawancara", english: "Bahasa Inggris", profile: "Profil", connections: "Koneksi", messages: "Pesan", circles: "Lingkar", mentorship: "Mentor", orgs: "Organisasi", inbox: "Kotak Masuk", notifications: "Notifikasi", admin: "Admin" }
+      : { dashboard: "Dashboard", documents: "Documents", applications: "Applications", interview: "Interview", english: "English", profile: "Profile", connections: "Connections", messages: "Messages", circles: "Circles", mentorship: "Mentorship", orgs: "Organizations", inbox: "Inbox", notifications: "Notifications", admin: "Admin" }
 
-  const navItems: Array<{ href: string; label: string; isAdmin?: boolean; badge?: number }> = [
+  const navItems: Array<{ href: string; label: string; icon?: React.ReactNode; isAdmin?: boolean; badge?: number }> = [
     { href: "/dashboard", label: navLabels.dashboard },
     { href: "/documents", label: navLabels.documents },
     { href: "/applications", label: navLabels.applications },
@@ -43,6 +43,11 @@ export function AppHeader({
     { href: "/english", label: navLabels.english },
     { href: "/profile", label: navLabels.profile },
     { href: "/connections", label: navLabels.connections, badge: pendingConnections },
+    { href: "/messages", label: navLabels.messages, icon: <MessageCircle className="h-3.5 w-3.5" /> },
+    { href: "/circles", label: navLabels.circles, icon: <UserRound className="h-3.5 w-3.5" /> },
+    { href: "/mentorship", label: navLabels.mentorship, icon: <GraduationCap className="h-3.5 w-3.5" /> },
+    { href: "/organizations", label: navLabels.orgs, icon: <Building2 className="h-3.5 w-3.5" /> },
+    { href: "/inbox", label: navLabels.inbox, icon: <InboxIcon className="h-3.5 w-3.5" /> },
     { href: "/notifications", label: navLabels.notifications, badge: unreadNotifications },
     ...(isAdmin ? [{ href: "/admin", label: navLabels.admin, isAdmin: true }] : []),
   ]
@@ -68,7 +73,7 @@ export function AppHeader({
                       : "text-muted-foreground"
                 }`}
               >
-                {item.isAdmin && <ShieldCheck className="h-3.5 w-3.5" />}
+                {item.icon ? item.icon : item.isAdmin ? <ShieldCheck className="h-3.5 w-3.5" /> : null}
                 {item.label}
                 {item.badge && item.badge > 0 ? (
                   <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-accent-foreground">
@@ -123,7 +128,7 @@ export function AppHeader({
                       : "text-muted-foreground"
                 }`}
               >
-                {item.isAdmin && <ShieldCheck className="h-3.5 w-3.5" />}
+                {item.icon ? item.icon : item.isAdmin ? <ShieldCheck className="h-3.5 w-3.5" /> : null}
                 {item.label}
                 {item.badge && item.badge > 0 ? (
                   <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-accent-foreground">

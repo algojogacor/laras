@@ -35,7 +35,7 @@ function Photo({ profile, className }: { profile: SerializedProfile; className?:
 export function ModernMinimal({ profile }: TemplateProps) {
   const links = profile.links as any
   return (
-    <div className="mx-auto w-full max-w-[640px] bg-white p-10 text-neutral-800" style={{ fontFamily: "Helvetica, Arial, sans-serif" }}>
+    <div className="mx-auto w-full max-w-[640px] bg-card p-10 text-neutral-800 print:bg-white dark:bg-card dark:text-foreground" style={{ fontFamily: "Helvetica, Arial, sans-serif" }}>
       <header className="flex items-start gap-4 border-b-2 border-neutral-800 pb-4">
         <div className="flex-1">
           <h1 className="text-3xl font-light tracking-tight">{profile.fullName}</h1>
@@ -89,7 +89,7 @@ export function ModernMinimal({ profile }: TemplateProps) {
 export function Corporate({ profile }: TemplateProps) {
   const links = profile.links as any
   return (
-    <div className="mx-auto w-full max-w-[640px] bg-white text-neutral-800" style={{ fontFamily: "Georgia, serif" }}>
+    <div className="mx-auto w-full max-w-[640px] bg-card text-neutral-800 print:bg-white dark:bg-card dark:text-foreground" style={{ fontFamily: "Georgia, serif" }}>
       <div className="flex">
         {/* Sidebar */}
         <aside className="w-[38%] bg-neutral-800 p-5 text-neutral-200">
@@ -142,7 +142,7 @@ export function Corporate({ profile }: TemplateProps) {
 export function Creative({ profile }: TemplateProps) {
   const links = profile.links as any
   return (
-    <div className="mx-auto w-full max-w-[640px] bg-white text-neutral-800" style={{ fontFamily: "Helvetica, Arial, sans-serif" }}>
+    <div className="mx-auto w-full max-w-[640px] bg-card text-neutral-800 print:bg-white dark:bg-card dark:text-foreground" style={{ fontFamily: "Helvetica, Arial, sans-serif" }}>
       {/* Header band */}
       <header className="flex items-center gap-4 bg-accent px-8 py-6 text-white">
         <div className="flex-1">
@@ -200,7 +200,7 @@ export function Creative({ profile }: TemplateProps) {
 export function Technical({ profile }: TemplateProps) {
   const links = profile.links as any
   return (
-    <div className="mx-auto w-full max-w-[640px] bg-white p-8 text-neutral-800" style={{ fontFamily: "Courier New, monospace" }}>
+    <div className="mx-auto w-full max-w-[640px] bg-card p-8 text-neutral-800 print:bg-white dark:bg-card dark:text-foreground" style={{ fontFamily: "Courier New, monospace" }}>
       <header className="flex items-start gap-3 border-b-2 border-dashed border-neutral-300 pb-3">
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{profile.fullName}</h1>

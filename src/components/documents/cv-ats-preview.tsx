@@ -44,7 +44,7 @@ export function CVATSPreview({
 
   return (
     <div
-      className="mx-auto w-full max-w-[640px] bg-white px-12 py-10 text-[11px] leading-relaxed text-neutral-900 shadow-lift"
+      className="mx-auto w-full max-w-[640px] bg-card px-12 py-10 text-[11px] leading-relaxed text-neutral-900 shadow-lift print:bg-white dark:bg-card dark:text-foreground"
       style={{ fontFamily: "Calibri, Arial, Helvetica, sans-serif", minHeight: "297mm" }}
     >
       {/* Name */}

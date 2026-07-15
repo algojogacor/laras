@@ -9,11 +9,13 @@ import {
   safeNextResponse
 } from "@/lib/authorization"
 import { acceptConnection, declineConnection } from "@/lib/connections"
+import { startConversation } from "@/lib/messaging"
 
 /**
  * PATCH /api/connections/[id]
  * Body: { action: "accept" | "decline" }
  * Accepts or declines a pending connection request (addressee only).
+ * On acceptance, auto-creates a conversation between the two users.
  */
 export async function PATCH(
   request: Request,
@@ -63,6 +65,26 @@ export async function PATCH(
         metadata: JSON.stringify({ by: actor.email }),
       },
     })
+
+    // On acceptance, auto-create a conversation between the two users
+    if (body.action === "accept") {
+      const connection = await db.connection.findUnique({
+        where: { id },
+        select: { requesterId: true, addresseeId: true },
+      })
+      if (connection) {
+        try {
+          await startConversation(
+            profileId,
+            [connection.requesterId === profileId ? connection.addresseeId : connection.requesterId],
+            "Halo! Sekarang kita terhubung. Silakan kirim pesan."
+          )
+        } catch {
+          // Non-critical: conversation creation failure shouldn't block the connection accept
+          console.error("[connections] Failed to auto-create conversation for", id)
+        }
+      }
+    }
 
     return safeNextResponse({ ok: true })
   } catch (error) {

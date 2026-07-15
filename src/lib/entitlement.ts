@@ -9,15 +9,16 @@ import { consumeQuota, refundQuota } from "@/lib/quota-ledger"
 // specific feature keys (overrides). The most permissive ACTIVE license wins.
 //
 // Feature keys (used by gateFeature / FeatureGate):
-//   - documents.unlimited     (free tier is capped at 5 docs)
+//   - documents.unlimited     (free tier is capped at 5 docs; plus+)
 //   - documents.visual_cv     (visual CV is pro+)
-//   - interview.unlimited     (free tier is capped at 3 sets)
+//   - interview.unlimited     (free tier is capped at 3 sets; plus+)
 //   - english.advanced        (advanced listening bank is pro+)
 //   - admin.panel             (admin/owner only — also role-gated)
 //   - support.priority        (pro+ priority support)
+//   - support.premium         (max only — dedicated support channel)
 // ---------------------------------------------------------------------------
 
-export type Plan = "free" | "pro" | "org"
+export type Plan = "free" | "plus" | "pro" | "max"
 export type LicenseStatus = "active" | "expired" | "suspended" | "cancelled"
 export type FeatureKey =
   | "documents.unlimited"
@@ -26,9 +27,14 @@ export type FeatureKey =
   | "english.advanced"
   | "admin.panel"
   | "support.priority"
+  | "support.premium"
 
 export const PLAN_FEATURES: Record<Plan, FeatureKey[]> = {
   free: [],
+  plus: [
+    "documents.unlimited",
+    "interview.unlimited",
+  ],
   pro: [
     "documents.unlimited",
     "documents.visual_cv",
@@ -36,22 +42,24 @@ export const PLAN_FEATURES: Record<Plan, FeatureKey[]> = {
     "english.advanced",
     "support.priority",
   ],
-  org: [
+  max: [
     "documents.unlimited",
     "documents.visual_cv",
     "interview.unlimited",
     "english.advanced",
     "support.priority",
+    "support.premium",
   ],
 }
 
 export const PLAN_LABELS: Record<Plan, string> = {
   free: "Free",
+  plus: "Plus",
   pro: "Pro",
-  org: "Org",
+  max: "Max",
 }
 
-export const PLAN_RANK: Record<Plan, number> = { free: 0, pro: 1, org: 2 }
+export const PLAN_RANK: Record<Plan, number> = { free: 0, plus: 1, pro: 2, max: 3 }
 
 export interface Entitlement {
   plan: Plan
@@ -130,11 +138,202 @@ export function hasFeature(e: Entitlement, feature: FeatureKey): boolean {
   return e.features.has(feature)
 }
 
-/** Free-tier usage caps (used by feature gates that check counts). */
+/** Per-tier usage caps (used by feature gates that check counts). */
 export const FREE_TIER_LIMITS = {
   maxDocuments: 5,
   maxInterviewSets: 3,
 } as const
+
+export const PLUS_TIER_LIMITS = {
+  maxDocuments: Number.POSITIVE_INFINITY,
+  maxInterviewSets: Number.POSITIVE_INFINITY,
+} as const
+
+export const PRO_TIER_LIMITS = {
+  maxDocuments: Number.POSITIVE_INFINITY,
+  maxInterviewSets: Number.POSITIVE_INFINITY,
+} as const
+
+export const MAX_TIER_LIMITS = {
+  maxDocuments: Number.POSITIVE_INFINITY,
+  maxInterviewSets: Number.POSITIVE_INFINITY,
+} as const
+
+/** Returns the effective tier limits for the given plan. */
+export function getTierLimits(plan: Plan) {
+  switch (plan) {
+    case "free":
+      return FREE_TIER_LIMITS
+    case "plus":
+      return PLUS_TIER_LIMITS
+    case "pro":
+      return PRO_TIER_LIMITS
+    case "max":
+      return MAX_TIER_LIMITS
+  }
+}
+
+/**
+ * Resolves the effective plan for a user by combining:
+ *   1. The most permissive active license plan
+ *   2. Any campaign-level plan override (campaign plan > license plan)
+ *
+ * Returns the effective Plan and the source of the determination.
+ */
+export async function resolveEffectivePlan(
+  profile: Pick<UserProfile, "id">
+): Promise<{ plan: Plan; source: "license" | "campaign" | "default"; campaignId?: string; licenseId?: string }> {
+  const now = new Date()
+
+  // 1. Check active licenses
+  const licenses = await db.license.findMany({
+    where: { userProfileId: profile.id },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, plan: true, status: true, expiresAt: true },
+  })
+
+  const activeLicenses = licenses.filter(
+    (l) => l.status === "active" && (!l.expiresAt || l.expiresAt > now)
+  )
+
+  let bestLicensePlan: Plan | null = null
+  let bestLicenseId: string | undefined
+  if (activeLicenses.length > 0) {
+    let best = activeLicenses[0]
+    for (const l of activeLicenses) {
+      if (PLAN_RANK[l.plan as Plan] > PLAN_RANK[best.plan as Plan]) best = l
+    }
+    bestLicensePlan = best.plan as Plan
+    bestLicenseId = best.id
+  }
+
+  // 2. Check campaign membership (campaign plan overrides license plan)
+  const now2 = new Date()
+  const campaignMemberships = await db.campaignMember.findMany({
+    where: {
+      userProfileId: profile.id,
+      campaign: {
+        isActive: true,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: now2 } },
+        ],
+      },
+    },
+    select: {
+      campaignId: true,
+      campaign: { select: { plan: true } },
+    },
+    orderBy: { enrolledAt: "desc" },
+  })
+
+  let bestCampaignPlan: Plan | null = null
+  let bestCampaignId: string | undefined
+  if (campaignMemberships.length > 0) {
+    // Pick the most permissive campaign
+    for (const m of campaignMemberships) {
+      const p = m.campaign.plan as Plan
+      if (!bestCampaignPlan || PLAN_RANK[p] > PLAN_RANK[bestCampaignPlan]) {
+        bestCampaignPlan = p
+        bestCampaignId = m.campaignId
+      }
+    }
+  }
+
+  // Determine effective plan
+  if (bestCampaignPlan && bestLicensePlan) {
+    // Campaign plan overrides license plan (marketing campaigns are additive)
+    if (PLAN_RANK[bestCampaignPlan] > PLAN_RANK[bestLicensePlan]) {
+      return { plan: bestCampaignPlan, source: "campaign", campaignId: bestCampaignId }
+    }
+    return { plan: bestLicensePlan, source: "license", licenseId: bestLicenseId }
+  }
+
+  if (bestCampaignPlan) {
+    return { plan: bestCampaignPlan, source: "campaign", campaignId: bestCampaignId }
+  }
+
+  if (bestLicensePlan) {
+    return { plan: bestLicensePlan, source: "license", licenseId: bestLicenseId }
+  }
+
+  return { plan: "free", source: "default" }
+}
+
+/**
+ * Returns a human-readable breakdown of what the user has and why.
+ *
+ * Includes:
+ *   - Effective plan and its source
+ *   - Features granted by the plan
+ *   - License status (if any)
+ *   - Campaign entitlement (if any)
+ *   - Remaining limits for the current tier
+ */
+export async function explainEntitlement(
+  profile: Pick<UserProfile, "id">
+): Promise<{
+  effectivePlan: Plan
+  source: "license" | "campaign" | "default"
+  license: { id: string; plan: Plan; status: string; expiresAt: Date | null } | null
+  campaign: { id: string; name: string; plan: Plan } | null
+  features: FeatureKey[]
+  limits: { maxDocuments: number; maxInterviewSets: number }
+  /** Human-readable summary (English) */
+  summary: string
+}> {
+  const [entitlement, effective] = await Promise.all([
+    getEntitlement(profile),
+    resolveEffectivePlan(profile),
+  ])
+
+  const features = Array.from(entitlement.features)
+  const limits = getTierLimits(effective.plan)
+
+  let license: { id: string; plan: Plan; status: string; expiresAt: Date | null } | null = null
+  if (entitlement.licenseId && entitlement.status !== "none") {
+    license = {
+      id: entitlement.licenseId,
+      plan: entitlement.plan,
+      status: entitlement.status,
+      expiresAt: entitlement.expiresAt,
+    }
+  }
+
+  let campaign: { id: string; name: string; plan: Plan } | null = null
+  if (effective.campaignId) {
+    const c = await db.campaign.findUnique({
+      where: { id: effective.campaignId },
+      select: { id: true, name: true, plan: true },
+    })
+    if (c) {
+      campaign = { id: c.id, name: c.name, plan: c.plan as Plan }
+    }
+  }
+
+  const planLabel = PLAN_LABELS[effective.plan]
+  const sourceDesc =
+    effective.source === "campaign"
+      ? `campaign "${campaign?.name ?? "unknown"}"`
+      : effective.source === "license"
+        ? "active license"
+        : "default free tier"
+
+  const summary = `You are on the ${planLabel} plan (via ${sourceDesc}). ` +
+    `You have access to ${features.length} premium feature(s): ${features.join(", ") || "none"}. ` +
+    `Document limit: ${limits.maxDocuments === Number.POSITIVE_INFINITY ? "unlimited" : limits.maxDocuments}, ` +
+    `Interview limit: ${limits.maxInterviewSets === Number.POSITIVE_INFINITY ? "unlimited" : limits.maxInterviewSets}.`
+
+  return {
+    effectivePlan: effective.plan,
+    source: effective.source,
+    license,
+    campaign,
+    features,
+    limits: { maxDocuments: limits.maxDocuments, maxInterviewSets: limits.maxInterviewSets },
+    summary,
+  }
+}
 
 /**
  * Check whether the user can create another document. Free tier is capped;

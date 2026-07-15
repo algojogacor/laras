@@ -27,8 +27,8 @@ export default async function SettingsPage() {
         status={entitlement.status}
         expiresAt={entitlement.expiresAt ? entitlement.expiresAt.toISOString() : null}
         labels={{
-          yourPlan: t.admin.yourPlan,
-          currentPlan: t.admin.currentPlan,
+          yourPlan: t.admin.yourPlan ?? "Paket Anda",
+          currentPlan: t.admin.currentPlan ?? "Paket saat ini",
           planDesc: t.admin.planDesc,
           planDescPro: t.admin.planDescPro,
           planDescOrg: t.admin.planDescOrg,

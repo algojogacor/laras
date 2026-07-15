@@ -278,7 +278,7 @@ export function EssayBuilder({ initialProfile }: { initialProfile: SerializedPro
                     </Button>
                   </div>
                 </div>
-                <div className="overflow-hidden rounded-xl border border-border bg-white p-8 shadow-lift sm:p-12" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
+                <div className="overflow-hidden rounded-xl border border-border bg-card p-8 shadow-lift sm:p-12 print:bg-white dark:bg-card" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
                   <h2 className="mb-6 font-serif text-xl font-bold text-neutral-900">{essay.title}</h2>
                   {essay.paragraphs.map((p, i) => <p key={i} className="mb-4 text-sm leading-relaxed text-neutral-800">{p}</p>)}
                 </div>

@@ -12,6 +12,7 @@ import {
   Users,
   UserCheck,
   Send,
+  MessageCircle,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -301,7 +302,19 @@ export function ConnectionsPanel({
               name={c.other.fullName || c.other.email || "Unknown"}
               headline={c.other.headline || c.other.email || ""}
               initials={initials(c.other.fullName)}
-              action={<StatusBadge text={labels.alreadyConnected} variant="success" icon={Check} />}
+              action={
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => router.push(`/messages?connect=${c.other.id}`)}
+                  >
+                    <MessageCircle className="mr-1 h-3.5 w-3.5" />
+                    Kirim Pesan
+                  </Button>
+                  <StatusBadge text={labels.alreadyConnected} variant="success" icon={Check} />
+                </div>
+              }
             />
           ))
         )}

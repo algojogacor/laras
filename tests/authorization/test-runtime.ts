@@ -9,12 +9,14 @@ type AsyncHook = (() => Promise<void>) | undefined
  */
 export const testRuntime = {
   cookieValue: undefined as string | undefined,
+  csrfCookieValue: undefined as string | undefined,
   zaiCompletionsHook: undefined as AsyncHook,
   notFoundTriggered: false,
 }
 
 export function resetTestRuntime() {
   testRuntime.cookieValue = undefined
+  testRuntime.csrfCookieValue = undefined
   testRuntime.zaiCompletionsHook = undefined
   testRuntime.notFoundTriggered = false
 }
@@ -27,7 +29,18 @@ mock.module("next/headers", () => ({
       if (name === "laras_session" && testRuntime.cookieValue) {
         return { name: "laras_session", value: testRuntime.cookieValue }
       }
+      if (name === "laras_csrf" && testRuntime.csrfCookieValue) {
+        return { name: "laras_csrf", value: testRuntime.csrfCookieValue }
+      }
       return undefined
+    },
+    set: (name: string, value: string) => {
+      // No-op in test — just track that it was called
+      if (name === "laras_csrf") testRuntime.csrfCookieValue = value
+    },
+    delete: (name: string) => {
+      if (name === "laras_csrf") testRuntime.csrfCookieValue = undefined
+      if (name === "laras_session") testRuntime.cookieValue = undefined
     },
   }),
 }))

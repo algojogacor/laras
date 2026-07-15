@@ -69,7 +69,7 @@ export function CoverLetterViewer({
         </div>
       </div>
 
-      <div className="print-area overflow-hidden rounded-xl border border-border bg-white p-8 shadow-lift sm:p-12 print:border-0 print:shadow-none print:p-0" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
+      <div className="print-area overflow-hidden rounded-xl border border-border bg-card p-8 shadow-lift sm:p-12 print:border-0 print:bg-white print:shadow-none print:p-0 dark:bg-card" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
         <div className="mb-6 border-b border-neutral-200 pb-4">
           <p className="text-sm font-bold text-neutral-900">{profile.fullName}</p>
           <p className="text-xs text-neutral-600">{[profile.email, profile.phone, profile.location].filter(Boolean).join("  |  ")}</p>

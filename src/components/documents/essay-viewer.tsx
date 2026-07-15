@@ -47,7 +47,7 @@ export function EssayViewer({ documentId, title, essay, profile, locale, updated
           </div>
         </div>
       </div>
-      <div className="print-area overflow-hidden rounded-xl border border-border bg-white p-8 shadow-lift sm:p-12 print:border-0 print:shadow-none print:p-0" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
+      <div className="print-area overflow-hidden rounded-xl border border-border bg-card p-8 shadow-lift sm:p-12 print:border-0 print:bg-white print:shadow-none print:p-0 dark:bg-card" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
         <h2 className="mb-6 font-serif text-xl font-bold text-neutral-900">{essay.title}</h2>
         {essay.paragraphs.map((p, i) => <p key={i} className="mb-4 text-sm leading-relaxed text-neutral-800">{p}</p>)}
       </div>

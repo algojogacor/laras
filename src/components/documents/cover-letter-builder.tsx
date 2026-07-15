@@ -203,7 +203,7 @@ export function CoverLetterBuilder({ initialProfile }: { initialProfile: Seriali
                     </Button>
                   </div>
                 </div>
-                <div className="overflow-hidden rounded-xl border border-border bg-white p-8 shadow-lift sm:p-12" style={{ fontFamily: "Calibri, Arial, sans-serif", minHeight: "297mm" }}>
+                <div className="overflow-hidden rounded-xl border border-border bg-card p-8 shadow-lift sm:p-12 print:bg-white dark:bg-card" style={{ fontFamily: "Calibri, Arial, sans-serif", minHeight: "297mm" }}>
                   <div className="mb-6 border-b border-neutral-200 pb-4">
                     <p className="text-sm font-bold text-neutral-900">{edits.fullName}</p>
                     <p className="text-xs text-neutral-600">{[edits.email, edits.phone, edits.location].filter(Boolean).join("  |  ")}</p>

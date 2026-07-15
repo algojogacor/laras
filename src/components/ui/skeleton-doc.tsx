@@ -16,7 +16,7 @@ export function Skeleton({ className, style }: { className?: string; style?: Rea
 /** Document preview skeleton — simulates a paper-style loading state. */
 export function DocumentSkeleton({ lines = 8 }: { lines?: number }) {
   return (
-    <div className="mx-auto w-full max-w-[640px] bg-white p-10 shadow-lift">
+    <div className="mx-auto w-full max-w-[640px] bg-card p-10 shadow-lift print:bg-white dark:bg-card">
       <Skeleton className="h-8 w-48" />
       <Skeleton className="mt-2 h-3 w-32" />
       <div className="mt-4 border-b border-border pb-2">

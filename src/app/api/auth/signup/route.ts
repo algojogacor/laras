@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { db } from "@/lib/db"
-import { hashPassword, createSessionToken, setSessionCookie } from "@/lib/auth"
+import { hashPassword, createSessionToken, setSessionCookie, createRefreshToken, setRefreshCookie } from "@/lib/auth"
 import { applyRateLimit, getClientIP } from "@/lib/rate-limit"
+import { createCsrfToken } from "@/lib/csrf"
 
 const schema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -61,13 +62,21 @@ export async function POST(request: Request) {
     include: { profile: true },
   })
 
+  // Create session and refresh tokens
   const token = await createSessionToken(account.id)
   await setSessionCookie(token)
+
+  const refreshToken = await createRefreshToken(account.id)
+  await setRefreshCookie(refreshToken)
+
+  // Generate CSRF token for subsequent mutation requests
+  const csrfToken = await createCsrfToken()
 
   return NextResponse.json({
     ok: true,
     user: { id: account.id, email: account.email, name: account.name },
     onboardingComplete: false,
     profileCompletion: 0,
+    csrfToken,
   })
 }

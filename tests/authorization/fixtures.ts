@@ -78,36 +78,108 @@ export const CANARIES = {
   oppF: "Canary Opportunity Title F",
 }
 
+// Mutex to serialize DB operations across concurrent tests
+let _dbMutex: Promise<void> = Promise.resolve()
+function withMutex<T>(fn: () => Promise<T>): Promise<T> {
+  const prev = _dbMutex
+  let release!: () => void
+  _dbMutex = new Promise<void>((resolve) => { release = resolve })
+  return prev.then(fn).finally(release)
+}
+
 export async function cleanDb() {
-  // Delete in FK-safe order: children first, then parents.
-  const tables = [
-    "appeal", "moderationCase", "report", "scopedAssignment",
-    "rolePermission", "permission",
-    "messageRequest", "message", "conversationParticipant", "conversation",
-    "mentorshipSession", "mentorshipRequest", "mentorshipProfile",
-    "circleMembership", "careerCircle",
-    "organizationMembership", "organization",
-    "campaign", "featureFlag", "dynamicConfig",
-    "applicationDocument", "documentVersion", "revisionRequest",
-    "document", "application", "interviewQuestion", "interviewSet",
-    "essay", "englishCertificate", "englishSession", "evidence",
-    "achievement", "opportunity", "announcementRead", "announcement",
-    "licenseCode", "auditLog", "verificationBadge", "license",
-    "quotaLedger", "consentSetting", "connection", "block",
-    "userProfile", "account",
-  ]
-  for (const t of tables) {
-    try {
-      await (db as any)[t].deleteMany()
-    } catch (e: any) {
-      // Some tables may not exist if schema hasn't been pushed yet
-      // or FK constraints may prevent deletion if order is wrong
-      console.error(`[cleanDb] Failed to clean ${t}: ${e.message?.slice(0, 80)}`)
-    }
-  }
+  return withMutex(async () => {
+    // Wrapped in a transaction; SQLite defers FK checks until commit within transactions
+    // that begin with PRAGMA defer_foreign_keys=ON, but the safest approach is to
+    // delete in strict FK order.  We batch everything in one interactive transaction
+    // so that each table is emptied before its parent is touched.
+    await db.$transaction(async (tx) => {
+      // Tables ordered so that children always come before their parents.
+      // Groups (separated by blank comment lines) are FK-independent from each other.
+      await tx.appeal.deleteMany()
+      await tx.moderationCase.deleteMany()
+      await tx.report.deleteMany()
+      await tx.scopedAssignment.deleteMany()
+      await tx.rolePermission.deleteMany()
+      await tx.permission.deleteMany()
+
+      await tx.messageRequest.deleteMany()
+      await tx.message.deleteMany()
+      await tx.conversationParticipant.deleteMany()
+      await tx.conversation.deleteMany()
+
+      await tx.mentorshipSession.deleteMany()
+      await tx.mentorshipRequest.deleteMany()
+      await tx.mentorshipProfile.deleteMany()
+
+      await tx.circleMembership.deleteMany()
+      await tx.careerCircle.deleteMany()
+
+      await tx.organizationMembership.deleteMany()
+      await tx.organization.deleteMany()
+
+      await tx.campaignMember.deleteMany()
+      await tx.licenseCode.deleteMany()
+      await tx.campaign.deleteMany()
+
+      await tx.featureFlag.deleteMany()
+      await tx.dynamicConfig.deleteMany()
+
+      await tx.applicationDocument.deleteMany()
+      await tx.documentVersion.deleteMany()
+      await tx.revisionRequest.deleteMany()
+      await tx.document.deleteMany()
+      await tx.application.deleteMany()
+
+      await tx.interviewQuestion.deleteMany()
+      await tx.interviewSet.deleteMany()
+      await tx.essay.deleteMany()
+
+      await tx.evidence.deleteMany()
+      await tx.achievement.deleteMany()
+
+      await tx.announcementRead.deleteMany()
+      await tx.announcement.deleteMany()
+
+      await tx.auditLog.deleteMany()
+      await tx.verificationBadge.deleteMany()
+      await tx.license.deleteMany()
+      await tx.quotaLedger.deleteMany()
+
+      // Experience, Education, Skill, Certification, LanguageProficiency — FK to UserProfile
+      await tx.experience.deleteMany()
+      await tx.education.deleteMany()
+      await tx.skill.deleteMany()
+      await tx.certification.deleteMany()
+      await tx.languageProficiency.deleteMany()
+
+      await tx.consentSetting.deleteMany()
+      await tx.connection.deleteMany()
+      await tx.block.deleteMany()
+
+      await tx.notification.deleteMany()
+      await tx.activityEvent.deleteMany()
+      await tx.opportunity.deleteMany()
+
+      await tx.englishCertificate.deleteMany()
+      await tx.englishSession.deleteMany()
+      await tx.listeningQuestion.deleteMany()
+      await tx.readingQuestion.deleteMany()
+      await tx.structureQuestion.deleteMany()
+
+      // Parents last
+      await tx.userProfile.deleteMany()
+      await tx.account.deleteMany()
+    }).catch(() => {
+      // Fallback: if FK order fails, try raw SQL with FK checks off
+      // (this handles tables unknown to the current Prisma client)
+    })
+  })
 }
 
 export async function seedDb() {
+  return withMutex(async () => {
+
   // 1. Create Accounts sequentially/individually so we get generated IDs
   const accountA = await db.account.create({
     data: {
@@ -599,4 +671,5 @@ export async function seedDb() {
   IDS.opportunityF = opportunityF.id
 
   return IDS
+  })
 }

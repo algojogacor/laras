@@ -10,7 +10,7 @@ import {
 import { requireCapability } from "@/lib/permissions"
 import type { Plan, LicenseStatus } from "@/lib/entitlement"
 
-const VALID_PLANS: Plan[] = ["free", "pro", "org"]
+const VALID_PLANS: Plan[] = ["free", "plus", "pro", "max"]
 const VALID_STATUSES: LicenseStatus[] = ["active", "expired", "suspended", "cancelled"]
 
 /**

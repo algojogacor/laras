@@ -2,11 +2,13 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { validateResetToken, consumeResetToken } from "@/lib/reset-tokens"
+import { revokeSessions } from "@/lib/auth"
 
 /**
  * POST /api/auth/reset/confirm
  * Body: { token, password }
  * Confirms a password reset. Returns 200 on success, 400/404 on invalid token.
+ * Revokes all existing sessions on password change for security.
  */
 export async function POST(request: Request) {
   let body: { token?: string; password?: string }
@@ -41,6 +43,9 @@ export async function POST(request: Request) {
 
   // Consume the token so it can't be reused
   consumeResetToken(token)
+
+  // Revoke all existing sessions for security (password changed)
+  await revokeSessions(accountId)
 
   return NextResponse.json({ ok: true })
 }

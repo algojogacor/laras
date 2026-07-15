@@ -36,7 +36,7 @@ import {
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
-type Plan = "free" | "pro" | "org"
+type Plan = "free" | "plus" | "pro" | "max"
 type LicenseStatus = "active" | "expired" | "suspended" | "cancelled"
 
 interface License {
@@ -62,8 +62,9 @@ interface LicenseLabels {
   noLicenses: string
   plan: string
   planFree: string
+  planPlus: string
   planPro: string
-  planOrg: string
+  planMax: string
   statusActive: string
   statusSuspended: string
   statusExpired: string
@@ -84,8 +85,9 @@ interface LicenseLabels {
 
 const PLAN_STYLE: Record<Plan, { badge: string; icon: typeof Crown }> = {
   free: { badge: "bg-muted text-muted-foreground", icon: Sparkles },
+  plus: { badge: "bg-chart-3/15 text-chart-3", icon: Crown },
   pro: { badge: "bg-chart-1/15 text-chart-1", icon: Crown },
-  org: { badge: "bg-primary/15 text-primary", icon: Crown },
+  max: { badge: "bg-primary/15 text-primary", icon: Crown },
 }
 
 const STATUS_STYLE: Record<LicenseStatus, { dot: string; text: string; icon: typeof CheckCircle2 }> = {
@@ -129,7 +131,7 @@ export function LicensePanel({ labels }: { labels: LicenseLabels }) {
   }
 
   const labelForPlan = (p: Plan) =>
-    p === "pro" ? labels.planPro : p === "org" ? labels.planOrg : labels.planFree
+    p === "pro" ? labels.planPro : p === "max" ? labels.planMax : p === "plus" ? labels.planPlus : labels.planFree
   const labelForStatus = (s: LicenseStatus) =>
     ({
       active: labels.statusActive,
@@ -369,8 +371,9 @@ export function LicensePanel({ labels }: { labels: LicenseLabels }) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="free">{labels.planFree}</SelectItem>
+                    <SelectItem value="plus">{labels.planPlus}</SelectItem>
                     <SelectItem value="pro">{labels.planPro}</SelectItem>
-                    <SelectItem value="org">{labels.planOrg}</SelectItem>
+                    <SelectItem value="max">{labels.planMax}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

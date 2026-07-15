@@ -38,7 +38,7 @@ export function AnnouncementFeed({ initialAnnouncements, labels }: AnnouncementF
   if (initialAnnouncements.length === 0) return null
 
   return (
-    <section>
+    <section aria-live="polite" aria-label={labels.feedTitle}>
       <h2 className="font-serif text-xl font-semibold">{labels.feedTitle}</h2>
       <div className="mt-4 space-y-2">
         {initialAnnouncements.map((a, i) => {

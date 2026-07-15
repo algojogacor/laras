@@ -103,6 +103,15 @@ export const RATE_LIMITS = {
 
   // Generic API: per-IP
   api: { limit: 60, windowMs: 60_000 }, // 60/min per IP
+
+  // Messaging / communication (Phase 10C)
+  messaging: { limit: 30, windowMs: 60_000 }, // 30 messages/min per user
+
+  // Connections / networking (Phase 10C)
+  connections: { limit: 10, windowMs: 60_000 }, // 10 connection requests/min per user
+
+  // Reports / moderation (Phase 10C)
+  reports: { limit: 5, windowMs: 60_000 }, // 5 reports/min per user
 } as const
 
 /**
@@ -141,4 +150,54 @@ export function applyRateLimit(
       },
     },
   )
+}
+
+/**
+ * Check if a key would be rate-limited without consuming a request.
+ * Useful for pre-flight checks and UI indicators.
+ *
+ * @param key     Identifier (e.g., `user:abc123`)
+ * @param preset  Rate limit preset to check against
+ * @returns       true if the next request would be rate-limited
+ */
+export function isRateLimited(
+  key: string,
+  preset: keyof typeof RATE_LIMITS,
+): boolean {
+  const { limit, windowMs } = RATE_LIMITS[preset]
+  const now = Date.now()
+  sweep(now)
+
+  const existing = buckets.get(key)
+  if (!existing || existing.resetAt <= now) return false
+
+  return existing.count >= limit
+}
+
+/**
+ * Generate standard rate limit response headers from a RateLimitResult.
+ * Attach these to every API response for transparency and client-side throttling.
+ */
+export function rateLimitHeaders(result: RateLimitResult): Record<string, string> {
+  return {
+    "X-RateLimit-Limit": String(result.limit),
+    "X-RateLimit-Remaining": String(result.remaining),
+    "X-RateLimit-Reset": String(Math.floor(result.resetAt / 1000)),
+  }
+}
+
+/**
+ * Apply rate limiting and return headers for inclusion in a normal response.
+ * Returns null if rate-limited (caller should return 429), or headers if allowed.
+ */
+export function consumeRateLimit(
+  preset: keyof typeof RATE_LIMITS,
+  key: string,
+): { headers: Record<string, string> } | null {
+  const { limit, windowMs } = RATE_LIMITS[preset]
+  const result = rateLimit(key, limit, windowMs)
+
+  if (!result.ok) return null
+
+  return { headers: rateLimitHeaders(result) }
 }
