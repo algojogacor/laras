@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server"
+import { db } from "@/lib/db"
 import {
   requireActor,
   handleAuthorizationError,
@@ -74,10 +75,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the case belongs to the appellant (ownership check)
-    const caseRecord = await import("@/lib/db").then(m => m.db.moderationCase.findUnique({
+    const caseRecord = await db.moderationCase.findUnique({
       where: { id: caseId },
       select: { subjectId: true },
-    }))
+    })
     if (!caseRecord || caseRecord.subjectId !== actor.accountId) {
       throw new AuthorizationError("NOT_FOUND")
     }

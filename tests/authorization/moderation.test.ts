@@ -421,20 +421,19 @@ describe("Phase 4B+4C — Moderation System", () => {
       expect(account!.suspensionReason).toBe("Repeated violations")
     })
 
-    test("suspended user session includes suspended=true", async () => {
+    test("suspended user session returns null (denied at auth layer)", async () => {
       // First suspend the user
       await db.account.update({
         where: { id: IDS.accountA },
         data: { suspended: true, suspendedAt: new Date(), suspensionReason: "Test" },
       })
 
-      // User A tries to access — the session should show suspended
+      // User A tries to access — session must be null for suspended users
       testRuntime.cookieValue = await createSessionToken(IDS.accountA)
-      // We test via service layer since routes would redirect
       const { getSession } = await import("@/lib/auth")
       const session = await getSession()
-      expect(session).not.toBeNull()
-      expect(session!.suspended).toBe(true)
+      // Suspended users get no valid session — enforced at verifySessionToken and getSession
+      expect(session).toBeNull()
     })
 
     test("moderator can unsuspend via revoke case", async () => {
@@ -503,16 +502,15 @@ describe("Phase 4B+4C — Moderation System", () => {
   // ============================================================================
   describe("Appeals", () => {
     test("user can file an appeal against a moderation case", async () => {
-      // Create a case first
+      // Create a case first (use warning, not suspension — suspension locks out the user)
       testRuntime.cookieValue = await createSessionToken(IDS.moderatorG)
       const createRes = await casesPost(new Request("http://localhost/api/moderation/cases", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subjectId: IDS.accountA,
-          type: "suspension",
+          type: "warning",
           reason: "Disputed action",
-          duration: "24h",
         }),
       }))
       const { case: mc } = await createRes.json()
@@ -567,16 +565,15 @@ describe("Phase 4B+4C — Moderation System", () => {
     })
 
     test("moderator can review an appeal (granted)", async () => {
-      // Create case
+      // Create case (use warning, not suspension — suspension locks out the appellant)
       testRuntime.cookieValue = await createSessionToken(IDS.moderatorG)
       const createRes = await casesPost(new Request("http://localhost/api/moderation/cases", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subjectId: IDS.accountA,
-          type: "suspension",
+          type: "warning",
           reason: "Test",
-          duration: "24h",
         }),
       }))
       const { case: mc } = await createRes.json()

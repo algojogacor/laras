@@ -69,9 +69,11 @@ function LockedField({ label, labels }: { label: string; labels: PublicProfileLa
 export function PublicProfileView({
   data,
   labels,
+  profileId,
 }: {
   data: PublicProfileDTO
   labels: PublicProfileLabels
+  profileId?: string
 }) {
   const { profile, viewerClass, omittedFields } = data
   const isOwner = viewerClass === "OWNER"
@@ -93,7 +95,7 @@ export function PublicProfileView({
           {!isOwner && (
             <ReportDialog
               targetType="user"
-              targetId={profile.id}
+              targetId={profileId ?? ""}
               targetLabel="Pengguna"
             />
           )}

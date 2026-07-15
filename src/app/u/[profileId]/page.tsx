@@ -125,6 +125,7 @@ export default async function PublicProfilePage({
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <PublicProfileView
         data={publicProfile}
+        profileId={profileId}
         labels={{
           title: t.publicProfile.title,
           back: t.publicProfile.back,

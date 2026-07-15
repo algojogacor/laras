@@ -490,8 +490,8 @@ describe.serial("Messaging integration tests", () => {
       )
       const { requestId } = await sendRes.json()
 
-      // User E (not the recipient) tries to accept
-      await setActor(IDS.accountF)
+      // User F (owner, not the recipient) tries to accept
+      await setActor(IDS.ownerF)
       const res = await requestsIdPatch(
         new Request(`http://localhost/api/messages/requests/${requestId}`, {
           method: "PATCH",
