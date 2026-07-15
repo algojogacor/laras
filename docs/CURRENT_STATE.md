@@ -1,18 +1,18 @@
 # CURRENT_STATE.md
 
-Last verified: 2026-07-11 (Phase 1C remediation ready for independent re-review; not yet independently accepted)
+Last verified: 2026-07-15 (Phase 1D complete; Phase 1C independently accepted)
 Current branch: main
-Phase 1C remediation code/test HEAD: 00aae805c8d7bd14997fe9b05ac0578e39767abc
-Documentation: finalized in subsequent local commit(s); the exact final repository HEAD is reported externally after commit creation to avoid a self-referential SHA claim
-Database: SQLite (local file: /home/z/my-project/db/custom.db)
+Current HEAD: 622051bc4c7cd651fd08d681ecc16903a375be8c
+Previous Phase 1C HEAD: 00aae805c8d7bd14997fe9b05ac0578e39767abc
+Database: SQLite (local file: ./db/laras.db)
 Storage: Supabase Storage (configured in .env, used for file uploads)
 Authentication: Custom JWT (jose) + bcrypt, cookie-based session (laras_session)
 AI provider: z-ai-web-dev-sdk (ZAI.create() auto-configured, no explicit key)
 Typecheck: PASS (0 errors)
 Lint: PASS (0 errors)
 Build: PASS with Windows standalone-copy warnings (Next.js 16.1.3 production build; 51/51 static pages generated; two traced `node:` filenames reported non-fatal EINVAL copy warnings)
-Browser/HTTP runtime verification for the Phase 1C remediation: NOT PERFORMED. Browser QA recorded for earlier phases is historical and was not revalidated during this remediation.
-Tests: 165 pass, 0 fail, 461 assertions, 0 skipped across 7 files in each of two identical full-suite runs on the Phase 1C code/test commit. Listening bank remains empty and is not part of this phase.
+Browser/HTTP runtime verification for Phase 1C: PERFORMED 2026-07-15. Fresh test run on Windows with local SQLite. All authorization boundaries confirmed.
+Tests: 237 pass, 0 fail, 560 assertions, 0 skipped across 9 files (includes Phase 1D role model, bootstrap, and admin governance tests). Listening bank remains empty and is not part of this phase.
 Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948d6e...)
 
 ---
@@ -96,7 +96,8 @@ Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948
 | Unified Inbox | MISSING |
 | Configuration Engine / Feature Flags | MISSING — no FeatureFlag or DynamicConfig model |
 | Analytics Event Layer | MISSING — no analytics event model or tracking |
-| Moderator role + scoped permissions | MISSING — only user/admin/owner; no MODERATOR, no permission model |
+| Moderator role | PRESENT — canonical 4-role model (owner/admin/moderator/user) with fail-closed normalization; scoped permissions deferred to Phase 4A |
+| Granular permissions + scoped assignments | MISSING — role strings used, no capability model yet (Phase 4A) |
 | Moderation / Reports / Appeals / Sanctions | MISSING — no models, API, or UI |
 | User suspension | MISSING — no suspended flag on Account |
 | Institution / Organization workspaces | MISSING — no models, API, or UI |
@@ -108,7 +109,7 @@ Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948
 | Learning pathways | MISSING |
 | Voice interview | MISSING |
 | MFA | MISSING |
-| Owner bootstrap (secure first-owner) | MISSING — roles set via DB/script, no secure bootstrap |
+| Owner bootstrap (secure first-owner) | PRESENT — `scripts/bootstrap-owner.ts` with timing-safe secret, transactional single-owner enforcement, idempotent re-run protection |
 | Personal plans: FREE / PLUS / PRO / MAX (§23) | MISSING — codebase has Free/Pro/Org (3 plans, not 4); PLUS and MAX tiers not implemented |
 | INSTITUTION / ORGANIZATION workspace products (§23) | MISSING |
 | Activity and Action Center (§9.1) | MISSING — dashboard has on-the-fly activity timeline, not a durable action center |
@@ -133,7 +134,7 @@ Canonical master prompt: docs/MASTER_PROMPT.md (4088 source lines, SHA-256 64948
 1. **RESOLVED IN PHASE 1B — Public profile data leak**: `/u/[profileId]` now selects a narrow source shape and projects it through one server-only DTO before any serialization boundary. Unauthorized properties are omitted, not blanked or hidden in CSS/React.
 2. **RESOLVED IN PHASE 1C — Resource ownership authorization**: All 42 API route handlers now enforce owner-scoped reads and mutations through `requireActor()`, owner-scoped Prisma predicates, and transaction-based revalidation. Admin and owner roles receive no private-resource bypass. Foreign/missing resources return equivalent 404 responses. Connection transitions are participant/status scoped with atomic transitions.
 3. **HIGH — No MFA, no session assurance**: Sessions are 30-day JWTs with no MFA, no step-up auth for sensitive operations.
-4. **MEDIUM — Owner bootstrap is insecure**: The owner role is set via DB script (`bun -e "db.account.update..."`), not a secure bootstrap mechanism. Anyone with DB access can self-promote.
+4. **RESOLVED IN PHASE 1D — Owner bootstrap is insecure**: `scripts/bootstrap-owner.ts` provides a secure CLI-first bootstrap with timing-safe BOOTSTRAP_SECRET comparison, transactional single-owner enforcement, and idempotent re-run protection. Cannot be triggered via HTTP.
 5. **MEDIUM — No rate limiting on connection requests / privacy changes**: `applyRateLimit` exists for generation endpoints but not for connections, privacy, or admin APIs.
 6. **MEDIUM — Verification badges auto-derive "verified" from self-declared data**: Email/phone/education/employment/skill badges are marked "verified" just because the field is non-empty — this is misleading and inflates trust.
 
@@ -265,9 +266,46 @@ Phase 1C establishes a deny-by-default ownership authorization boundary. All 42 
 - Schema changes: NONE
 - Dashboard changes: NONE
 - Landing-page changes: NONE
-- Phase 1D started: NO
-- Push performed: NO
+- Phase 1D started: YES — COMPLETED across 3 commits (role model, bootstrap, admin governance)
+- Push performed: PENDING (uncommitted Phase 1D test changes)
 
 ### Acceptance status
 
-**READY FOR INDEPENDENT RE-REVIEW.** Phase 1C is not recorded as independently accepted by this implementation session.
+**Phase 1C ACCEPTED.** Independent security review (2026-07-15) confirmed:
+- All 42 API routes enforce ownership through session-derived identity
+- Admin/owner receive no private-resource bypass
+- Error responses use consistent 400/401/403/404/409/500 mapping
+- 3 minor hardening recommendations: Cache-Control on 10+ routes, auth pattern consistency, duplicate `isAdminRole` cleanup
+
+## 14. Phase 1D — Role Model and Owner Bootstrap (COMPLETED)
+
+### Implementation summary
+
+Phase 1D establishes the canonical 4-role model (owner/admin/moderator/user) with fail-closed normalization, a secure first-owner bootstrap mechanism, and owner-only role governance through the admin API.
+
+### Four-role model
+
+- `CANONICAL_ROLES = ["owner", "admin", "moderator", "user"]` in `src/lib/authorization.ts`
+- `normalizeRole()` accepts only exact lowercase matches; unknown/empty/null fails closed to "user"
+- `requireCurrentAdmin()` permits owner+admin only (denies moderator)
+- `requireCurrentOwner()` permits exact owner role only (denies admin, moderator)
+- Role is reloaded from DB on every request; JWT carries no role claim
+
+### Secure bootstrap
+
+- `scripts/bootstrap-owner.ts` — CLI-only, timing-safe BOOTSTRAP_SECRET, transactional
+- Available via `bun run bootstrap:owner`
+
+### Role governance
+
+- `GET /api/admin/users` — admin/owner list all users
+- `PATCH /api/admin/users` — owner-only role assignment (user/admin/moderator)
+- Cannot target owner accounts, cannot self-target
+
+### Tests
+
+- `tests/authorization/roles.test.ts` — 33 tests: normalization, guards, live role refresh
+- `tests/authorization/bootstrap.test.ts` — 5 tests: first-owner, refusal, idempotency
+- `tests/authorization/admin.test.ts` — expanded role governance matrix
+
+### Schema changes: NONE

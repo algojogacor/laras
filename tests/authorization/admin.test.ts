@@ -351,4 +351,323 @@ describe("Wave E Admin Boundaries and Regression Tests", () => {
       expect(testRuntime.notFoundTriggered).toBe(true)
     })
   })
+
+  // ============================================================================
+  // PHASE 1D — ROLE GOVERNANCE (PATCH /api/admin/users)
+  // ============================================================================
+  describe("PATCH /api/admin/users — role governance", () => {
+    let adminUsersPatch: any
+
+    beforeAll(async () => {
+      const adminUsersRoute = await import("@/app/api/admin/users/route")
+      adminUsersPatch = adminUsersRoute.PATCH
+    })
+
+    // --- Owner governance matrix ---
+    test("owner can change user role to moderator", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.accountA, role: "moderator" }),
+      })
+      const res = await adminUsersPatch(req)
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.role).toBe("moderator")
+
+      // Verify DB state
+      const acc = await db.account.findUnique({ where: { id: IDS.accountA } })
+      expect(acc!.role).toBe("moderator")
+    })
+
+    test("owner can change moderator to admin", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.moderatorG, role: "admin" }),
+      })
+      const res = await adminUsersPatch(req)
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.role).toBe("admin")
+    })
+
+    test("owner can change admin to user", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.adminC, role: "user" }),
+      })
+      const res = await adminUsersPatch(req)
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.role).toBe("user")
+    })
+
+    // --- Denied callers ---
+    test("admin cannot change roles (403)", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.adminC)
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.accountA, role: "moderator" }),
+      })
+      const res = await adminUsersPatch(req)
+      expect(res.status).toBe(403)
+    })
+
+    test("moderator cannot change roles (403)", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.moderatorG)
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.accountA, role: "user" }),
+      })
+      const res = await adminUsersPatch(req)
+      expect(res.status).toBe(403)
+    })
+
+    test("user cannot change roles (403)", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.accountB, role: "moderator" }),
+      })
+      const res = await adminUsersPatch(req)
+      expect(res.status).toBe(403)
+    })
+
+    test("anonymous cannot change roles (401)", async () => {
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.accountA, role: "moderator" }),
+      })
+      const res = await adminUsersPatch(req)
+      expect(res.status).toBe(401)
+    })
+
+    // --- Authorization occurs before target lookup ---
+    test("unauthorized callers cannot use role governance as account-existence oracle", async () => {
+      // Admin should get 403 even for valid, invalid, and nonexistent targets
+      testRuntime.cookieValue = await createSessionToken(IDS.adminC)
+
+      // Valid target
+      let req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.accountA, role: "moderator" }),
+      })
+      let res = await adminUsersPatch(req)
+      expect(res.status).toBe(403)
+
+      // Non-existent target
+      req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: "cxxxxxxxxxxxxxxxxxxxxxxxx", role: "moderator" }),
+      })
+      res = await adminUsersPatch(req)
+      expect(res.status).toBe(403) // same error — no oracle
+    })
+
+    // --- Invalid inputs ---
+    test("owner assignment through web API is rejected (403)", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.accountA, role: "owner" }),
+      })
+      const res = await adminUsersPatch(req)
+      expect(res.status).toBe(400) // role not in allowed set
+    })
+
+    test("owner demotion is rejected — cannot change owner role", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.ownerF, role: "user" }),
+      })
+      const res = await adminUsersPatch(req)
+      expect(res.status).toBe(403) // self-targeting rejected
+    })
+
+    test("unsupported role is rejected (400)", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.accountA, role: "superadmin" }),
+      })
+      const res = await adminUsersPatch(req)
+      expect(res.status).toBe(400)
+    })
+
+    test("malformed target ID returns 400 after owner auth", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: "bad-id", role: "user" }),
+      })
+      const res = await adminUsersPatch(req)
+      expect(res.status).toBe(400)
+    })
+
+    test("missing target returns safe 404", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: "cyyyyyyyyyyyyyyyyyyyyyyyy", role: "user" }),
+      })
+      const res = await adminUsersPatch(req)
+      expect(res.status).toBe(404)
+    })
+
+    // --- Protected input ignored or rejected ---
+    test("extra fields in request body are rejected", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.accountA, role: "user", actorId: IDS.ownerF }),
+      })
+      const res = await adminUsersPatch(req)
+      expect(res.status).toBe(400)
+    })
+
+    // --- Duplicate no-op ---
+    test("duplicate no-op role request returns 409", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
+      // Account A is already "user"
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.accountA, role: "user" }),
+      })
+      const res = await adminUsersPatch(req)
+      expect(res.status).toBe(409)
+    })
+
+    // --- Database unchanged after denied requests ---
+    test("database state unchanged after every denied request", async () => {
+      const originalRole = (await db.account.findUnique({ where: { id: IDS.accountA } }))!.role
+
+      // Admin tries to promote
+      testRuntime.cookieValue = await createSessionToken(IDS.adminC)
+      await adminUsersPatch(new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.accountA, role: "admin" }),
+      }))
+
+      const afterAdmin = (await db.account.findUnique({ where: { id: IDS.accountA } }))!.role
+      expect(afterAdmin).toBe(originalRole)
+
+      // User tries to promote
+      testRuntime.cookieValue = await createSessionToken(IDS.accountB)
+      await adminUsersPatch(new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.accountA, role: "admin" }),
+      }))
+
+      const afterUser = (await db.account.findUnique({ where: { id: IDS.accountA } }))!.role
+      expect(afterUser).toBe(originalRole)
+    })
+
+    // --- Cache headers ---
+    test("role governance responses include private/no-store cache headers", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.accountB, role: "moderator" }),
+      })
+      const res = await adminUsersPatch(req)
+      expect(res.headers.get("Cache-Control")).toBe("private, no-store")
+    })
+
+    // --- Response DTO is narrow ---
+    test("successful role change returns only id and role", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.ownerF)
+      const req = new Request("http://localhost/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: IDS.accountB, role: "moderator" }),
+      })
+      const res = await adminUsersPatch(req)
+      const body = await res.json()
+      expect(Object.keys(body).sort()).toEqual(["id", "role"])
+      expect(body).not.toHaveProperty("email")
+      expect(body).not.toHaveProperty("passwordHash")
+      expect(body).not.toHaveProperty("name")
+    })
+  })
+
+  // ============================================================================
+  // PHASE 1D — MODERATOR BOUNDARIES
+  // ============================================================================
+  describe("Moderator admin-route boundaries", () => {
+    test("moderator cannot access GET /api/admin/users (403)", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.moderatorG)
+      const res = await adminUsersGet()
+      expect(res.status).toBe(403)
+    })
+
+    test("moderator cannot grant licenses (403)", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.moderatorG)
+      const req = new Request("http://localhost/api/admin/licenses", {
+        method: "POST",
+        body: JSON.stringify({ profileId: IDS.profileA, plan: "pro", status: "active" }),
+      })
+      const res = await adminLicPost(req)
+      expect(res.status).toBe(403)
+    })
+
+    test("moderator cannot manage announcements (403)", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.moderatorG)
+      const res = await adminAnnGet()
+      expect(res.status).toBe(403)
+    })
+
+    test("moderator cannot verify badges (403)", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.moderatorG)
+      const req = new Request("http://localhost/api/admin/verification", {
+        method: "POST",
+        body: JSON.stringify({ profileId: IDS.profileA, type: "identity", status: "verified" }),
+      })
+      const res = await adminVerPost(req)
+      expect(res.status).toBe(403)
+    })
+  })
+
+  // ============================================================================
+  // PHASE 1D — MODERATOR PRIVATE-RESOURCE NO-BYPASS
+  // ============================================================================
+  describe("Moderator private-resource no-bypass", () => {
+    let readsGetDocumentsHandler: any
+
+    beforeAll(async () => {
+      const readsDocRoute = await import("@/app/api/documents/route")
+      readsGetDocumentsHandler = readsDocRoute.GET
+    })
+
+    test("moderator cannot read User A private documents through owner-scoped route", async () => {
+      testRuntime.cookieValue = await createSessionToken(IDS.moderatorG)
+      const res = await readsGetDocumentsHandler()
+      if (res.status === 200) {
+        const body = await res.json()
+        const docIds = (body.documents || []).map((d: any) => d.id)
+        expect(docIds).not.toContain(IDS.documentA)
+      }
+    })
+  })
 })

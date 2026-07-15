@@ -116,12 +116,14 @@ describe("Authorization Foundation Remediation Tests", () => {
   })
 
   test("malformed role values fail closed to user scope and are forbidden from admin routes", async () => {
+    // "moderator" is now a canonical Phase 1D role — it is tested separately
     const invalidRoles = [
       "Admin",
       " ADMIN ",
       "Owner",
       " owner ",
-      "moderator",
+      "superadmin",
+      "administrator",
       "",
     ]
 

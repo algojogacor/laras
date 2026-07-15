@@ -7,12 +7,14 @@ export const IDS = {
   unknownD: "",
   accountE: "",
   ownerF: "",
+  moderatorG: "",
 
   profileA: "",
   profileB: "",
   profileC: "",
   profileD: "",
   profileF: "",
+  profileG: "",
 
   documentA: "",
   documentB: "",
@@ -130,12 +132,21 @@ export async function seedDb() {
     },
   })
 
+  const moderatorG = await db.account.create({
+    data: {
+      email: "moderator-g@example.com",
+      passwordHash: "dummy-hash-g",
+      role: "moderator",
+    },
+  })
+
   IDS.accountA = accountA.id
   IDS.accountB = accountB.id
   IDS.adminC = adminC.id
   IDS.unknownD = unknownD.id
   IDS.accountE = accountE.id
   IDS.ownerF = ownerF.id
+  IDS.moderatorG = moderatorG.id
 
   // 2. Create UserProfiles
   const profileA = await db.userProfile.create({
@@ -180,6 +191,15 @@ export async function seedDb() {
     },
   })
   IDS.profileF = profileF.id
+
+  const profileG = await db.userProfile.create({
+    data: {
+      accountId: IDS.moderatorG,
+      fullName: "Moderator G",
+      email: "moderator-g@example.com",
+    },
+  })
+  IDS.profileG = profileG.id
 
   // 3. Create Documents
   const docA = await db.document.create({
