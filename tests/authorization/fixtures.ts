@@ -43,6 +43,10 @@ export const IDS = {
   appDocA: "",
   appDocB: "",
   appDocF: "",
+
+  evidenceA: "",
+  evidenceB: "",
+  evidenceF: "",
 }
 
 export const CANARIES = {
@@ -61,6 +65,9 @@ export const CANARIES = {
   certA: "Canary Cert Title A",
   certB: "Canary Cert Title B",
   certF: "Canary Cert Title F",
+  evidenceA: "Canary Evidence Title A",
+  evidenceB: "Canary Evidence Title B",
+  evidenceF: "Canary Evidence Title F",
 }
 
 export async function cleanDb() {
@@ -75,6 +82,7 @@ export async function cleanDb() {
     db.essay.deleteMany(),
     db.englishCertificate.deleteMany(),
     db.englishSession.deleteMany(),
+    db.evidence.deleteMany(),
     db.achievement.deleteMany(),
     db.auditLog.deleteMany(),
     db.verificationBadge.deleteMany(),
@@ -454,6 +462,44 @@ export async function seedDb() {
     },
   })
   IDS.appDocF = appDocF.id
+
+  // 10. Create Evidence items
+  const evidenceA = await db.evidence.create({
+    data: {
+      userProfileId: IDS.profileA,
+      type: "project",
+      title: CANARIES.evidenceA,
+      description: "Canary evidence description A",
+      sourceUrl: "https://github.com/user-a/project",
+      verificationStatus: "self-reported",
+    },
+  })
+  const evidenceB = await db.evidence.create({
+    data: {
+      userProfileId: IDS.profileB,
+      type: "metric",
+      title: CANARIES.evidenceB,
+      description: "Canary evidence description B",
+      metricValue: "42% improvement",
+      metricContext: "Measured over Q1-Q2 2025",
+      verificationStatus: "self-reported",
+    },
+  })
+
+  IDS.evidenceA = evidenceA.id
+  IDS.evidenceB = evidenceB.id
+
+  const evidenceF = await db.evidence.create({
+    data: {
+      userProfileId: IDS.profileF,
+      type: "artifact",
+      title: CANARIES.evidenceF,
+      description: "Canary evidence description F",
+      sourceUrl: "https://owner-f.example.com/portfolio",
+      verificationStatus: "self-reported",
+    },
+  })
+  IDS.evidenceF = evidenceF.id
 
   return IDS
 }

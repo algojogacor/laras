@@ -73,6 +73,7 @@ model UserProfile {
   englishSessions EnglishSession[]
   certificates   EnglishCertificate[]
   achievements   Achievement[]
+  evidences      Evidence[]
   auditLogs      AuditLog[]
   verificationBadges VerificationBadge[]
   licenses       License[]
@@ -99,6 +100,8 @@ model Experience {
   order         Int         @default(0)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  evidences     Evidence[]
 
   @@index([userProfileId])
 }
@@ -129,6 +132,8 @@ model Skill {
   proficiency   String? // beginner | intermediate | advanced | expert
   context       String? // WHERE used — anti-generic (Section 5)
   order         Int         @default(0)
+
+  evidences     Evidence[]
 
   @@index([userProfileId])
 }
@@ -373,8 +378,43 @@ model Achievement {
   tone          String   @default("primary") // primary | success | warning | info
   earnedAt      DateTime @default(now())
 
+  evidences     Evidence[]
+
   @@unique([userProfileId, code]) // one badge per user per code
   @@index([userProfileId])
+}
+
+// ---------------------------------------------------------------------------
+// Evidence — Evidence Graph (Phase 2A, Brief §9.1)
+// Structured proof linked to profile elements: projects, metrics, artifacts.
+// Provenance-aware: self-reported by default, verifiable in future phases.
+// ---------------------------------------------------------------------------
+model Evidence {
+  id            String   @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  type          String   @default("project") // project | metric | artifact | certification | publication | other
+  title         String
+  description   String?
+  sourceUrl     String?  // URL to proof artifact (GitHub, portfolio, publication, etc.)
+  metricValue   String?  // "30% increase", "200 users", "Rp 50M saved"
+  metricContext String?  // how the metric was measured, over what period, with what baseline
+  verificationStatus String @default("self-reported") // self-reported | pending | verified | disputed
+  verifiedBy    String?  // Account.id of verifier (future phase)
+  verifiedAt    DateTime?
+  experienceId  String?  // optional link to Experience
+  experience    Experience? @relation(fields: [experienceId], references: [id], onDelete: SetNull)
+  skillId       String?  // optional link to Skill
+  skill         Skill? @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  achievementId String?  // optional link to Achievement
+  achievement   Achievement? @relation(fields: [achievementId], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userProfileId])
+  @@index([experienceId])
+  @@index([skillId])
+  @@index([achievementId])
 }
 
 // ---------------------------------------------------------------------------
