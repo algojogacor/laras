@@ -1,5 +1,18 @@
 import { createCompletion, extractJSON, LARAS_AI_MODEL } from "@/lib/ai/deepseek"
 import type { SerializedProfile } from "@/lib/profile"
+import { parseStructured } from "@/lib/ai/structured-output"
+import { z } from "zod"
+
+const bulletSchema = z.object({ text: z.string().trim().min(1).max(2000), hasEvidence: z.boolean(), evidenceType: z.enum(["metric", "proper-noun", "scale", "none"]) }).strict()
+const cvSchema = z.object({
+  headline: z.string().max(500), summary: z.string().max(10000),
+  skillsByCategory: z.array(z.object({ category: z.string().min(1).max(200), items: z.array(z.string().min(1).max(200)).max(50) }).strict()).max(30),
+  experiences: z.array(z.object({ experienceId: z.string().min(1).max(200), bullets: z.array(bulletSchema).max(30) }).strict()).max(100),
+  warnings: z.array(z.string().max(1000)).max(50),
+}).strict()
+const coverLetterSchema = z.object({ recipientGreeting: z.string().max(500), paragraphs: z.array(z.string().min(1).max(10000)).min(1).max(10), closing: z.string().max(500), wordCount: z.number().int().nonnegative().max(10000), warnings: z.array(z.string().max(1000)).max(50) }).strict()
+const bioSchema = z.object({ headline: z.string().max(1000), about: z.string().max(10000), personal: z.array(z.string().max(10000)).min(1).max(10), warnings: z.array(z.string().max(1000)).max(50) }).strict()
+const essaySchema = z.object({ title: z.string().max(500), paragraphs: z.array(z.string().min(1).max(15000)).min(1).max(20), wordCount: z.number().int().nonnegative().max(30000), warnings: z.array(z.string().max(1000)).max(50) }).strict()
 
 /**
  * Content Engine — Laras
@@ -192,31 +205,7 @@ export async function generateCVATS(
     ],
   })
   const raw = completion.choices[0]?.message?.content ?? ""
-  let parsed: GeneratedCVATS
-  try {
-    parsed = extractJSON(raw) as GeneratedCVATS
-  } catch {
-    // Fallback: minimal structure so the UI doesn't crash
-    parsed = {
-      headline: profile.headline || "",
-      summary: profile.summary || "",
-      skillsByCategory: profile.skills.length
-        ? [{ category: "Skills", items: profile.skills.map((s) => s.name) }]
-        : [],
-      experiences: profile.experiences.map((e) => ({
-        experienceId: e.id,
-        bullets: (e.achievements?.length
-          ? e.achievements
-          : [e.description || e.title]
-        ).map((text) => ({
-          text: text || e.title,
-          hasEvidence: detectEvidence(text || "") !== "none",
-          evidenceType: detectEvidence(text || ""),
-        })),
-      })),
-      warnings: ["LLM returned non-JSON; showing raw profile data. Try regenerating."],
-    }
-  }
+  const parsed = parseStructured(raw, cvSchema, "cv-ats") as GeneratedCVATS
 
   // Post-process: recompute hasEvidence deterministically (don't trust LLM's self-report)
   for (const exp of parsed.experiences ?? []) {
@@ -329,18 +318,7 @@ export async function generateCoverLetter(
     ],
   })
   const raw = completion.choices[0]?.message?.content ?? ""
-  let parsed: GeneratedCoverLetter
-  try {
-    parsed = extractJSON(raw) as GeneratedCoverLetter
-  } catch {
-    parsed = {
-      recipientGreeting: opts.locale === "id" ? "Yth. Tim Rekrutmen," : "Dear Hiring Team,",
-      paragraphs: [profile.summary || profile.headline || ""],
-      closing: opts.locale === "id" ? "Hormat saya," : "Sincerely,",
-      wordCount: 0,
-      warnings: ["LLM returned non-JSON; showing fallback. Try regenerating."],
-    }
-  }
+  const parsed = parseStructured(raw, coverLetterSchema, "cover-letter") as GeneratedCoverLetter
   if (!Array.isArray(parsed.paragraphs)) parsed.paragraphs = []
   if (!Array.isArray(parsed.warnings)) parsed.warnings = []
   // recompute word count
@@ -410,17 +388,7 @@ export async function generateBio(
     ],
   })
   const raw = completion.choices[0]?.message?.content ?? ""
-  let parsed: GeneratedBio
-  try {
-    parsed = extractJSON(raw) as GeneratedBio
-  } catch {
-    parsed = {
-      headline: profile.headline || "",
-      about: profile.summary || "",
-      personal: [profile.summary || ""],
-      warnings: ["LLM returned non-JSON; showing fallback. Try regenerating."],
-    }
-  }
+  const parsed = parseStructured(raw, bioSchema, "bio") as GeneratedBio
   if (!Array.isArray(parsed.personal)) parsed.personal = []
   if (!Array.isArray(parsed.warnings)) parsed.warnings = []
   return parsed
@@ -570,18 +538,7 @@ Return JSON:
     ],
   })
   const raw = completion.choices[0]?.message?.content ?? ""
-  let parsed: GeneratedEssay
-  try {
-    parsed = extractJSON(raw) as GeneratedEssay
-  } catch {
-    parsed = {
-      title: opts.essayType,
-      paragraphs: [profile.summary || ""],
-      wordCount: 0,
-      warnings: ["LLM returned non-JSON; showing fallback. Try regenerating."],
-      probingQA: opts.probingQA,
-    }
-  }
+  const parsed = parseStructured(raw, essaySchema, "essay") as GeneratedEssay
   if (!Array.isArray(parsed.paragraphs)) parsed.paragraphs = []
   if (!Array.isArray(parsed.warnings)) parsed.warnings = []
   parsed.wordCount = parsed.paragraphs.join(" ").split(/\s+/).filter(Boolean).length

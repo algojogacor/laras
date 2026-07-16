@@ -236,6 +236,21 @@ After deploying, create the first owner account:
 → Run `bun run dev` — the startup validation (in `src/instrumentation.ts`) will
   tell you exactly which required variables are missing.
 
+### Windows: `prisma generate` fails with `EPERM` on `query_engine-windows.dll.node`
+→ Stop only Laras processes that may hold the Prisma engine: Next/Bun test/dev
+  processes for this repository. Do not delete unrelated processes or files.
+→ Run `bunx prisma generate` again, then `bunx prisma validate`.
+→ If the rename is still blocked, close IDE terminals using this repository and
+  check antivirus/file-indexing locks before retrying. The generated engine must
+  be available before starting Next.js.
+
+### Password reset testing in local development
+→ Reset requests always return a generic success response to prevent account
+  enumeration. Set `RESET_TOKEN_DEV_OUTPUT=true` only in a private local
+  environment when a test client needs the one-time token in the response.
+→ Reset tokens are persisted hashed, expire after one hour, and are consumed
+  atomically with the password/session-version update.
+
 ---
 
 ## CI/CD (GitHub Actions)

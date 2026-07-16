@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { createResetToken } from "@/lib/reset-tokens"
+import { applyRateLimit, getClientIP } from "@/lib/rate-limit"
 
 /**
  * POST /api/auth/reset/request
@@ -9,6 +10,8 @@ import { createResetToken } from "@/lib/reset-tokens"
  * If the email exists, a reset token is generated (in production: emailed).
  */
 export async function POST(request: Request) {
+  const limited = applyRateLimit(request, "auth", `ip:${getClientIP(request)}:password-reset`)
+  if (limited) return limited
   let email: string | undefined
   try {
     const body = await request.json()
@@ -27,10 +30,13 @@ export async function POST(request: Request) {
   })
 
   if (account) {
-    const token = createResetToken(account.id)
+    const token = await createResetToken(account.id)
     // In production: send email with reset link containing token
     // For development, the token is available in the store
-    void token // suppress unused warning
+    // Explicit local-only test transport; never enabled in production.
+    if (process.env.NODE_ENV !== "production" && process.env.RESET_TOKEN_DEV_OUTPUT === "true") {
+      return NextResponse.json({ ok: true, token })
+    }
   }
 
   return NextResponse.json({ ok: true })

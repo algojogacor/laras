@@ -415,7 +415,7 @@ export async function canCreateDocument(
     const result = await consumeQuota(profile.id, "documents.create", idempotencyKey, limit)
     if (!result.success) {
       const used = result.consumed ?? limit
-      return { allowed: false, reason: "document-limit", used, limit }
+      return { allowed: false, reason: result.reason === "duplicate" ? "duplicate-operation" : "document-limit", used, limit }
     }
     return { allowed: true, used: result.consumed ?? 0, limit }
   }

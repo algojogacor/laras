@@ -7,6 +7,7 @@ import { getEntitlement } from "@/lib/entitlement"
 import { SettingsForm } from "@/components/settings/settings-form"
 import { LicenseCard } from "@/components/settings/license-card"
 import { RedeemCode } from "@/components/settings/redeem-code"
+import { BetaFeedbackForm } from "@/components/feedback/beta-feedback-form"
 
 export default async function SettingsPage() {
   const session = await getSession()
@@ -63,6 +64,7 @@ export default async function SettingsPage() {
         }}
       />
       <SettingsForm initialProfile={serializeProfile(profile)} />
+      <BetaFeedbackForm />
     </div>
   )
 }

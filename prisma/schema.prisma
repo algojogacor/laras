@@ -34,6 +34,7 @@ model Account {
 
   scopedAssignments        ScopedAssignment[]
   grantedScopedAssignments ScopedAssignment[] @relation("GrantedScopedAssignments")
+  passwordResetTokens      PasswordResetToken[]
 }
 
 // ---------------------------------------------------------------------------
@@ -112,6 +113,42 @@ model UserProfile {
   mentorshipSessionsAsMentee MentorshipSession[] @relation("MentorshipSessionMentee")
   peerReviewsAsRequester     PeerReview[]        @relation("PeerReviewRequester")
   peerReviewsAsReviewer      PeerReview[]        @relation("PeerReviewReviewer")
+  betaFeedback              BetaFeedback[]
+}
+
+model PasswordResetToken {
+  id         String   @id @default(cuid())
+  accountId  String
+  account    Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([accountId])
+  @@index([expiresAt])
+  @@index([consumedAt])
+}
+
+model BetaFeedback {
+  id                String      @id @default(cuid())
+  userProfileId     String
+  userProfile       UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  category          String
+  page              String
+  description       String
+  expectedBehavior  String?
+  consentToContact  Boolean     @default(false)
+  appVersion        String
+  technicalContext  String?
+  status            String      @default("new")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([userProfileId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // --- Riwayat pengalaman (Section 4) — contextNotes is the anti-generic foundation ---

@@ -1,9 +1,11 @@
+import crypto from "crypto"
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { applyRateLimit } from "@/lib/rate-limit"
 import { serializeProfile, type ProfileWithRelations } from "@/lib/profile"
 import { canCreateDocument } from "@/lib/entitlement"
+import { refundQuota } from "@/lib/quota-ledger"
 import { generateCoverLetter, textConcretenessCheck } from "@/lib/content-engine"
 
 export async function POST(request: Request) {
@@ -14,7 +16,7 @@ export async function POST(request: Request) {
   const limited = applyRateLimit(request, "generate", `user:${session.userId}:cover-letter`)
   if (limited) return limited
 
-  let body: { locale?: string; tone?: string; region?: string; position?: string; organization?: string; edits?: any }
+  let body: { locale?: string; tone?: string; region?: string; position?: string; organization?: string; edits?: any; idempotencyKey?: string }
   try {
     body = await request.json()
   } catch {
@@ -34,11 +36,12 @@ export async function POST(request: Request) {
   if (!profile) return NextResponse.json({ error: "no-profile" }, { status: 404 })
 
   // Entitlement gate: free tier capped at 5 documents (Brief §9.4)
-  const docEntitlement = await canCreateDocument(profile)
+  const quotaKey = body.idempotencyKey || request.headers.get("Idempotency-Key") || crypto.randomUUID()
+  const docEntitlement = await canCreateDocument(profile, quotaKey)
   if (!docEntitlement.allowed) {
     return NextResponse.json(
-      { error: "entitlement-limit", reason: docEntitlement.reason, used: docEntitlement.used, limit: docEntitlement.limit },
-      { status: 402 }
+      { error: docEntitlement.reason === "duplicate-operation" ? "duplicate-operation" : "entitlement-limit", reason: docEntitlement.reason, used: docEntitlement.used, limit: docEntitlement.limit },
+      { status: docEntitlement.reason === "duplicate-operation" ? 409 : 402 }
     )
   }
 
@@ -56,6 +59,7 @@ export async function POST(request: Request) {
       position: body.position, organization: body.organization,
     })
   } catch (e) {
+    await refundQuota(quotaKey, profile.id)
     console.error("[cover-letter/generate] LLM failed:", (e as Error).message)
     return NextResponse.json({ error: "generation-failed" }, { status: 502 })
   }
@@ -68,16 +72,20 @@ export async function POST(request: Request) {
     ? `Cover Letter — ${body.position}${body.organization ? ` @ ${body.organization}` : ""}`
     : `Cover Letter — ${serialized.fullName || ""}`
 
-  const doc = await db.document.create({
-    data: {
-      userProfileId: profile.id,
-      type: "cover-letter",
-      title,
-      content: JSON.stringify({ ...cl, position: body.position, organization: body.organization }),
-      config: JSON.stringify({ locale, tone, region, concreteness: check.hasEvidence ? 100 : 0 }),
-      version: 1,
-    },
-  })
+  let doc
+  try {
+    doc = await db.document.create({
+      data: {
+        userProfileId: profile.id, type: "cover-letter", title,
+        content: JSON.stringify({ ...cl, position: body.position, organization: body.organization }),
+        config: JSON.stringify({ locale, tone, region, concreteness: check.hasEvidence ? 100 : 0 }), version: 1,
+      },
+    })
+  } catch (e) {
+    await refundQuota(quotaKey, profile.id)
+    console.error("[cover-letter/generate] persist failed:", (e as Error).message)
+    return NextResponse.json({ error: "persistence-failed" }, { status: 500 })
+  }
 
   return NextResponse.json({ ok: true, documentId: doc.id, cl, check, config: { locale, tone, region } })
 }

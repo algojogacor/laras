@@ -1,9 +1,11 @@
+import crypto from "crypto"
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { applyRateLimit } from "@/lib/rate-limit"
 import { serializeProfile, type ProfileWithRelations } from "@/lib/profile"
 import { canCreateDocument } from "@/lib/entitlement"
+import { refundQuota } from "@/lib/quota-ledger"
 import { generateBio, textConcretenessCheck } from "@/lib/content-engine"
 
 export async function POST(request: Request) {
@@ -14,7 +16,7 @@ export async function POST(request: Request) {
   const limited = applyRateLimit(request, "generate", `user:${session.userId}:bio`)
   if (limited) return limited
 
-  let body: { locale?: string; tone?: string; edits?: any }
+  let body: { locale?: string; tone?: string; edits?: any; idempotencyKey?: string }
   try {
     body = await request.json()
   } catch {
@@ -34,11 +36,12 @@ export async function POST(request: Request) {
   if (!profile) return NextResponse.json({ error: "no-profile" }, { status: 404 })
 
   // Entitlement gate: free tier capped at 5 documents (Brief §9.4)
-  const docEntitlement = await canCreateDocument(profile)
+  const quotaKey = body.idempotencyKey || request.headers.get("Idempotency-Key") || crypto.randomUUID()
+  const docEntitlement = await canCreateDocument(profile, quotaKey)
   if (!docEntitlement.allowed) {
     return NextResponse.json(
-      { error: "entitlement-limit", reason: docEntitlement.reason, used: docEntitlement.used, limit: docEntitlement.limit },
-      { status: 402 }
+      { error: docEntitlement.reason === "duplicate-operation" ? "duplicate-operation" : "entitlement-limit", reason: docEntitlement.reason, used: docEntitlement.used, limit: docEntitlement.limit },
+      { status: docEntitlement.reason === "duplicate-operation" ? 409 : 402 }
     )
   }
 
@@ -52,6 +55,7 @@ export async function POST(request: Request) {
   try {
     bio = await generateBio(serialized, { locale, tone })
   } catch (e) {
+    await refundQuota(quotaKey, profile.id)
     console.error("[bio/generate] LLM failed:", (e as Error).message)
     return NextResponse.json({ error: "generation-failed" }, { status: 502 })
   }
@@ -59,16 +63,16 @@ export async function POST(request: Request) {
   const allText = [bio.headline, bio.about, ...bio.personal].join(" ")
   const check = textConcretenessCheck(allText, locale)
 
-  const doc = await db.document.create({
-    data: {
-      userProfileId: profile.id,
-      type: "bio",
-      title: `Bio — ${serialized.fullName || ""}`,
-      content: JSON.stringify(bio),
-      config: JSON.stringify({ locale, tone, concreteness: check.hasEvidence ? 100 : 0 }),
-      version: 1,
-    },
-  })
+  let doc
+  try {
+    doc = await db.document.create({
+      data: { userProfileId: profile.id, type: "bio", title: `Bio — ${serialized.fullName || ""}`, content: JSON.stringify(bio), config: JSON.stringify({ locale, tone, concreteness: check.hasEvidence ? 100 : 0 }), version: 1 },
+    })
+  } catch (e) {
+    await refundQuota(quotaKey, profile.id)
+    console.error("[bio/generate] persist failed:", (e as Error).message)
+    return NextResponse.json({ error: "persistence-failed" }, { status: 500 })
+  }
 
   return NextResponse.json({ ok: true, documentId: doc.id, bio, check, config: { locale, tone } })
 }

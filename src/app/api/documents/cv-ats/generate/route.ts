@@ -1,9 +1,11 @@
+import crypto from "crypto"
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { applyRateLimit } from "@/lib/rate-limit"
 import { serializeProfile, computeCompletion, type ProfileWithRelations } from "@/lib/profile"
 import { canCreateDocument } from "@/lib/entitlement"
+import { refundQuota } from "@/lib/quota-ledger"
 import { generateCVATS, concretenessCheck, type GeneratedCVATS } from "@/lib/content-engine"
 import { buildCVATSDocx } from "@/lib/docx-renderer"
 
@@ -15,7 +17,7 @@ export async function POST(request: Request) {
   const limited = applyRateLimit(request, "generate", `user:${session.userId}:cv-ats`)
   if (limited) return limited
 
-  let body: { locale?: string; tone?: string; region?: string; title?: string; edits?: any; generationConfig?: Record<string, unknown> }
+  let body: { locale?: string; tone?: string; region?: string; title?: string; edits?: any; generationConfig?: Record<string, unknown>; idempotencyKey?: string }
   try {
     body = await request.json()
   } catch {
@@ -35,11 +37,12 @@ export async function POST(request: Request) {
   if (!profile) return NextResponse.json({ error: "no-profile" }, { status: 404 })
 
   // Entitlement gate: free tier capped at 5 documents (Brief §9.4)
-  const docEntitlement = await canCreateDocument(profile)
+  const quotaKey = body.idempotencyKey || request.headers.get("Idempotency-Key") || crypto.randomUUID()
+  const docEntitlement = await canCreateDocument(profile, quotaKey)
   if (!docEntitlement.allowed) {
     return NextResponse.json(
-      { error: "entitlement-limit", reason: docEntitlement.reason, used: docEntitlement.used, limit: docEntitlement.limit },
-      { status: 402 }
+      { error: docEntitlement.reason === "duplicate-operation" ? "duplicate-operation" : "entitlement-limit", reason: docEntitlement.reason, used: docEntitlement.used, limit: docEntitlement.limit },
+      { status: docEntitlement.reason === "duplicate-operation" ? 409 : 402 }
     )
   }
 
@@ -57,6 +60,7 @@ export async function POST(request: Request) {
   try {
     cv = await generateCVATS(serialized, { locale, tone, region })
   } catch (e) {
+    await refundQuota(quotaKey, profile.id)
     console.error("[cv-ats/generate] LLM failed:", (e as Error).message)
     return NextResponse.json(
       { error: "generation-failed" },
@@ -68,27 +72,26 @@ export async function POST(request: Request) {
 
   // Persist the document
   const configSnapshot = JSON.stringify({ locale, tone, region, concreteness: check.score, ...(body.generationConfig || {}) })
-  const doc = await db.document.create({
-    data: {
-      userProfileId: profile.id,
-      type: "cv-ats",
-      title: body.title || `${serialized.fullName || "CV"} — ATS`,
-      content: JSON.stringify(cv),
-      config: configSnapshot,
-      version: 1,
-    },
-  })
-
-  // Save initial version (Brief Task 2 — version history)
-  await db.documentVersion.create({
-    data: {
-      documentId: doc.id,
-      versionNumber: 1,
-      content: JSON.stringify(cv),
-      configSnapshot,
-      revisionInstruction: null, // initial generation
-    },
-  })
+  let doc
+  try {
+    doc = await db.document.create({
+      data: {
+        userProfileId: profile.id,
+        type: "cv-ats",
+        title: body.title || `${serialized.fullName || "CV"} — ATS`,
+        content: JSON.stringify(cv),
+        config: configSnapshot,
+        version: 1,
+      },
+    })
+    await db.documentVersion.create({
+      data: { documentId: doc.id, versionNumber: 1, content: JSON.stringify(cv), configSnapshot, revisionInstruction: null },
+    })
+  } catch (e) {
+    await refundQuota(quotaKey, profile.id)
+    console.error("[cv-ats/generate] persist failed:", (e as Error).message)
+    return NextResponse.json({ error: "persistence-failed" }, { status: 500 })
+  }
 
   return NextResponse.json({
     ok: true,

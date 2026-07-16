@@ -1,9 +1,11 @@
+import crypto from "crypto"
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { applyRateLimit } from "@/lib/rate-limit"
 import { serializeProfile, type ProfileWithRelations } from "@/lib/profile"
 import { canCreateDocument } from "@/lib/entitlement"
+import { refundQuota } from "@/lib/quota-ledger"
 import { generateEssay, textConcretenessCheck } from "@/lib/content-engine"
 
 export async function POST(request: Request) {
@@ -30,11 +32,12 @@ export async function POST(request: Request) {
   if (!profile) return NextResponse.json({ error: "no-profile" }, { status: 404 })
 
   // Entitlement gate: free tier capped at 5 documents (Brief §9.4)
-  const docEntitlement = await canCreateDocument(profile)
+  const quotaKey = body.idempotencyKey || request.headers.get("Idempotency-Key") || crypto.randomUUID()
+  const docEntitlement = await canCreateDocument(profile, quotaKey)
   if (!docEntitlement.allowed) {
     return NextResponse.json(
-      { error: "entitlement-limit", reason: docEntitlement.reason, used: docEntitlement.used, limit: docEntitlement.limit },
-      { status: 402 }
+      { error: docEntitlement.reason === "duplicate-operation" ? "duplicate-operation" : "entitlement-limit", reason: docEntitlement.reason, used: docEntitlement.used, limit: docEntitlement.limit },
+      { status: docEntitlement.reason === "duplicate-operation" ? 409 : 402 }
     )
   }
 
@@ -47,6 +50,7 @@ export async function POST(request: Request) {
   // Require at least one probing answer
   const probingQA = Array.isArray(body.probingQA) ? body.probingQA.filter((q: any) => q.answer?.trim()) : []
   if (probingQA.length === 0) {
+    await refundQuota(quotaKey, profile.id)
     return NextResponse.json({ error: "no-probing-answers" }, { status: 400 })
   }
 
@@ -61,6 +65,7 @@ export async function POST(request: Request) {
       probingQA,
     })
   } catch (e) {
+    await refundQuota(quotaKey, profile.id)
     console.error("[essay/generate] LLM failed:", (e as Error).message)
     return NextResponse.json({ error: "generation-failed" }, { status: 502 })
   }
@@ -68,16 +73,16 @@ export async function POST(request: Request) {
   const check = textConcretenessCheck(essay.paragraphs.join(" "), locale)
 
   const title = `${body.essayType || "Essay"} — ${body.targetOrg || serialized.fullName || ""}`
-  const doc = await db.document.create({
-    data: {
-      userProfileId: profile.id,
-      type: "essay",
-      title,
-      content: JSON.stringify(essay),
-      config: JSON.stringify({ locale, tone, essayType: body.essayType, targetOrg: body.targetOrg, concreteness: check.hasEvidence ? 100 : 0 }),
-      version: 1,
-    },
-  })
+  let doc
+  try {
+    doc = await db.document.create({
+      data: { userProfileId: profile.id, type: "essay", title, content: JSON.stringify(essay), config: JSON.stringify({ locale, tone, essayType: body.essayType, targetOrg: body.targetOrg, concreteness: check.hasEvidence ? 100 : 0 }), version: 1 },
+    })
+  } catch (e) {
+    await refundQuota(quotaKey, profile.id)
+    console.error("[essay/generate] persist failed:", (e as Error).message)
+    return NextResponse.json({ error: "persistence-failed" }, { status: 500 })
+  }
 
   return NextResponse.json({ ok: true, documentId: doc.id, essay, check, config: { locale, tone } })
 }
