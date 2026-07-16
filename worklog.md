@@ -3108,3 +3108,21 @@ External validation database: `D:/laras-phase1c-final-76cadc2959a64d86ba52067fb3
 - The documentation commit SHA and exact final repository HEAD are reported externally after commit creation; the documentation commit does not attempt to name itself.
 - Browser, Playwright, BrowserOS, and production-compatible HTTP verification for this corrective pass: **NOT PERFORMED**. Any earlier browser QA is historical and was not revalidated here.
 - Phase 1D started: NO. Push performed: NO. Prisma schema, dashboard, and landing page changed: NO.
+
+## 2026-07-16 — Artifact Studio schema checkpoint
+
+- Database target verified as local SQLite (`file:./db/laras.db`) before schema synchronization.
+- The new `(documentId, versionNumber)` uniqueness guard was checked against existing `DocumentVersion` rows: `0` duplicate groups.
+- `prisma db push` requested explicit data-loss acknowledgement because it cannot prove a new unique index is safe; the preflight query confirms no rows need removal or rewriting.
+- Scope: add version-safe artifact proposals/exports and prevent concurrent duplicate version numbers. No production/Turso database operation was performed.
+
+## 2026-07-16 — Artifact Studio release-candidate validation
+
+- `bun install --frozen-lockfile`: clean, no dependency changes.
+- Prisma Client 6.19.2 generated; `prisma validate` passed. The only warning is the existing deprecated `driverAdapters` preview flag.
+- TypeScript and ESLint passed with zero errors; `git diff --check` passed.
+- Full suite ran three consecutive times on the final implementation with query logging disabled and a 20-second Bun hook ceiling: each run reported 643 tests, 1,386 assertions, 0 failures across 29 files.
+- Production build compiled and generated 90/90 pages. `pptxgenjs` is server-externalized, eliminating the Windows standalone trace-copy warning for `node:https` chunks.
+- Eight deterministic artifacts generated outside the repository: four PPTX fixtures and four DOCX fixtures. The Studio-specific client chunk is 35,833 bytes uncompressed; no pre-change route chunk exists for a direct baseline comparison.
+- Microsoft PowerPoint rendering was visually inspected for the Indonesian law-student deck with no observed clipping or overlap. Desktop and 390px mobile Studio flows were browser-checked, including autosave and undo. LibreOffice/Impress and complete Word/Writer visual review remain manual release checks.
+- Security review confirmed owner scoping, runtime schemas, no-store responses, stale-write rejection, bounded AI patches, exact-version restore, read-only GET export, and CSRF-protected audited POST export.
