@@ -1,4 +1,4 @@
-import ZAI from "z-ai-web-dev-sdk"
+import { createCompletion, extractJSON, LARAS_AI_MODEL } from "@/lib/ai/deepseek"
 import type { SerializedProfile } from "@/lib/profile"
 
 /**
@@ -13,13 +13,9 @@ import type { SerializedProfile } from "@/lib/profile"
  *
  * The LLM is asked to return STRICT JSON so we can render structured documents and
  * run the concreteness self-check (Section 5.5) deterministically.
+ *
+ * Powered by DeepSeek V4 Pro via the centralized provider at @/lib/ai/deepseek.
  */
-
-let _zai: Awaited<ReturnType<typeof ZAI.create>> | null = null
-async function getZai() {
-  if (!_zai) _zai = await ZAI.create()
-  return _zai
-}
 
 export type GeneratedBullet = {
   text: string
@@ -183,39 +179,17 @@ Set hasEvidence=true ONLY if the bullet contains a number, metric, percentage, o
   return { sys, user }
 }
 
-/** Robustly extract JSON from an LLM response that may wrap it in markdown fences. */
-function extractJSON(raw: string): unknown {
-  let s = raw.trim()
-  // strip ```json ... ``` fences
-  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i)
-  if (fence) s = fence[1].trim()
-  // Handle arrays: if it starts with [, find matching ]
-  const firstBracket = s.indexOf("[")
-  const firstBrace = s.indexOf("{")
-  // Prefer array if it comes before object (or no object)
-  if (firstBracket !== -1 && (firstBrace === -1 || firstBracket < firstBrace)) {
-    const lastBracket = s.lastIndexOf("]")
-    if (lastBracket !== -1) s = s.slice(firstBracket, lastBracket + 1)
-  } else if (firstBrace !== -1) {
-    const lastBrace = s.lastIndexOf("}")
-    if (lastBrace !== -1) s = s.slice(firstBrace, lastBrace + 1)
-  }
-  return JSON.parse(s)
-}
-
 /** Generate a CV ATS from the profile using the LLM, with anti-generic enforcement. */
 export async function generateCVATS(
   profile: SerializedProfile,
   opts: { locale: "id" | "en"; tone: string; region: string }
 ): Promise<GeneratedCVATS> {
   const { sys, user } = buildCVPrompt(profile, opts)
-  const zai = await getZai()
-  const completion = await zai.chat.completions.create({
+  const completion = await createCompletion({
     messages: [
       { role: "assistant", content: sys },
       { role: "user", content: user },
     ],
-    thinking: { type: "disabled" },
   })
   const raw = completion.choices[0]?.message?.content ?? ""
   let parsed: GeneratedCVATS
@@ -348,13 +322,11 @@ export async function generateCoverLetter(
   opts: { locale: "id" | "en"; tone: string; region: string; position?: string; organization?: string }
 ): Promise<GeneratedCoverLetter> {
   const { sys, user } = buildCoverLetterPrompt(profile, opts)
-  const zai = await getZai()
-  const completion = await zai.chat.completions.create({
+  const completion = await createCompletion({
     messages: [
       { role: "assistant", content: sys },
       { role: "user", content: user },
     ],
-    thinking: { type: "disabled" },
   })
   const raw = completion.choices[0]?.message?.content ?? ""
   let parsed: GeneratedCoverLetter
@@ -431,13 +403,11 @@ export async function generateBio(
   opts: { locale: "id" | "en"; tone: string }
 ): Promise<GeneratedBio> {
   const { sys, user } = buildBioPrompt(profile, opts)
-  const zai = await getZai()
-  const completion = await zai.chat.completions.create({
+  const completion = await createCompletion({
     messages: [
       { role: "assistant", content: sys },
       { role: "user", content: user },
     ],
-    thinking: { type: "disabled" },
   })
   const raw = completion.choices[0]?.message?.content ?? ""
   let parsed: GeneratedBio
@@ -492,13 +462,11 @@ Output JSON array only: [{"id":"q1","question":"...","hint":"short hint what kin
 
   const user = `Essay type: ${opts.essayType}\nPrompt/requirements: ${opts.prompt || "(none)"}\nTarget organization: ${opts.targetOrg || "(not specified)"}`
 
-  const zai = await getZai()
-  const completion = await zai.chat.completions.create({
+  const completion = await createCompletion({
     messages: [
       { role: "assistant", content: sys },
       { role: "user", content: user },
     ],
-    thinking: { type: "disabled" },
   })
   const raw = completion.choices[0]?.message?.content ?? ""
   try {
@@ -595,13 +563,11 @@ Return JSON:
   "warnings": ["<any anti-generic warning>"]
 }`
 
-  const zai = await getZai()
-  const completion = await zai.chat.completions.create({
+  const completion = await createCompletion({
     messages: [
       { role: "assistant", content: sys },
       { role: "user", content: user },
     ],
-    thinking: { type: "disabled" },
   })
   const raw = completion.choices[0]?.message?.content ?? ""
   let parsed: GeneratedEssay
@@ -645,13 +611,11 @@ export async function generateInterviewQuestions(opts: {
     ? `Kamu pewawancara berpengalaman. Susun ${count} pertanyaan wawancara yang realistis berdasarkan role & konteks. Variasikan kategori: behavioral (pengalaman masa lalu), technical (skill spesifik), motivational (kenapa role/org ini), situational (skenario hipotetis). Output JSON array: [{"id":"q1","question":"...","category":"behavioral"}]`
     : `You are an experienced interviewer. Compose ${count} realistic interview questions based on the role & context. Vary categories: behavioral (past experience), technical (specific skill), motivational (why this role/org), situational (hypothetical scenario). Output JSON array: [{"id":"q1","question":"...","category":"behavioral"}]`
 
-  const zai = await getZai()
-  const completion = await zai.chat.completions.create({
+  const completion = await createCompletion({
     messages: [
       { role: "assistant", content: sys },
       { role: "user", content: `Role: ${opts.role || "(general)"}\nContext: ${opts.context || "(none)"}` },
     ],
-    thinking: { type: "disabled" },
   })
   const raw = completion.choices[0]?.message?.content ?? ""
   try {
@@ -705,13 +669,11 @@ Output JSON: {"structureScore":N,"specificityScore":N,"lengthScore":N,"overall":
     ? opts.profile.experiences.map((e) => `- ${e.title} @ ${e.organization}: ${e.contextNotes || e.description || ""}`).join("\n")
     : "(no experiences)"
 
-  const zai = await getZai()
-  const completion = await zai.chat.completions.create({
+  const completion = await createCompletion({
     messages: [
       { role: "assistant", content: sys },
       { role: "user", content: `Question: ${opts.question}\n\nUser's answer: ${opts.userAnswer}\n\nUser's real experiences (use for suggestedAnswer):\n${expBlock}` },
     ],
-    thinking: { type: "disabled" },
   })
   const raw = completion.choices[0]?.message?.content ?? ""
   try {
@@ -773,13 +735,11 @@ export async function generateReading(opts: {
 5. Vary the passage and questions every time — never reuse.
 Output STRICT JSON only: {"title":"<short title>","passage":"<full passage>","difficulty":"${opts.difficulty}","topic":"${topic}","questions":[{"id":"q1","question":"...","options":["A","B","C","D"],"answer":0,"explanation":"..."}]}`
 
-  const zai = await getZai()
-  const completion = await zai.chat.completions.create({
+  const completion = await createCompletion({
     messages: [
       { role: "assistant", content: sys },
       { role: "user", content: `Topic: ${topic}. Difficulty: ${opts.difficulty}. Generate a fresh passage + 5 questions.` },
     ],
-    thinking: { type: "disabled" },
   })
   const raw = completion.choices[0]?.message?.content ?? ""
   try {
@@ -831,13 +791,11 @@ export async function generateStructure(opts: {
 4. Vary questions every time.
 Output STRICT JSON only: {"difficulty":"${opts.difficulty}","questions":[{"id":"q1","question":"...","options":["A","B","C","D"],"answer":0,"explanation":"...","type":"sentence-completion"}]}`
 
-  const zai = await getZai()
-  const completion = await zai.chat.completions.create({
+  const completion = await createCompletion({
     messages: [
       { role: "assistant", content: sys },
       { role: "user", content: `Generate ${count} ${opts.difficulty} structure questions.` },
     ],
-    thinking: { type: "disabled" },
   })
   const raw = completion.choices[0]?.message?.content ?? ""
   try {
@@ -899,13 +857,11 @@ export async function generateListening(opts: {
 6. Vary content every time.
 Output STRICT JSON: {"title":"<short>","script":"<full script under 900 chars>","speaker":"<description>","difficulty":"${opts.difficulty}","topic":"${scenario}","questions":[{"id":"q1","question":"...","options":["A","B","C","D"],"answer":0,"explanation":"..."}]}`
 
-  const zai = await getZai()
-  const completion = await zai.chat.completions.create({
+  const completion = await createCompletion({
     messages: [
       { role: "assistant", content: sys },
       { role: "user", content: `Generate a ${opts.difficulty} listening script about ${scenario}.` },
     ],
-    thinking: { type: "disabled" },
   })
   const raw = completion.choices[0]?.message?.content ?? ""
   try {
@@ -928,4 +884,3 @@ Output STRICT JSON: {"title":"<short>","script":"<full script under 900 chars>",
     return { title: scenario, script: "", speaker: scenario, difficulty: opts.difficulty, topic: scenario, questions: [] }
   }
 }
-

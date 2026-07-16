@@ -219,7 +219,7 @@ describe("Wave B Mutations Authorization Tests", () => {
       const barrier = new Promise<void>((resolve) => {
         releaseBarrier = resolve
       })
-      testRuntime.zaiCompletionsHook = async () => {
+      testRuntime.deepseekCompletionsHook = async () => {
         arrivals += 1
         if (arrivals === 2) releaseBarrier()
         await barrier
@@ -278,7 +278,7 @@ describe("Wave B Mutations Authorization Tests", () => {
       testRuntime.cookieValue = await createSessionToken(IDS.accountA)
 
       // Set hook to update database version concurrently during LLM execution
-      testRuntime.zaiCompletionsHook = async () => {
+      testRuntime.deepseekCompletionsHook = async () => {
         await db.document.update({
           where: { id: IDS.documentA },
           data: { version: 99 },

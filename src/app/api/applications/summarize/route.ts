@@ -1,14 +1,8 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import ZAI from "z-ai-web-dev-sdk"
+import { createCompletion, extractJSON } from "@/lib/ai/deepseek"
 import { getSession } from "@/lib/auth"
 import { db } from "@/lib/db"
-
-let _zai: Awaited<ReturnType<typeof ZAI.create>> | null = null
-async function getZai() {
-  if (!_zai) _zai = await ZAI.create()
-  return _zai
-}
 
 const schema = z.object({
   jobDescription: z.string().min(20),
@@ -16,7 +10,7 @@ const schema = z.object({
 })
 
 export async function POST(request: Request) {
-  // Defense-in-depth: verify session explicitly (not just rely on proxy)
+  // Defense-in-depth: verify session explicitly (not just rely on middleware)
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 })
@@ -46,13 +40,11 @@ export async function POST(request: Request) {
     : `Extract from this job description. Output JSON: { "requirements": string[], "responsibilities": string[], "deadline": string|null, "contacts": string|null, "highlights": string }.\n\nJob description:\n${body.jobDescription}`
 
   try {
-    const zai = await getZai()
-    const completion = await zai.chat.completions.create({
+    const completion = await createCompletion({
       messages: [
         { role: "assistant", content: sys },
         { role: "user", content: user },
       ],
-      thinking: { type: "disabled" },
     })
     const raw = completion.choices[0]?.message?.content ?? ""
     let s = raw.trim()
@@ -64,7 +56,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, summary: parsed })
   } catch (e) {
     // Sanitized error: don't leak internal details to client
-    console.error("[applications/summarize] LLM failed:", (e as Error).message)
+    console.error("[applications/summarize] AI generation failed:", (e as Error).message)
     return NextResponse.json({ error: "summarize-failed" }, { status: 502 })
   }
 }

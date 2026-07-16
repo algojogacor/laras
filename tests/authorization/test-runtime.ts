@@ -10,14 +10,14 @@ type AsyncHook = (() => Promise<void>) | undefined
 export const testRuntime = {
   cookieValue: undefined as string | undefined,
   csrfCookieValue: undefined as string | undefined,
-  zaiCompletionsHook: undefined as AsyncHook,
+  deepseekCompletionsHook: undefined as AsyncHook,
   notFoundTriggered: false,
 }
 
 export function resetTestRuntime() {
   testRuntime.cookieValue = undefined
   testRuntime.csrfCookieValue = undefined
-  testRuntime.zaiCompletionsHook = undefined
+  testRuntime.deepseekCompletionsHook = undefined
   testRuntime.notFoundTriggered = false
 }
 
@@ -83,29 +83,33 @@ mock.module("@/lib/i18n", () => ({
   }),
 }))
 
-mock.module("z-ai-web-dev-sdk", () => ({
-  default: {
-    create: async () => ({
-      chat: {
-        completions: {
-          create: async () => {
-            await testRuntime.zaiCompletionsHook?.()
-            return {
-              choices: [
-                {
-                  message: {
-                    content: JSON.stringify({
-                      fullName: "User A Revised",
-                      experiences: [],
-                      warnings: [],
-                    }),
-                  },
-                },
-              ],
-            }
+mock.module("@/lib/ai/deepseek", () => ({
+  LARAS_AI_MODEL: "deepseek-v4-pro",
+  createCompletion: async () => {
+    await testRuntime.deepseekCompletionsHook?.()
+    return {
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              fullName: "User A Revised",
+              experiences: [],
+              warnings: [],
+            }),
           },
         },
-      },
-    }),
+      ],
+    }
+  },
+  extractJSON: (raw: string) => JSON.parse(raw.trim()),
+  validateModel: () => {}, // no-op: accepts deepseek-v4-pro
+  isProhibitedModel: () => false,
+  isDeepSeekConfigured: () => true,
+  getProviderStatus: () => ({ configured: true, model: "deepseek-v4-pro", baseUrl: "https://api.deepseek.com" }),
+  DeepSeekError: class DeepSeekError extends Error {
+    code: string; status: number
+    constructor(message: string, code: string, status: number) {
+      super(message); this.name = "DeepSeekError"; this.code = code; this.status = status
+    }
   },
 }))

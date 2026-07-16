@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import ZAI from "z-ai-web-dev-sdk"
+import { createCompletion, extractJSON } from "@/lib/ai/deepseek"
 import { db } from "@/lib/db"
 import { applyRateLimit } from "@/lib/rate-limit"
 import { serializeProfile, type ProfileWithRelations } from "@/lib/profile"
@@ -12,16 +12,12 @@ import {
   safeNextResponse,
 } from "@/lib/authorization"
 
-let _zai: Awaited<ReturnType<typeof ZAI.create>> | null = null
-async function getZai() {
-  if (!_zai) _zai = await ZAI.create()
-  return _zai
-}
-
 /**
  * Follow-up revision API (Brief Task 2).
  * Takes the previous output + user instruction → LLM revises → saves as new version.
  * NEVER overwrites — always creates a new DocumentVersion.
+ *
+ * Powered by DeepSeek V4 Pro via the centralized provider.
  */
 export async function POST(
   request: Request,
@@ -85,38 +81,36 @@ export async function POST(
     const isID = config.docLocale === "id"
     const sys = isID
       ? `Kamu editor dokumen profesional. User meminta revisi dari output sebelumnya. Aturan:
-  1. Pertahankan HANYA detail yang berasal dari data user — jangan mengarang detail baru.
-  2. Ikuti instruksi revisi user: "${instruction}".
-  3. Jika user meminta detail yang belum ada di profil, beri peringatan dalam field "warnings".
-  4. Pertahankan format JSON yang sama dengan output sebelumnya.
-  5. Bahasa ${config.docLocale || "id"}, tone ${config.tone || "professional"}.`
+1. Pertahankan HANYA detail yang berasal dari data user — jangan mengarang detail baru.
+2. Ikuti instruksi revisi user: "${instruction}".
+3. Jika user meminta detail yang belum ada di profil, beri peringatan dalam field "warnings".
+4. Pertahankan format JSON yang sama dengan output sebelumnya.
+5. Bahasa ${config.docLocale || "id"}, tone ${config.tone || "professional"}.`
       : `You are a professional document editor. The user requests a revision of the previous output. Rules:
-  1. Keep ONLY details that come from the user's data — do not invent new details.
-  2. Follow the user's revision instruction: "${instruction}".
-  3. If the user asks for details not in the profile, add a warning in the "warnings" field.
-  4. Maintain the same JSON format as the previous output.
-  5. Language: ${config.docLocale || "en"}, tone: ${config.tone || "professional"}.`
+1. Keep ONLY details that come from the user's data — do not invent new details.
+2. Follow the user's revision instruction: "${instruction}".
+3. If the user asks for details not in the profile, add a warning in the "warnings" field.
+4. Maintain the same JSON format as the previous output.
+5. Language: ${config.docLocale || "en"}, tone: ${config.tone || "professional"}.`
 
     const user = `Previous output (JSON):
-  ${currentContent}
-  
-  User's revision instruction: ${instruction}
-  
-  User's real profile data (source of truth — do not invent beyond this):
-  - Name: ${serialized.fullName || ""}
-  - Experiences: ${serialized.experiences.map((e) => `${e.title} @ ${e.organization}: ${e.contextNotes || e.description || ""}`).join("; ")}
-  
-  Return the revised output as JSON with the SAME structure as the previous output.`
+${currentContent}
+
+User's revision instruction: ${instruction}
+
+User's real profile data (source of truth — do not invent beyond this):
+- Name: ${serialized.fullName || ""}
+- Experiences: ${serialized.experiences.map((e) => `${e.title} @ ${e.organization}: ${e.contextNotes || e.description || ""}`).join("; ")}
+
+Return the revised output as JSON with the SAME structure as the previous output.`
 
     let revisedContent: string
     try {
-      const zai = await getZai()
-      const completion = await zai.chat.completions.create({
+      const completion = await createCompletion({
         messages: [
           { role: "assistant", content: sys },
           { role: "user", content: user },
         ],
-        thinking: { type: "disabled" },
       })
       const raw = completion.choices[0]?.message?.content ?? ""
 
@@ -130,7 +124,7 @@ export async function POST(
       JSON.parse(s) // validate
       revisedContent = s
     } catch (llmError) {
-      console.error("[documents/revise] LLM failed:", (llmError as Error).message)
+      console.error("[documents/revise] AI generation failed:", (llmError as Error).message)
 
       // Save failed revision request (as validated user owns the document)
       await db.revisionRequest.create({

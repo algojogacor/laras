@@ -557,19 +557,19 @@ describe("Phase 10C+10D — Security Hardening Tests", () => {
 
     test("validateEnv warns on missing optional vars", async () => {
       const { validateEnv } = await import("@/lib/env-validation")
-      const originalSupabase = process.env.SUPABASE_URL
-      const originalZai = process.env.ZAI_API_KEY
-      delete (process.env as any).SUPABASE_URL
-      delete (process.env as any).ZAI_API_KEY
+      const originalSupabase = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const originalDeepSeek = process.env.DEEPSEEK_API_KEY
+      delete (process.env as any).NEXT_PUBLIC_SUPABASE_URL
+      delete (process.env as any).DEEPSEEK_API_KEY
 
       try {
         const result = validateEnv()
         expect(result.valid).toBe(true)
-        expect(result.warnings).toContain("SUPABASE_URL")
-        expect(result.warnings).toContain("ZAI_API_KEY")
+        expect(result.warnings).toContain("NEXT_PUBLIC_SUPABASE_URL")
+        expect(result.warnings).toContain("DEEPSEEK_API_KEY")
       } finally {
-        process.env.SUPABASE_URL = originalSupabase
-        process.env.ZAI_API_KEY = originalZai
+        process.env.NEXT_PUBLIC_SUPABASE_URL = originalSupabase
+        process.env.DEEPSEEK_API_KEY = originalDeepSeek
       }
     })
   })
