@@ -6,6 +6,7 @@ import {
   isValidId,
   safeNextResponse,
 } from "@/lib/authorization"
+import { applyRateLimit } from "@/lib/rate-limit"
 import {
   getCircleMembers,
   joinCircle,
@@ -52,6 +53,11 @@ export async function POST(
     if (!isValidId(id)) {
       throw new AuthorizationError("BAD_REQUEST")
     }
+
+    // Rate limit by user
+    const rateLimitKey = `user:${actor.accountId}`
+    const limited = applyRateLimit(request, "circles", rateLimitKey)
+    if (limited) return limited
 
     const result = await joinCircle(profileId, id)
     return safeNextResponse(result)

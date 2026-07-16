@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
+import { createCsrfToken } from "@/lib/csrf"
 
 export async function GET() {
   const session = await getSession()
@@ -24,7 +25,11 @@ export async function GET() {
   if (!account) {
     return NextResponse.json({ user: null }, { status: 200 })
   }
-  return NextResponse.json({
+
+  // Refresh CSRF token on each /me call so the client always has a valid token
+  const csrfToken = await createCsrfToken()
+
+  const resp = NextResponse.json({
     user: {
       id: account.id,
       email: account.email,
@@ -35,5 +40,8 @@ export async function GET() {
       profileCompletion: account.profile?.profileCompletion ?? 0,
       uiLocale: account.profile?.uiLocale ?? "id",
     },
+    csrfToken,
   })
+  resp.headers.set("X-CSRF-Token", csrfToken)
+  return resp
 }

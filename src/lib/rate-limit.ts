@@ -112,6 +112,18 @@ export const RATE_LIMITS = {
 
   // Reports / moderation (Phase 10C)
   reports: { limit: 5, windowMs: 60_000 }, // 5 reports/min per user
+
+  // Mentorship (Phase 10C)
+  mentorship: { limit: 10, windowMs: 60_000 }, // 10 mentorship ops/min per user
+
+  // Circles (Phase 10C)
+  circles: { limit: 10, windowMs: 60_000 }, // 10 circle ops/min per user
+
+  // Blocks (Phase 10C)
+  blocks: { limit: 5, windowMs: 60_000 }, // 5 blocks/min per user
+
+  // Appeals (Phase 10C)
+  appeals: { limit: 5, windowMs: 3600_000 }, // 5 appeals/hour per user (stricter)
 } as const
 
 /**

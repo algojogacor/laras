@@ -108,6 +108,10 @@ model UserProfile {
   mentorshipProfile         MentorshipProfile?
   mentorshipRequestsAsMentor MentorshipRequest[] @relation("MentorshipMentor")
   mentorshipRequestsAsMentee MentorshipRequest[] @relation("MentorshipMentee")
+  mentorshipSessionsAsMentor MentorshipSession[] @relation("MentorshipSessionMentor")
+  mentorshipSessionsAsMentee MentorshipSession[] @relation("MentorshipSessionMentee")
+  peerReviewsAsRequester     PeerReview[]        @relation("PeerReviewRequester")
+  peerReviewsAsReviewer      PeerReview[]        @relation("PeerReviewReviewer")
 }
 
 // --- Riwayat pengalaman (Section 4) — contextNotes is the anti-generic foundation ---
@@ -581,9 +585,12 @@ model License {
   issuedById    String?  // Account.id of the admin who issued it (audit trail)
   startsAt      DateTime @default(now())
   expiresAt     DateTime? // null = no expiry
+  licenseCodeId String?  // which LicenseCode was redeemed (structural duplicate prevention)
+  licenseCode   LicenseCode? @relation(fields: [licenseCodeId], references: [id], onDelete: SetNull)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  @@unique([userProfileId, licenseCodeId])
   @@index([userProfileId])
   @@index([status])
   @@index([plan])
@@ -755,6 +762,8 @@ model LicenseCode {
   expiresAt       DateTime? // optional expiry
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  licenses        License[]
 
   @@index([code])
   @@index([batchId])
@@ -1060,6 +1069,7 @@ model CareerCircle {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   memberships CircleMembership[]
+  peerReviews PeerReview[]
 }
 
 model CircleMembership {
@@ -1073,6 +1083,30 @@ model CircleMembership {
 
   @@unique([circleId, userProfileId])
   @@index([userProfileId])
+}
+
+// ---------------------------------------------------------------------------
+// PeerReview — Structured peer feedback within career circles (Phase 6B)
+// ---------------------------------------------------------------------------
+model PeerReview {
+  id          String   @id @default(cuid())
+  requesterId String
+  requester   UserProfile  @relation("PeerReviewRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  reviewerId  String?
+  reviewer    UserProfile? @relation("PeerReviewReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  circleId    String
+  circle      CareerCircle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  prompt      String
+  feedback    String?
+  rating      String?  // JSON: { clarity, specificity, actionability }
+  status      String   @default("open") // open | submitted
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([requesterId])
+  @@index([reviewerId])
+  @@index([circleId])
+  @@index([status])
 }
 
 // ---------------------------------------------------------------------------
@@ -1101,6 +1135,7 @@ model MentorshipRequest {
   message     String?
   goals       String?  // JSON: [{ goal, timeline }]
   status      String   @default("pending") // pending | accepted | declined
+  sessions    MentorshipSession[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -1111,8 +1146,11 @@ model MentorshipRequest {
 model MentorshipSession {
   id          String   @id @default(cuid())
   requestId   String?
+  request     MentorshipRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
   mentorId    String
+  mentor      UserProfile @relation("MentorshipSessionMentor", fields: [mentorId], references: [id], onDelete: Cascade)
   menteeId    String
+  mentee      UserProfile @relation("MentorshipSessionMentee", fields: [menteeId], references: [id], onDelete: Cascade)
   title       String?
   notes       String?
   scheduledAt DateTime?
@@ -1123,4 +1161,6 @@ model MentorshipSession {
 
   @@index([mentorId])
   @@index([menteeId])
+  @@index([requestId])
+  @@index([scheduledAt])
 }

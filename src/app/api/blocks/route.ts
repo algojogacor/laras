@@ -1,5 +1,6 @@
 import { db } from "@/lib/db"
 import { blockUser, unblockUser } from "@/lib/messaging"
+import { applyRateLimit } from "@/lib/rate-limit"
 import {
   requireActor,
   getRequiredProfileId,
@@ -60,6 +61,11 @@ export async function POST(request: Request) {
   try {
     const actor = await requireActor()
     const profileId = getRequiredProfileId(actor)
+
+    // Rate limit by user
+    const rateLimitKey = `user:${actor.accountId}`
+    const limited = applyRateLimit(request, "blocks", rateLimitKey)
+    if (limited) return limited
 
     let body: { blockedId?: string; reason?: string }
     try {

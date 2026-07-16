@@ -134,11 +134,11 @@ export async function redeemCode(
       throw new RedeemError("USED_UP")
     }
 
-    // Check duplicate: has this user already redeemed this code?
+    // Check duplicate: has this user already redeemed this specific code?
     const existingLicense = await tx.license.findFirst({
       where: {
         userProfileId,
-        note: { contains: `code:${cleaned}` },
+        licenseCodeId: licenseCode.id,
       },
     })
     if (existingLicense) {
@@ -170,6 +170,7 @@ export async function redeemCode(
         features: features ? JSON.stringify(features) : null,
         note: `Redeemed code:${cleaned}` + (licenseCode.batchId ? ` batch:${licenseCode.batchId}` : ""),
         issuedById: licenseCode.createdById,
+        licenseCodeId: licenseCode.id,
         startsAt: new Date(),
         expiresAt: licenseCode.expiresAt,
       },

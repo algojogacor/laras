@@ -6,6 +6,7 @@ import {
   isValidId,
   safeNextResponse,
 } from "@/lib/authorization"
+import { applyRateLimit } from "@/lib/rate-limit"
 import {
   getMentorshipRequests,
   requestMentorship,
@@ -40,6 +41,11 @@ export async function POST(request: Request) {
   try {
     const actor = await requireActor()
     const profileId = getRequiredProfileId(actor)
+
+    // Rate limit by user
+    const rateLimitKey = `user:${actor.accountId}`
+    const limited = applyRateLimit(request, "mentorship", rateLimitKey)
+    if (limited) return limited
 
     let body: {
       mentorId?: string

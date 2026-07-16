@@ -436,6 +436,15 @@ export async function scheduleSession(
     throw new AuthorizationError("FORBIDDEN")
   }
 
+  // Verify mentorId and menteeId correspond to real UserProfiles
+  const [mentorProfile, menteeProfile] = await Promise.all([
+    db.userProfile.findUnique({ where: { id: mentorId }, select: { id: true } }),
+    db.userProfile.findUnique({ where: { id: menteeId }, select: { id: true } }),
+  ])
+  if (!mentorProfile || !menteeProfile) {
+    throw new AuthorizationError("NOT_FOUND")
+  }
+
   // Verify there's an accepted mentorship relationship
   const hasAccepted = await db.mentorshipRequest.findFirst({
     where: {
@@ -550,21 +559,12 @@ export async function getMentorshipSessions(
         { menteeId: userProfileId },
       ],
     },
+    include: {
+      mentor: { select: { fullName: true } },
+      mentee: { select: { fullName: true } },
+    },
     orderBy: { scheduledAt: "desc" },
   })
-
-  // Manual lookups since MentorshipSession has no relation fields in schema
-  const profileIds = new Set<string>()
-  sessions.forEach((s) => {
-    profileIds.add(s.mentorId)
-    profileIds.add(s.menteeId)
-  })
-
-  const profiles = await db.userProfile.findMany({
-    where: { id: { in: Array.from(profileIds) } },
-    select: { id: true, fullName: true },
-  })
-  const nameMap = new Map(profiles.map((p) => [p.id, p.fullName]))
 
   return sessions.map((s) => ({
     id: s.id,
@@ -578,8 +578,8 @@ export async function getMentorshipSessions(
     feedback: s.feedback ? safeParseJson(s.feedback) : null,
     createdAt: s.createdAt,
     updatedAt: s.updatedAt,
-    mentorName: nameMap.get(s.mentorId) ?? null,
-    menteeName: nameMap.get(s.menteeId) ?? null,
+    mentorName: s.mentor.fullName ?? null,
+    menteeName: s.mentee.fullName ?? null,
   }))
 }
 

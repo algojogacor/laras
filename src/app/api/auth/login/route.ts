@@ -60,11 +60,13 @@ export async function POST(request: Request) {
   // Generate CSRF token for subsequent mutation requests
   const csrfToken = await createCsrfToken()
 
-  return NextResponse.json({
+  const resp = NextResponse.json({
     ok: true,
     user: { id: account.id, email: account.email, name: account.name },
     onboardingComplete: account.profile?.onboardingComplete ?? false,
     profileCompletion: account.profile?.profileCompletion ?? 0,
     csrfToken,
   })
+  resp.headers.set("X-CSRF-Token", csrfToken)
+  return resp
 }

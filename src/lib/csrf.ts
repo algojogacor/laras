@@ -16,18 +16,25 @@ export function generateCsrfToken(): string {
 }
 
 /**
- * Set the CSRF token as an httpOnly cookie and return it for the response header.
+ * Set the CSRF token as a non-httpOnly cookie for the double-submit pattern.
  *
  * Double-submit cookie pattern:
- * - Cookie is httpOnly (inaccessible to JS, protected from XSS)
- * - Token is also returned in response header for client to store
- * - Client sends token in X-CSRF-Token header on subsequent requests
- * - Server compares cookie value with header value
+ * - Cookie is NOT httpOnly so browser JavaScript can read it via document.cookie.
+ *   This is an intentional deviation from the default security posture. The cookie
+ *   is still protected by sameSite: "strict" which prevents cross-origin requests
+ *   from including it. The client reads the cookie value and includes it in the
+ *   X-CSRF-Token request header. The server compares cookie and header values.
+ *   An attacker on a different origin cannot read the cookie (sameSite blocks
+ *   cross-origin cookie attachment) and cannot set a matching header because they
+ *   cannot read the cookie value.
+ * - Token is also returned in response header for stateless client initialization.
+ * - Client sends token in X-CSRF-Token header on subsequent mutation requests.
+ * - Server compares cookie value with header value using constant-time comparison.
  */
 export async function setCsrfCookie(token: string): Promise<void> {
   const cookieStore = await cookies()
   cookieStore.set(CSRF_COOKIE, token, {
-    httpOnly: true,
+    httpOnly: false,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     path: "/",

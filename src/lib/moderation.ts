@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { createNotification } from "@/lib/notifications"
 import { AuthorizationError } from "@/lib/authorization"
 import { revokeSessions } from "@/lib/auth"
+import { createAppealToken } from "@/lib/appeal-token"
 
 // ============================================================================
 // Moderation Service — Phase 4B+4C
@@ -171,66 +172,85 @@ export async function createCase(input: CreateCaseInput) {
     }
   }
 
-  const mc = await db.moderationCase.create({
-    data: {
-      reportId: input.reportId || null,
-      subjectId: input.subjectId,
-      type: input.type,
-      reason: input.reason,
-      moderatorId: input.moderatorId,
-      duration: input.duration || null,
-      expiresAt,
-    },
-    select: {
-      id: true,
-      reportId: true,
-      subjectId: true,
-      type: true,
-      status: true,
-      reason: true,
-      moderatorId: true,
-      duration: true,
-      expiresAt: true,
-      createdAt: true,
-    },
-  })
-
-  // If suspension, verify role hierarchy and update the account
-  if (input.type === "suspension") {
-    // Load target account to enforce role hierarchy
-    const targetAccount = await db.account.findUnique({
-      where: { id: input.subjectId },
-      select: { role: true },
-    })
-    if (!targetAccount) {
-      throw new AuthorizationError("NOT_FOUND")
-    }
-    // Moderators cannot suspend admin or owner accounts
-    if (input.moderatorRole === "moderator" && (targetAccount.role === "admin" || targetAccount.role === "owner")) {
-      throw new AuthorizationError("FORBIDDEN")
-    }
-    // No one can suspend the platform owner
-    if (targetAccount.role === "owner") {
-      throw new AuthorizationError("FORBIDDEN")
-    }
-
-    await db.account.update({
-      where: { id: input.subjectId },
+  // Transactional: case creation + suspension are atomic.
+  // If suspension validation or account update fails, the case is rolled back.
+  const mc = await db.$transaction(async (tx) => {
+    const newCase = await tx.moderationCase.create({
       data: {
-        suspended: true,
-        suspendedAt: new Date(),
-        suspensionReason: input.reason,
+        reportId: input.reportId || null,
+        subjectId: input.subjectId,
+        type: input.type,
+        reason: input.reason,
+        moderatorId: input.moderatorId,
+        duration: input.duration || null,
+        expiresAt,
+      },
+      select: {
+        id: true,
+        reportId: true,
+        subjectId: true,
+        type: true,
+        status: true,
+        reason: true,
+        moderatorId: true,
+        duration: true,
+        expiresAt: true,
+        createdAt: true,
       },
     })
 
-    // Revoke all active sessions for the suspended user
-    await revokeSessions(input.subjectId)
+    // If suspension, verify role hierarchy and update the account atomically
+    if (input.type === "suspension") {
+      const targetAccount = await tx.account.findUnique({
+        where: { id: input.subjectId },
+        select: { role: true },
+      })
+      if (!targetAccount) {
+        throw new AuthorizationError("NOT_FOUND")
+      }
+      // Moderators cannot suspend admin or owner accounts
+      if (input.moderatorRole === "moderator" && (targetAccount.role === "admin" || targetAccount.role === "owner")) {
+        throw new AuthorizationError("FORBIDDEN")
+      }
+      // No one can suspend the platform owner
+      if (targetAccount.role === "owner") {
+        throw new AuthorizationError("FORBIDDEN")
+      }
+
+      await tx.account.update({
+        where: { id: input.subjectId },
+        data: {
+          suspended: true,
+          suspendedAt: new Date(),
+          suspensionReason: input.reason,
+        },
+      })
+    }
+
+    return newCase
+  })
+
+  // Post-transaction: revoke sessions (non-critical — session version check
+  // in verifySessionToken will catch it on next request even if this fails)
+  // Also generate an appeal token so the suspended user can still file an
+  // appeal via POST /api/appeals using Authorization: Bearer <token>.
+  // In production this token should be delivered to the user via email.
+  let appealToken: string | null = null
+  if (input.type === "suspension") {
+    try {
+      await revokeSessions(input.subjectId)
+    } catch (e) {
+      console.error("[moderation] Failed to revoke sessions after suspension:", e)
+      // Non-fatal: session version enforcement handles this on next request
+    }
+    appealToken = await createAppealToken(input.subjectId, mc.id)
   }
 
   return {
     ...mc,
     expiresAt: mc.expiresAt?.toISOString() ?? null,
     createdAt: mc.createdAt.toISOString(),
+    ...(appealToken ? { appealToken } : {}),
   }
 }
 
@@ -317,27 +337,32 @@ export async function revokeCase(caseId: string, moderatorId: string) {
   const existing = await db.moderationCase.findUnique({ where: { id: caseId } })
   if (!existing) throw new Error("NOT_FOUND")
 
-  const mc = await db.moderationCase.update({
-    where: { id: caseId },
-    data: {
-      status: "revoked",
-      revokedAt: new Date(),
-      revokedById: moderatorId,
-    },
-    select: { id: true, subjectId: true, type: true, status: true },
-  })
-
-  // If suspension, unsuspend the account
-  if (existing.type === "suspension") {
-    await db.account.update({
-      where: { id: existing.subjectId },
+  // Transactional: case revocation + unsuspension are atomic
+  const mc = await db.$transaction(async (tx) => {
+    const updated = await tx.moderationCase.update({
+      where: { id: caseId },
       data: {
-        suspended: false,
-        suspendedAt: null,
-        suspensionReason: null,
+        status: "revoked",
+        revokedAt: new Date(),
+        revokedById: moderatorId,
       },
+      select: { id: true, subjectId: true, type: true, status: true },
     })
-  }
+
+    // If suspension, unsuspend the account atomically
+    if (existing.type === "suspension") {
+      await tx.account.update({
+        where: { id: existing.subjectId },
+        data: {
+          suspended: false,
+          suspendedAt: null,
+          suspensionReason: null,
+        },
+      })
+    }
+
+    return updated
+  })
 
   return mc
 }

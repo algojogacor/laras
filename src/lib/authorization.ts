@@ -150,6 +150,13 @@ export async function requireActor(): Promise<ActorContext> {
     throw new AuthorizationError("UNAUTHORIZED")
   }
 
+  // Defense-in-depth: reject suspended users even though getSession()
+  // already checks. This catches race conditions where an account was
+  // suspended between getSession() and this query.
+  if (account.suspended) {
+    throw new AuthorizationError("FORBIDDEN")
+  }
+
   const profile = await db.userProfile.findUnique({
     where: { accountId: account.id },
     select: { id: true },

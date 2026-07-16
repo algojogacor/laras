@@ -3,7 +3,7 @@ import { jwtVerify } from "jose"
 
 const COOKIE_NAME = "laras_session"
 const CSRF_COOKIE = "laras_csrf"
-const CSRF_HEADER = "x-csrf-token"
+const CSRF_HEADER = "X-CSRF-Token"
 
 // ---------------------------------------------------------------------------
 // Public paths — no authentication required
@@ -37,22 +37,24 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(secret)
 }
 
+// Suspension is enforced at the API/route level via requireActor() and
+// getSession() which reload the account from DB. The JWT contains only
+// { sub, sv } — there is no "suspended" claim, so middleware cannot and
+// should not enforce suspension from the token alone.
 async function isAuthenticated(req: NextRequest): Promise<{
   authed: boolean
-  suspended: boolean
   userId?: string
 }> {
   const token = req.cookies.get(COOKIE_NAME)?.value
-  if (!token) return { authed: false, suspended: false }
+  if (!token) return { authed: false }
   try {
     const { payload } = await jwtVerify(token, getSecret())
     return {
       authed: true,
-      suspended: payload.suspended === true,
       userId: payload.sub as string,
     }
   } catch {
-    return { authed: false, suspended: false }
+    return { authed: false }
   }
 }
 
@@ -102,7 +104,8 @@ function validateCsrfToken(req: NextRequest): boolean {
   const headerToken = req.headers.get(CSRF_HEADER)?.trim()
 
   if (!cookieToken || !headerToken) return false
-  if (cookieToken.length < 32 || headerToken.length < 32) return false
+  // Token is 32 bytes → 64 hex characters
+  if (cookieToken.length !== 64 || headerToken.length !== 64) return false
 
   // Constant-time comparison using Edge-compatible TextEncoder
   try {
@@ -209,6 +212,18 @@ export async function middleware(req: NextRequest) {
   // 4. CSRF validation for mutation requests
   // ------------------------------------------------------------------
   if (requiresCsrf(req)) {
+    // Origin/referer validation: reject cross-origin mutation requests
+    const origin = req.headers.get("origin")
+    if (origin) {
+      const requestOrigin = req.nextUrl.origin
+      if (origin !== requestOrigin) {
+        return NextResponse.json(
+          { error: "csrf-invalid", message: "Origin mismatch" },
+          { status: 403 }
+        )
+      }
+    }
+
     if (!validateCsrfToken(req)) {
       return NextResponse.json(
         { error: "csrf-invalid", message: "CSRF token missing or invalid" },
@@ -226,7 +241,7 @@ export async function middleware(req: NextRequest) {
   // ------------------------------------------------------------------
   // 6. Auth check for protected routes
   // ------------------------------------------------------------------
-  const { authed, suspended } = await isAuthenticated(req)
+  const { authed } = await isAuthenticated(req)
 
   if (!authed) {
     if (pathname.startsWith("/api/")) {
@@ -239,21 +254,17 @@ export async function middleware(req: NextRequest) {
   }
 
   // ------------------------------------------------------------------
-  // 7. Block suspended users at the edge
+  // 7. Suspension enforcement
+  //    Suspension is NOT enforced here. Middleware only validates the
+  //    JWT signature and expiry. The JWT carries no "suspended" claim.
+  //    Suspension is enforced server-side by requireActor() (which
+  //    reloads the account from DB and checks suspended) and by
+  //    getSession() / verifySessionToken() which return null for
+  //    suspended accounts. This prevents suspended users from accessing
+  //    any route that calls these guards, while still allowing access
+  //    to public resources and the appeal endpoint (which supports
+  //    appeal tokens for suspended users).
   // ------------------------------------------------------------------
-  if (suspended) {
-    if (pathname.startsWith("/api/")) {
-      return NextResponse.json(
-        { error: "forbidden", message: "Account suspended" },
-        { status: 403 }
-      )
-    }
-    // Redirect to a suspended notice page
-    const url = req.nextUrl.clone()
-    url.pathname = "/login"
-    url.searchParams.set("suspended", "1")
-    return NextResponse.redirect(url)
-  }
 
   return response
 }

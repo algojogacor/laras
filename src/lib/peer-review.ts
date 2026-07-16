@@ -3,7 +3,6 @@ import { db } from "@/lib/db"
 import { AuthorizationError } from "@/lib/authorization"
 import { emitEvent } from "@/lib/activity"
 import { createNotification } from "@/lib/notifications"
-import crypto from "crypto"
 
 // ============================================================================
 // Peer Review Service — Phase 6B
@@ -48,83 +47,20 @@ function validateRating(rating: any): ReviewRating {
   return { clarity, specificity, actionability }
 }
 
-// ---- PeerReview table ----
-// We store peer reviews directly as a JSON structure within a generic
-// "peer review" concept. Since the schema doesn't have a dedicated PeerReview
-// model, we use a minimal pattern: we create a lightweight review record
-// via a structured approach.
-//
-// Strategy: since there's no PeerReview table in the Prisma schema, we
-// model peer reviews using a virtual store. For a real implementation,
-// we'd add a PeerReview model to the schema. For Phase 6B, we use the
-// CircleMembership association and a simple in-app structure.
-//
-// We'll store peer reviews as entries keyed by (circleId, requesterId).
-// This is done by persisting to a notional "review" concept.
-
-// NOTE: Since prisma schema lacks PeerReview model, we simulate it
-// using the database directly with raw queries or by creating a minimal
-// table. For now, we use a pragmatic approach: store reviews as records
-// in a simple JSON structure managed via the application layer.
-//
-// In production, add a PeerReview model to schema.prisma:
-//   model PeerReview {
-//     id String @id @default(cuid())
-//     requesterId String
-//     reviewerId String?
-//     circleId String
-//     prompt String
-//     feedback String?
-//     rating String? // JSON
-//     status String @default("open")
-//     createdAt DateTime @default(now())
-//     updatedAt DateTime @updatedAt
-//   }
-
-// For Phase 6B, we implement the peer review API contract using direct
-// SQLite access through Prisma's $queryRaw. This avoids needing a schema
-// migration while providing the full functionality.
-
-interface PeerReviewRow {
-  id: string
-  requesterId: string
-  reviewerId: string | null
-  circleId: string
-  prompt: string
-  feedback: string | null
-  rating: string | null
-  status: string
-  createdAt: string
-  updatedAt: string
-}
-
-// Ensure the peer_review table exists
-async function ensurePeerReviewTable(): Promise<void> {
+function safeParseRating(raw: string): ReviewRating | null {
   try {
-    await db.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS peer_review (
-        id TEXT PRIMARY KEY,
-        requesterId TEXT NOT NULL,
-        reviewerId TEXT,
-        circleId TEXT NOT NULL,
-        prompt TEXT NOT NULL DEFAULT '',
-        feedback TEXT,
-        rating TEXT,
-        status TEXT NOT NULL DEFAULT 'open',
-        createdAt TEXT NOT NULL DEFAULT (datetime('now')),
-        updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
-        FOREIGN KEY (requesterId) REFERENCES UserProfile(id) ON DELETE CASCADE,
-        FOREIGN KEY (reviewerId) REFERENCES UserProfile(id) ON DELETE SET NULL,
-        FOREIGN KEY (circleId) REFERENCES CareerCircle(id) ON DELETE CASCADE
-      )
-    `)
+    const r = JSON.parse(raw)
+    if (
+      typeof r.clarity === "number" &&
+      typeof r.specificity === "number" &&
+      typeof r.actionability === "number"
+    ) {
+      return r as ReviewRating
+    }
+    return null
   } catch {
-    // Table may already exist — safe to ignore
+    return null
   }
-}
-
-function generateId(): string {
-  return crypto.randomUUID()
 }
 
 /**
@@ -136,8 +72,6 @@ export async function requestReview(
   circleId: string,
   prompt: string
 ): Promise<{ id: string }> {
-  await ensurePeerReviewTable()
-
   // Verify membership
   const membership = await db.circleMembership.findUnique({
     where: {
@@ -156,30 +90,23 @@ export async function requestReview(
     throw new AuthorizationError("BAD_REQUEST")
   }
 
-  const id = generateId()
-  await db.$executeRawUnsafe(
-    `INSERT INTO peer_review (id, requesterId, circleId, prompt, status) VALUES (?, ?, ?, ?, 'open')`,
-    id,
-    requesterId,
-    circleId,
-    trimmedPrompt
-  )
-
-  // Notify circle members (simplified: notify the circle creator)
-  const circle = await db.careerCircle.findUnique({
-    where: { id: circleId },
-    select: { createdById: true, name: true },
+  const review = await db.peerReview.create({
+    data: {
+      requesterId,
+      circleId,
+      prompt: trimmedPrompt,
+    },
   })
 
   emitEvent({
     userProfileId: requesterId,
     type: "profile.update",
     resourceType: "PeerReview",
-    resourceId: id,
+    resourceId: review.id,
     metadata: { action: "review.requested", circleId },
   })
 
-  return { id }
+  return { id: review.id }
 }
 
 /**
@@ -191,18 +118,13 @@ export async function submitReview(
   feedback: string,
   rating: ReviewRating
 ): Promise<void> {
-  await ensurePeerReviewTable()
+  const review = await db.peerReview.findUnique({
+    where: { id: requestId },
+  })
 
-  const rows = await db.$queryRawUnsafe(
-    `SELECT * FROM peer_review WHERE id = ? AND status = 'open'`,
-    requestId
-  ) as PeerReviewRow[]
-
-  if (!rows || rows.length === 0) {
+  if (!review || review.status !== "open") {
     throw new AuthorizationError("NOT_FOUND")
   }
-
-  const review = rows[0]
 
   // Prevent self-review
   if (review.requesterId === reviewerId) {
@@ -228,13 +150,15 @@ export async function submitReview(
     throw new AuthorizationError("BAD_REQUEST")
   }
 
-  await db.$executeRawUnsafe(
-    `UPDATE peer_review SET reviewerId = ?, feedback = ?, rating = ?, status = 'submitted', updatedAt = datetime('now') WHERE id = ? AND status = 'open'`,
-    reviewerId,
-    trimmedFeedback,
-    JSON.stringify(validatedRating),
-    requestId
-  )
+  await db.peerReview.update({
+    where: { id: requestId },
+    data: {
+      reviewerId,
+      feedback: trimmedFeedback,
+      rating: JSON.stringify(validatedRating),
+      status: "submitted",
+    },
+  })
 
   createNotification({
     userProfileId: review.requesterId,
@@ -260,36 +184,33 @@ export async function submitReview(
 export async function getUserReviews(
   userProfileId: string
 ): Promise<PeerReviewData[]> {
-  await ensurePeerReviewTable()
+  const reviews = await db.peerReview.findMany({
+    where: {
+      OR: [
+        { requesterId: userProfileId },
+        { reviewerId: userProfileId },
+      ],
+    },
+    include: {
+      reviewer: { select: { fullName: true } },
+      requester: { select: { fullName: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  })
 
-  const rows = await db.$queryRawUnsafe(
-    `SELECT pr.*,
-            r.fullName as reviewerName,
-            req.fullName as requesterName
-     FROM peer_review pr
-     LEFT JOIN UserProfile r ON pr.reviewerId = r.id
-     LEFT JOIN UserProfile req ON pr.requesterId = req.id
-     WHERE pr.requesterId = ? OR pr.reviewerId = ?
-     ORDER BY pr.createdAt DESC`,
-    userProfileId,
-    userProfileId
-  ) as (PeerReviewRow & { reviewerName: string | null; requesterName: string | null })[]
-
-  if (!rows) return []
-
-  return rows.map((row) => ({
-    id: row.id,
-    requesterId: row.requesterId,
-    reviewerId: row.reviewerId,
-    circleId: row.circleId,
-    prompt: row.prompt,
-    feedback: row.feedback,
-    rating: row.rating ? safeParseRating(row.rating) : null,
-    status: row.status as "open" | "submitted",
-    createdAt: new Date(row.createdAt),
-    updatedAt: new Date(row.updatedAt),
-    reviewerName: row.reviewerName,
-    requesterName: row.requesterName,
+  return reviews.map((r) => ({
+    id: r.id,
+    requesterId: r.requesterId,
+    reviewerId: r.reviewerId,
+    circleId: r.circleId,
+    prompt: r.prompt,
+    feedback: r.feedback,
+    rating: r.rating ? safeParseRating(r.rating) : null,
+    status: r.status as "open" | "submitted",
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+    reviewerName: r.reviewer?.fullName ?? null,
+    requesterName: r.requester?.fullName ?? null,
   }))
 }
 
@@ -300,8 +221,6 @@ export async function getCircleReviews(
   circleId: string,
   userProfileId: string
 ): Promise<PeerReviewData[]> {
-  await ensurePeerReviewTable()
-
   // Verify membership
   const membership = await db.circleMembership.findUnique({
     where: {
@@ -315,48 +234,27 @@ export async function getCircleReviews(
     throw new AuthorizationError("FORBIDDEN")
   }
 
-  const rows = await db.$queryRawUnsafe(
-    `SELECT pr.*,
-            r.fullName as reviewerName,
-            req.fullName as requesterName
-     FROM peer_review pr
-     LEFT JOIN UserProfile r ON pr.reviewerId = r.id
-     LEFT JOIN UserProfile req ON pr.requesterId = req.id
-     WHERE pr.circleId = ?
-     ORDER BY pr.createdAt DESC`,
-    circleId
-  ) as (PeerReviewRow & { reviewerName: string | null; requesterName: string | null })[]
+  const reviews = await db.peerReview.findMany({
+    where: { circleId },
+    include: {
+      reviewer: { select: { fullName: true } },
+      requester: { select: { fullName: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  })
 
-  if (!rows) return []
-
-  return rows.map((row) => ({
-    id: row.id,
-    requesterId: row.requesterId,
-    reviewerId: row.reviewerId,
-    circleId: row.circleId,
-    prompt: row.prompt,
-    feedback: row.feedback,
-    rating: row.rating ? safeParseRating(row.rating) : null,
-    status: row.status as "open" | "submitted",
-    createdAt: new Date(row.createdAt),
-    updatedAt: new Date(row.updatedAt),
-    reviewerName: row.reviewerName,
-    requesterName: row.requesterName,
+  return reviews.map((r) => ({
+    id: r.id,
+    requesterId: r.requesterId,
+    reviewerId: r.reviewerId,
+    circleId: r.circleId,
+    prompt: r.prompt,
+    feedback: r.feedback,
+    rating: r.rating ? safeParseRating(r.rating) : null,
+    status: r.status as "open" | "submitted",
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+    reviewerName: r.reviewer?.fullName ?? null,
+    requesterName: r.requester?.fullName ?? null,
   }))
-}
-
-function safeParseRating(raw: string): ReviewRating | null {
-  try {
-    const r = JSON.parse(raw)
-    if (
-      typeof r.clarity === "number" &&
-      typeof r.specificity === "number" &&
-      typeof r.actionability === "number"
-    ) {
-      return r as ReviewRating
-    }
-    return null
-  } catch {
-    return null
-  }
 }

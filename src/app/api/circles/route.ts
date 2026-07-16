@@ -5,6 +5,7 @@ import {
   AuthorizationError,
   safeNextResponse,
 } from "@/lib/authorization"
+import { applyRateLimit } from "@/lib/rate-limit"
 import {
   createCircle,
   getCircles,
@@ -39,6 +40,11 @@ export async function POST(request: Request) {
   try {
     const actor = await requireActor()
     const profileId = getRequiredProfileId(actor)
+
+    // Rate limit by user
+    const rateLimitKey = `user:${actor.accountId}`
+    const limited = applyRateLimit(request, "circles", rateLimitKey)
+    if (limited) return limited
 
     let body: { name?: string; description?: string; type?: string }
     try {

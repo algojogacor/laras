@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server"
+import { applyRateLimit } from "@/lib/rate-limit"
 import {
   requireActor,
   getRequiredProfileId,
@@ -52,6 +53,11 @@ export async function POST(request: NextRequest) {
   try {
     const actor = await requireActor()
     const profileId = getRequiredProfileId(actor)
+
+    // Rate limit by user
+    const rateLimitKey = `user:${actor.accountId}`
+    const limited = applyRateLimit(request, "reports", rateLimitKey)
+    if (limited) return limited
 
     const body = await request.json().catch(() => {
       throw new AuthorizationError("BAD_REQUEST")
