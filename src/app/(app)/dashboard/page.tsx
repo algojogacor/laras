@@ -410,6 +410,8 @@ export default async function DashboardPage() {
   const allApps = await db.application.findMany({
     where: { userProfileId: profile.id },
     select: { id: true, position: true, organization: true, status: true, deadline: true },
+    take: 200,
+    orderBy: { updatedAt: "desc" },
   })
 
   const suggestions = generateSuggestions({

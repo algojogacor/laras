@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { safeNextResponse } from "@/lib/authorization"
 import { z } from "zod"
 import { db } from "@/lib/db"
 import { hashPassword, createSessionToken, setSessionCookie, createRefreshToken, setRefreshCookie } from "@/lib/auth"
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
   // Generate CSRF token for subsequent mutation requests
   const csrfToken = await createCsrfToken()
 
-  const resp = NextResponse.json({
+  const resp = safeNextResponse({
     ok: true,
     user: { id: account.id, email: account.email, name: account.name },
     onboardingComplete: false,

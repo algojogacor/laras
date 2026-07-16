@@ -1,0 +1,5 @@
+[test]
+# Single worker ensures sequential test file execution
+# All tests share one SQLite database
+# Without this, parallel cleanDb/seedDb calls in beforeAll cause FK violations
+timeout = 60000

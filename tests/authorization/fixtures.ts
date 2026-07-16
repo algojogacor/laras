@@ -87,7 +87,14 @@ function withMutex<T>(fn: () => Promise<T>): Promise<T> {
   return prev.then(fn).finally(release)
 }
 
+// Guard to serialize clean+seed across all test files
+let _seeded = false
+let _seedPromise: Promise<any> | null = null
+
 export async function cleanDb() {
+  return withMutex(async () => {
+  _seeded = false  // allow re-seed after clean
+  _seedPromise = null
   // Delete in FK-safe order: children first, then parents.
   // Uses Prisma model deleteMany (not raw SQL) for connection-pool safety.
   const tables = [
@@ -158,10 +165,18 @@ export async function cleanDb() {
       // Non-fatal: table may not exist in current schema
     }
   }
+  }); // close withMutex
 }
 
 export async function seedDb() {
+  // Run seed exactly once across all test files (idempotent under mutex)
+  if (_seeded) return _seedPromise!
   return withMutex(async () => {
+    if (_seeded) return  // double-check under mutex, another caller already seeded
+    _seedPromise = withMutex(async () => { void 0 }) // placeholder, replaced below
+    // Capture the result so callers can await the actual seed
+    let resolvePromise!: (v: any) => void
+    _seedPromise = new Promise((r) => { resolvePromise = r })
 
   // 1. Create Accounts sequentially/individually so we get generated IDs
   const accountA = await db.account.create({
@@ -653,6 +668,15 @@ export async function seedDb() {
   })
   IDS.opportunityF = opportunityF.id
 
-  return IDS
-  })
+  resolvePromise(IDS)
+  _seeded = true
+  return _seedPromise
+  }); // close withMutex
+  return _seedPromise!
+}
+
+/** Atomically clean + seed the database. Safe for parallel beforeAll calls. */
+export async function resetDb() {
+  await cleanDb()
+  await seedDb()
 }

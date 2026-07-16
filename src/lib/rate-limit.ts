@@ -186,6 +186,12 @@ export function isRateLimited(
   return existing.count >= limit
 }
 
+/** Reset all rate-limit buckets — for test cleanup only. */
+export function resetRateLimitBuckets() {
+  buckets.clear()
+  lastSweep = Date.now()
+}
+
 /**
  * Generate standard rate limit response headers from a RateLimitResult.
  * Attach these to every API response for transparency and client-side throttling.

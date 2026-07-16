@@ -207,6 +207,7 @@ export async function listConnections(
       }
     },
     orderBy: { updatedAt: "desc" },
+    take: 500,
   })
   const incoming = await db.connection.findMany({
     where: { addresseeId: userId },
@@ -219,6 +220,7 @@ export async function listConnections(
       }
     },
     orderBy: { updatedAt: "desc" },
+    take: 500,
   })
 
   const projectOther = (otherProfile: any, connection: any) => {

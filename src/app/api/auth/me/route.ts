@@ -2,11 +2,12 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { createCsrfToken } from "@/lib/csrf"
+import { safeNextResponse } from "@/lib/authorization"
 
 export async function GET() {
   const session = await getSession()
   if (!session) {
-    return NextResponse.json({ user: null }, { status: 200 })
+    return safeNextResponse({ user: null }, { status: 200 })
   }
   const account = await db.account.findUnique({
     where: { id: session.userId },
@@ -23,13 +24,13 @@ export async function GET() {
     },
   })
   if (!account) {
-    return NextResponse.json({ user: null }, { status: 200 })
+    return safeNextResponse({ user: null }, { status: 200 })
   }
 
   // Refresh CSRF token on each /me call so the client always has a valid token
   const csrfToken = await createCsrfToken()
 
-  const resp = NextResponse.json({
+  const resp = safeNextResponse({
     user: {
       id: account.id,
       email: account.email,

@@ -58,7 +58,7 @@ export async function createRefreshToken(userId: string): Promise<string> {
 /**
  * Verify a refresh token and return the userId if valid.
  */
-export async function verifyRefreshToken(token: string): Promise<{ sub: string } | null> {
+export async function verifyRefreshToken(token: string): Promise<{ sub: string; rtv: number } | null> {
   try {
     const { payload } = await jwtVerify(token, getSecret())
     if (payload.type !== "refresh") return null
@@ -69,9 +69,10 @@ export async function verifyRefreshToken(token: string): Promise<{ sub: string }
       select: { refreshTokenVersion: true },
     })
     if (!account) return null
-    if ((payload.rtv as number) !== account.refreshTokenVersion) return null
+    const rtv = payload.rtv as number
+    if (rtv !== account.refreshTokenVersion) return null
 
-    return { sub: payload.sub as string }
+    return { sub: payload.sub as string, rtv }
   } catch {
     return null
   }
@@ -88,11 +89,19 @@ export async function refreshSession(refreshToken: string): Promise<{
   const payload = await verifyRefreshToken(refreshToken)
   if (!payload) return null
 
-  // Rotate: revoke old refresh token version and create new ones
-  await db.account.update({
-    where: { id: payload.sub },
+  // Atomic rotation: use updateMany with the expected version as a predicate.
+  // If another concurrent refresh already incremented the version, the WHERE
+  // won't match and count will be 0 — preventing replay attacks.
+  // verifyRefreshToken already loaded the expected version into payload.rtv.
+  const result = await db.account.updateMany({
+    where: {
+      id: payload.sub,
+      refreshTokenVersion: (payload as any).rtv as number,
+    },
     data: { refreshTokenVersion: { increment: 1 } },
   })
+
+  if (result.count === 0) return null // token already consumed (replay or race)
 
   return {
     sessionToken: await createSessionToken(payload.sub),

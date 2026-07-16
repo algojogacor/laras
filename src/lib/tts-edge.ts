@@ -1,4 +1,4 @@
-import { execSync } from "child_process"
+import { exec } from "child_process"
 import { writeFileSync, readFileSync, unlinkSync, existsSync, mkdirSync } from "fs"
 import path from "path"
 import { getServerSupabase } from "@/lib/supabase"
@@ -51,24 +51,31 @@ export async function generateAudioEdgeTTS(
   try {
     // Call edge-tts via Python
     const escaped = truncated.replace(/'/g, "\\'").replace(/"/g, '\\"')
-    execSync(
-      `python3 -c "
+    await new Promise<void>((resolve, reject) => {
+      exec(
+        `python3 -c "
 import asyncio, edge_tts
 async def gen():
     c = edge_tts.Communicate('${escaped}', '${voice}')
     await c.save('${filepath}')
 asyncio.run(gen())
 "`,
-      { timeout: 30000, stdio: "pipe" }
+      { timeout: 30000, maxBuffer: 1024 * 1024 },
+      (error, _stdout, stderr) => {
+        if (error) reject(error)
+        else if (stderr && !stderr.includes("INFO")) reject(new Error(stderr))
+        else resolve()
+      }
     )
+  })
 
-    if (!existsSync(filepath)) return null
+  if (!existsSync(filepath)) return null
 
-    // Return public URL path (served by Next.js from /public)
-    return `/audio/listening/${filename}`
-  } catch (e) {
-    console.error("[edge-tts] failed:", (e as Error).message)
-    return null
+  // Return public URL path (served by Next.js from /public)
+  return `/audio/listening/${filename}`
+} catch (e) {
+  console.error("[edge-tts] failed:", (e as Error).message)
+  return null
   }
 }
 

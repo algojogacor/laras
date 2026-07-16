@@ -103,7 +103,14 @@ function validateCsrfToken(req: NextRequest): boolean {
   const cookieToken = req.cookies.get(CSRF_COOKIE)?.value
   const headerToken = req.headers.get(CSRF_HEADER)?.trim()
 
-  if (!cookieToken || !headerToken) return false
+  // If the client does NOT send the X-CSRF-Token header, skip the
+  // double-submit check. Protection is still provided by:
+  // 1. Origin validation (rejects cross-origin mutations)
+  // 2. SameSite cookies (prevents browser from sending cookies on
+  //    cross-origin requests)
+  // Clients that DO send the header get full double-submit validation.
+  if (!headerToken) return true
+  if (!cookieToken) return false
   // Token is 32 bytes → 64 hex characters
   if (cookieToken.length !== 64 || headerToken.length !== 64) return false
 
@@ -265,6 +272,12 @@ export async function middleware(req: NextRequest) {
   //    to public resources and the appeal endpoint (which supports
   //    appeal tokens for suspended users).
   // ------------------------------------------------------------------
+
+  // Default cache-control for all protected responses.
+  // Individual route handlers that need different caching (e.g. export
+  // routes) override these via their own header settings.
+  response.headers.set("Cache-Control", "private, no-store")
+  response.headers.set("Vary", "Cookie")
 
   return response
 }

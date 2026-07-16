@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     const items = await db.opportunity.findMany({
       where,
       orderBy: [{ deadline: "asc" }, { createdAt: "desc" }],
+      take: 100,
       select: {
         id: true,
         type: true,
