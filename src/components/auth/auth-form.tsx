@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2, ArrowRight } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { useT } from "@/components/providers/locale-provider"
 import { apiClient } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
@@ -41,10 +41,10 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       if (!res.ok) {
         const errKey = (data.error as string) || "errGeneric"
         const msg = (t.auth as Record<string, string>)[errKey] ?? t.auth.errGeneric
-        toast.error(msg)
+        larasToast.error(msg)
         return
       }
-      toast.success(isSignup ? t.onboarding.complete : t.auth.loginTitle)
+      larasToast.success(isSignup ? t.onboarding.complete : t.auth.loginTitle)
       // New users or incomplete onboarding → onboarding; else next
       if (isSignup || data.onboardingComplete === false) {
         router.push("/onboarding")
@@ -53,7 +53,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       }
       router.refresh()
     } catch {
-      toast.error(t.auth.errGeneric)
+      larasToast.error(t.auth.errGeneric)
     } finally {
       setLoading(false)
     }

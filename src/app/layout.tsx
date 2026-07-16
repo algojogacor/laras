@@ -1,9 +1,10 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono, Fraunces } from "next/font/google"
 import "./globals.css"
+import "goey-toast/styles.css"
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import { LocaleProvider } from "@/components/providers/locale-provider"
-import { Toaster } from "@/components/ui/sonner"
+import { LarasToaster } from "@/components/feedback/laras-toaster"
 import { getLocale } from "@/lib/i18n"
 
 const geistSans = Geist({
@@ -76,7 +77,7 @@ export default async function RootLayout({
             <div className="relative z-10 min-h-screen flex flex-col">
               {children}
             </div>
-            <Toaster position="top-center" richColors closeButton />
+            <LarasToaster />
           </LocaleProvider>
         </ThemeProvider>
       </body>

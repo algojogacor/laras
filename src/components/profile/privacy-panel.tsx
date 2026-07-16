@@ -11,7 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { cn } from "@/lib/utils"
 import { apiClient } from "@/lib/api-client"
 
@@ -120,14 +120,14 @@ export function PrivacyPanel({
           body: JSON.stringify({ field, visibility }),
         })
         if (!res.ok) throw new Error("failed")
-        toast.success(labels.saved)
+        larasToast.success(labels.saved)
         router.refresh()
       } catch {
         // Revert on failure to the previous visibility
         setEntries((prev) =>
           prev.map((e) => (e.field === field ? { ...e, visibility: oldVisibility ?? "private" } : e))
         )
-        toast.error(labels.error)
+        larasToast.error(labels.error)
       }
     })
   }

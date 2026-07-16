@@ -6,7 +6,7 @@ import { Download, ArrowLeft, Calendar, Copy, Check } from "lucide-react"
 import { PrintButton } from "@/components/documents/print-button"
 import { DeleteDocButton } from "@/components/documents/delete-doc-button"
 import { FollowUpRevisionPanel } from "@/components/documents/follow-up-revision-panel"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import type { Dictionary } from "@/lib/i18n/dictionary"
 import type { SerializedProfile } from "@/lib/profile"
 import type { GeneratedBio } from "@/lib/content-engine"
@@ -32,7 +32,7 @@ export function BioViewer({
 
   function copy(text: string, key: string) {
     navigator.clipboard.writeText(text).then(() => {
-      setCopied(key); toast.success(t.documents.copied); setTimeout(() => setCopied(null), 2000)
+      setCopied(key); larasToast.success(t.documents.copied); setTimeout(() => setCopied(null), 2000)
     })
   }
 

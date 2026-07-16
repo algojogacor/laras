@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Loader2, Sparkles, Download, RefreshCw, ArrowLeft, AlertTriangle, PenLine, Copy, Check, HelpCircle } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -67,18 +67,18 @@ export function EssayBuilder({ initialProfile }: { initialProfile: SerializedPro
         body: JSON.stringify({ locale, essayType, prompt, targetOrg }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(t.auth.errGeneric); return }
+      if (!res.ok) { larasToast.error(t.auth.errGeneric); return }
       setProbing(data.questions)
       setAnswers({})
       setActiveTab("probing")
-      toast.success(t.documents.essayProbingTitle)
-    } catch { toast.error(t.auth.errGeneric) }
+      larasToast.success(t.documents.essayProbingTitle)
+    } catch { larasToast.error(t.auth.errGeneric) }
     finally { setProbingLoading(false) }
   }
 
   async function generateDraft() {
     const answered = Object.entries(answers).filter(([, v]) => v.trim()).length
-    if (answered === 0) { toast.error(t.documents.essayNoProbing); return }
+    if (answered === 0) { larasToast.error(t.documents.essayNoProbing); return }
     setGenLoading(true); setEssay(null)
     try {
       const probingQA = probing.map((q) => ({ id: q.id, question: q.question, answer: answers[q.id] || "" }))
@@ -87,11 +87,11 @@ export function EssayBuilder({ initialProfile }: { initialProfile: SerializedPro
         body: JSON.stringify({ locale, tone, essayType, prompt, targetOrg, wordLimit, probingQA, edits }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(t.documents.generateError); return }
+      if (!res.ok) { larasToast.error(t.documents.generateError); return }
       setEssay(data.essay); setCheck(data.check); setDocumentId(data.documentId)
       setActiveTab("preview")
-      toast.success(t.documents.preview)
-    } catch { toast.error(t.documents.generateError) }
+      larasToast.success(t.documents.preview)
+    } catch { larasToast.error(t.documents.generateError) }
     finally { setGenLoading(false) }
   }
 
@@ -99,7 +99,7 @@ export function EssayBuilder({ initialProfile }: { initialProfile: SerializedPro
   function copyAll() {
     if (!essay) return
     const text = [essay.title, "", ...essay.paragraphs].join("\n")
-    navigator.clipboard.writeText(text).then(() => { setCopied(true); toast.success(t.documents.copied); setTimeout(() => setCopied(false), 2000) })
+    navigator.clipboard.writeText(text).then(() => { setCopied(true); larasToast.success(t.documents.copied); setTimeout(() => setCopied(false), 2000) })
   }
 
   const answeredCount = Object.values(answers).filter((v) => v?.trim()).length

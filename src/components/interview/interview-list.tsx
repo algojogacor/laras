@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Plus, MessageSquareText, Loader2, Trash2, ArrowRight, Briefcase, Clock } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { useT } from "@/components/providers/locale-provider"
 import type { Locale } from "@/lib/i18n/dictionary"
 import { apiClient } from "@/lib/api-client"
@@ -31,7 +31,7 @@ export function InterviewList({ initialSets, locale }: { initialSets: Set[]; loc
   const [form, setForm] = useState({ title: "", role: "", context: "" })
 
   async function create() {
-    if (!form.role.trim()) { toast.error(t.auth.errGeneric); return }
+    if (!form.role.trim()) { larasToast.error(t.auth.errGeneric); return }
     setCreating(true)
     try {
       const res = await apiClient("/api/interview-sets", {
@@ -39,19 +39,19 @@ export function InterviewList({ initialSets, locale }: { initialSets: Set[]; loc
         body: JSON.stringify({ ...form, locale }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(t.auth.errGeneric); return }
-      toast.success(t.interview.title)
+      if (!res.ok) { larasToast.error(t.auth.errGeneric); return }
+      larasToast.success(t.interview.title)
       setDialogOpen(false)
       setForm({ title: "", role: "", context: "" })
       router.push(`/interview/${data.set.id}`)
       router.refresh()
-    } catch { toast.error(t.auth.errGeneric) }
+    } catch { larasToast.error(t.auth.errGeneric) }
     finally { setCreating(false) }
   }
 
   async function deleteSet(id: string) {
     setSets((prev) => prev.filter((s) => s.id !== id))
-    try { await apiClient(`/api/interview-sets/${id}`, { method: "DELETE" }); toast.success(t.common.delete) } catch {}
+    try { await apiClient(`/api/interview-sets/${id}`, { method: "DELETE" }); larasToast.success(t.common.delete) } catch {}
   }
 
   return (

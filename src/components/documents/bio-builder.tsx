@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Loader2, Sparkles, Download, RefreshCw, ArrowLeft, AlertTriangle, Quote, Copy, Check } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -44,10 +44,10 @@ export function BioBuilder({ initialProfile }: { initialProfile: SerializedProfi
         body: JSON.stringify({ locale, tone, edits: { ...edits } }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(t.documents.generateError); return }
+      if (!res.ok) { larasToast.error(t.documents.generateError); return }
       setBio(data.bio); setDocumentId(data.documentId); setActiveTab("preview")
-      toast.success(t.documents.preview)
-    } catch { toast.error(t.documents.generateError) }
+      larasToast.success(t.documents.preview)
+    } catch { larasToast.error(t.documents.generateError) }
     finally { setLoading(false) }
   }
 
@@ -57,7 +57,7 @@ export function BioBuilder({ initialProfile }: { initialProfile: SerializedProfi
 
   function copy(text: string, key: string) {
     navigator.clipboard.writeText(text).then(() => {
-      setCopied(key); toast.success(t.documents.copied); setTimeout(() => setCopied(null), 2000)
+      setCopied(key); larasToast.success(t.documents.copied); setTimeout(() => setCopied(null), 2000)
     })
   }
 

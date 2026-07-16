@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Trash2, Loader2 } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { useT } from "@/components/providers/locale-provider"
 import { apiClient } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
@@ -21,11 +21,11 @@ export function DeleteDocButton({ documentId }: { documentId: string }) {
     try {
       const res = await apiClient(`/api/documents/${documentId}`, { method: "DELETE" })
       if (!res.ok) throw new Error()
-      toast.success(t.documents.deleteDoc)
+      larasToast.success(t.documents.deleteDoc)
       router.push("/documents")
       router.refresh()
     } catch {
-      toast.error(t.auth.errGeneric)
+      larasToast.error(t.auth.errGeneric)
     } finally {
       setDeleting(false)
     }

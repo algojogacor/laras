@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react"
 import { Printer, Loader2 } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { Button } from "@/components/ui/button"
 import { useT } from "@/components/providers/locale-provider"
 
@@ -17,7 +17,7 @@ export function PrintButton({ className }: { className?: string }) {
 
   const onPrint = useCallback(() => {
     setLoading(true)
-    toast.success(t.documents.downloadPdf)
+    larasToast.success(t.documents.downloadPdf)
     setTimeout(() => {
       window.print()
       setLoading(false)

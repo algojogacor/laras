@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { apiClient } from "@/lib/api-client"
 import { ArrowLeft, Loader2, Sparkles, Trash2, ChevronDown, ChevronUp, MessageSquareText } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { useT } from "@/components/providers/locale-provider"
 import type { Locale } from "@/lib/i18n/dictionary"
 import type { AnswerFeedback } from "@/lib/content-engine"
@@ -43,7 +43,7 @@ export function InterviewPractice({
 
   async function getFeedback(qId: string) {
     const answer = answers[qId] || ""
-    if (!answer.trim()) { toast.error(t.interview.yourAnswerHint); return }
+    if (!answer.trim()) { larasToast.error(t.interview.yourAnswerHint); return }
     setLoading((p) => ({ ...p, [qId]: true }))
     try {
       const res = await apiClient(`/api/interview-sets/${setId}/feedback`, {
@@ -51,11 +51,11 @@ export function InterviewPractice({
         body: JSON.stringify({ questionId: qId, answer, locale }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(t.auth.errGeneric); return }
+      if (!res.ok) { larasToast.error(t.auth.errGeneric); return }
       setQuestions((prev) => prev.map((q) => q.id === qId ? { ...q, userAnswer: answer, feedback: data.feedback, suggestedAnswer: data.feedback.suggestedAnswer } : q))
       setExpanded((p) => ({ ...p, [qId]: true }))
-      toast.success(t.interview.feedback)
-    } catch { toast.error(t.auth.errGeneric) }
+      larasToast.success(t.interview.feedback)
+    } catch { larasToast.error(t.auth.errGeneric) }
     finally { setLoading((p) => ({ ...p, [qId]: false })) }
   }
 
@@ -63,7 +63,7 @@ export function InterviewPractice({
     try {
       await apiClient(`/api/interview-sets/${setId}`, { method: "DELETE" })
       router.push("/interview"); router.refresh()
-    } catch { toast.error(t.auth.errGeneric) }
+    } catch { larasToast.error(t.auth.errGeneric) }
   }
 
   return (

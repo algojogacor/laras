@@ -28,7 +28,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { cn } from "@/lib/utils"
 
 // ---------------------------------------------------------------------------
@@ -149,12 +149,12 @@ export function MessageThread({
         ])
         setBody("")
       } else if (res.status === 429) {
-        toast.error("Terlalu banyak pesan. Silakan tunggu sebentar.")
+        larasToast.error("Terlalu banyak pesan. Silakan tunggu sebentar.")
       } else {
-        toast.error("Gagal mengirim pesan.")
+        larasToast.error("Gagal mengirim pesan.")
       }
     } catch {
-      toast.error("Gagal mengirim pesan.")
+      larasToast.error("Gagal mengirim pesan.")
     } finally {
       setSending(false)
     }
@@ -181,9 +181,9 @@ export function MessageThread({
         if (res.ok) {
           setLocalBlockedByMe(false)
           setLocalBlocked(false)
-          toast.success("Pengguna berhasil diblokir.")
+          larasToast.success("Pengguna berhasil diblokir.")
         } else {
-          toast.error("Gagal membuka blokir.")
+          larasToast.error("Gagal membuka blokir.")
         }
       } else {
         // Block
@@ -194,13 +194,13 @@ export function MessageThread({
         if (res.ok) {
           setLocalBlockedByMe(true)
           setLocalBlocked(true)
-          toast.success("Pengguna berhasil diblokir.")
+          larasToast.success("Pengguna berhasil diblokir.")
         } else {
-          toast.error("Gagal memblokir pengguna.")
+          larasToast.error("Gagal memblokir pengguna.")
         }
       }
     } catch {
-      toast.error("Gagal memproses.")
+      larasToast.error("Gagal memproses.")
     } finally {
       setBlockLoading(false)
     }
@@ -218,13 +218,13 @@ export function MessageThread({
         }),
       })
       if (res.ok) {
-        toast.success("Laporan berhasil dikirim. Terima kasih.")
+        larasToast.success("Laporan berhasil dikirim. Terima kasih.")
         setShowReportDialog(false)
       } else {
-        toast.error("Gagal mengirim laporan.")
+        larasToast.error("Gagal mengirim laporan.")
       }
     } catch {
-      toast.error("Gagal mengirim laporan.")
+      larasToast.error("Gagal mengirim laporan.")
     }
   }
 

@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { cn } from "@/lib/utils"
 import { apiClient } from "@/lib/api-client"
 
@@ -180,10 +180,10 @@ export function CampaignsPanel({ labels }: { labels: CampaignsLabels }) {
         setCampaigns(listData.campaigns)
         setDialogOpen(false)
         resetForm()
-        toast.success(editing ? labels.updated : labels.created)
+        larasToast.success(editing ? labels.updated : labels.created)
         router.refresh()
       } catch {
-        toast.error(labels.error)
+        larasToast.error(labels.error)
       }
     })
   }
@@ -199,10 +199,10 @@ export function CampaignsPanel({ labels }: { labels: CampaignsLabels }) {
         setCampaigns((prev) =>
           prev.map((x) => (x.id === c.id ? { ...x, isActive: !x.isActive } : x))
         )
-        toast.success(labels.updated)
+        larasToast.success(labels.updated)
         router.refresh()
       } catch {
-        toast.error(labels.error)
+        larasToast.error(labels.error)
       }
     })
   }

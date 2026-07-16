@@ -37,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { cn } from "@/lib/utils"
 import { apiClient } from "@/lib/api-client"
 
@@ -217,10 +217,10 @@ export function AdminPanel({ labels, currentUserRole }: { labels: AdminLabels; c
         setUsers((prev) =>
           prev.map((u) => (u.id === targetId ? { ...u, role: data.role } : u))
         )
-        toast.success(labels.roleChanged)
+        larasToast.success(labels.roleChanged)
         router.refresh()
       } catch {
-        toast.error(labels.roleChangeError)
+        larasToast.error(labels.roleChangeError)
       }
     })
   }
@@ -261,10 +261,10 @@ export function AdminPanel({ labels, currentUserRole }: { labels: AdminLabels; c
               }
             : prev
         )
-        toast.success(labels.saved)
+        larasToast.success(labels.saved)
         router.refresh()
       } catch {
-        toast.error(labels.error)
+        larasToast.error(labels.error)
       }
     })
   }

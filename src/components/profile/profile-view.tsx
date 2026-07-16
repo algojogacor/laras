@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { apiClient } from "@/lib/api-client"
 import {
   Loader2,
@@ -179,10 +179,10 @@ export function ProfileView({ profile, initialCompletion }: Props) {
       if (typeof data.profileCompletion === "number") setCompletion(data.profileCompletion)
       setCommitted(editingRef.current)
       setActiveSection(null)
-      toast.success(t.profile.saved)
+      larasToast.success(t.profile.saved)
       router.refresh()
     } catch {
-      toast.error(t.common.loading)
+      larasToast.error(t.common.loading)
     } finally {
       setSaving(false)
     }
@@ -210,11 +210,11 @@ export function ProfileView({ profile, initialCompletion }: Props) {
     try {
       const res = await apiClient("/api/auth/delete", { method: "POST" })
       if (!res.ok) throw new Error("delete failed")
-      toast.success(t.profile.delete)
+      larasToast.success(t.profile.delete)
       router.push("/")
       router.refresh()
     } catch {
-      toast.error(t.common.loading)
+      larasToast.error(t.common.loading)
     } finally {
       setDeleting(false)
       setDeleteOpen(false)

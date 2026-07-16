@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Loader2, Sparkles, Send, History, RotateCcw } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -65,10 +65,10 @@ export function FollowUpRevisionPanel({
         }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error("Restore failed"); return }
-      toast.success(`Restored to v${versionNumber} → new v${data.versionNumber}`)
+      if (!res.ok) { larasToast.error("Restore failed"); return }
+      larasToast.success(`Restored to v${versionNumber} → new v${data.versionNumber}`)
       if (onRevised) onRevised(data.content, data.versionId)
-    } catch { toast.error("Restore failed") }
+    } catch { larasToast.error("Restore failed") }
     finally { setLoading(false) }
   }
 
@@ -85,7 +85,7 @@ export function FollowUpRevisionPanel({
   async function revise(instr?: string) {
     const finalInstruction = instr || instruction
     if (!finalInstruction.trim()) {
-      toast.error("Please enter a revision instruction")
+      larasToast.error("Please enter a revision instruction")
       return
     }
     setLoading(true)
@@ -96,14 +96,14 @@ export function FollowUpRevisionPanel({
       })
       const data = await res.json()
       if (!res.ok) {
-        toast.error(data.error || "Revision failed")
+        larasToast.error(data.error || "Revision failed")
         return
       }
-      toast.success(`Revision completed — v${data.versionNumber}`)
+      larasToast.success(`Revision completed — v${data.versionNumber}`)
       setInstruction("")
       if (onRevised) onRevised(data.content, data.versionId)
     } catch {
-      toast.error("Revision failed")
+      larasToast.error("Revision failed")
     } finally {
       setLoading(false)
     }

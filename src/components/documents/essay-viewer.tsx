@@ -6,7 +6,7 @@ import { Download, ArrowLeft, Calendar, Copy, Check } from "lucide-react"
 import { PrintButton } from "@/components/documents/print-button"
 import { DeleteDocButton } from "@/components/documents/delete-doc-button"
 import { FollowUpRevisionPanel } from "@/components/documents/follow-up-revision-panel"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import type { Dictionary } from "@/lib/i18n/dictionary"
 import type { SerializedProfile } from "@/lib/profile"
 import type { GeneratedEssay } from "@/lib/content-engine"
@@ -22,7 +22,7 @@ export function EssayViewer({ documentId, title, essay, profile, locale, updated
   const [copied, setCopied] = useState(false)
   function copyAll() {
     const text = [essay.title, "", ...essay.paragraphs].join("\n")
-    navigator.clipboard.writeText(text).then(() => { setCopied(true); toast.success(t.documents.copied); setTimeout(() => setCopied(false), 2000) })
+    navigator.clipboard.writeText(text).then(() => { setCopied(true); larasToast.success(t.documents.copied); setTimeout(() => setCopied(false), 2000) })
   }
   return (
     <div className="space-y-6 animate-rise">

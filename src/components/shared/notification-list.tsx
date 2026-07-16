@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { useTransition } from "react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { apiClient } from "@/lib/api-client"
 
 interface NotificationItem {
@@ -40,7 +40,7 @@ export function NotificationList({ items }: { items: NotificationItem[] }) {
         })
         if (res.ok) router.refresh()
       } catch {
-        toast.error("Gagal menandai notifikasi")
+        larasToast.error("Gagal menandai notifikasi")
       }
     })
   }
@@ -54,7 +54,7 @@ export function NotificationList({ items }: { items: NotificationItem[] }) {
         })
         if (res.ok) router.refresh()
       } catch {
-        toast.error("Gagal menandai semua")
+        larasToast.error("Gagal menandai semua")
       }
     })
   }

@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { apiClient } from "@/lib/api-client"
 import { ArrowLeft, BookOpen, Braces, Headphones, Loader2, Check, X, RefreshCw, Trophy, Sparkles, ArrowRight, Award, Lock } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { useT } from "@/components/providers/locale-provider"
 import type { Locale } from "@/lib/i18n/dictionary"
 import type { GeneratedReading, GeneratedStructure, GeneratedListening } from "@/lib/content-engine"
@@ -44,12 +44,12 @@ export function EnglishHub({ locale, history, canAccessHard = true }: { locale: 
         body: JSON.stringify({ module: m, difficulty, locale }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(t.auth.errGeneric); setPhase("hub"); return }
+      if (!res.ok) { larasToast.error(t.auth.errGeneric); setPhase("hub"); return }
       setSessionId(data.sessionId)
       if (m === "reading") setReading(data.data)
       else if (m === "structure") setStructure(data.data)
       else setListening(data.data)
-    } catch { toast.error(t.auth.errGeneric); setPhase("hub") }
+    } catch { larasToast.error(t.auth.errGeneric); setPhase("hub") }
     finally { setLoading(false) }
   }
 
@@ -62,9 +62,9 @@ export function EnglishHub({ locale, history, canAccessHard = true }: { locale: 
         body: JSON.stringify({ sessionId, answers }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(t.auth.errGeneric); return }
+      if (!res.ok) { larasToast.error(t.auth.errGeneric); return }
       setResults(data); setPhase("results")
-    } catch { toast.error(t.auth.errGeneric) }
+    } catch { larasToast.error(t.auth.errGeneric) }
     finally { setSubmitting(false) }
   }
 
@@ -444,10 +444,10 @@ export function EnglishHub({ locale, history, canAccessHard = true }: { locale: 
               })
               const data = await res.json()
               if (data.ok) {
-                toast.success("Certificate generated!")
+                larasToast.success("Certificate generated!")
                 window.location.href = `/english/certificates/${data.certificate.id}`
-              } else { toast.error("Could not generate certificate") }
-            } catch { toast.error("Could not generate certificate") }
+              } else { larasToast.error("Could not generate certificate") }
+            } catch { larasToast.error("Could not generate certificate") }
           }} variant="outline" size="sm">
             <Award className="mr-1.5 h-3.5 w-3.5" />Get Certificate
           </Button>

@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Loader2, Globe2, PenLine, UserCog, Check } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { apiClient } from "@/lib/api-client"
 import { useT, useLocale } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
@@ -54,10 +54,10 @@ export function SettingsForm({ initialProfile }: { initialProfile: SerializedPro
       if (uiLocale !== initialProfile.uiLocale) {
         setLocale(uiLocale as "id" | "en")
       }
-      toast.success(t.settings.saved)
+      larasToast.success(t.settings.saved)
       router.refresh()
     } catch {
-      toast.error(t.auth.errGeneric)
+      larasToast.error(t.auth.errGeneric)
     } finally {
       setSaving(false)
     }

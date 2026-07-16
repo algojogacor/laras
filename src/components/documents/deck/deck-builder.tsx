@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Download, Monitor, Loader2 } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -37,9 +37,9 @@ export function DeckBuilder({ initialProfile }: { initialProfile: SerializedProf
     setDownloading(true)
     try {
       window.location.href = `/api/documents/deck/export?theme=${theme}`
-      toast.success(t.documents.downloadDocx)
+      larasToast.success(t.documents.downloadDocx)
     } catch {
-      toast.error(t.auth.errGeneric)
+      larasToast.error(t.auth.errGeneric)
     } finally {
       setTimeout(() => setDownloading(false), 1500)
     }

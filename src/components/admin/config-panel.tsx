@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { cn } from "@/lib/utils"
 import { apiClient } from "@/lib/api-client"
 
@@ -243,10 +243,10 @@ function FeaturesTab({ labels }: { labels: ConfigLabels }) {
         setFlags(listData.flags)
         setDialogOpen(false)
         resetForm()
-        toast.success(editing ? labels.updated : labels.created)
+        larasToast.success(editing ? labels.updated : labels.created)
         router.refresh()
       } catch {
-        toast.error(labels.error)
+        larasToast.error(labels.error)
       }
     })
   }
@@ -260,10 +260,10 @@ function FeaturesTab({ labels }: { labels: ConfigLabels }) {
         })
         if (!res.ok) throw new Error("failed")
         setFlags((prev) => prev.filter((f) => f.key !== key))
-        toast.success(labels.deleted)
+        larasToast.success(labels.deleted)
         router.refresh()
       } catch {
-        toast.error(labels.error)
+        larasToast.error(labels.error)
       }
     })
   }
@@ -279,10 +279,10 @@ function FeaturesTab({ labels }: { labels: ConfigLabels }) {
         setFlags((prev) =>
           prev.map((x) => (x.key === f.key ? { ...x, enabled: !x.enabled } : x))
         )
-        toast.success(labels.updated)
+        larasToast.success(labels.updated)
         router.refresh()
       } catch {
-        toast.error(labels.error)
+        larasToast.error(labels.error)
       }
     })
   }
@@ -587,10 +587,10 @@ function ConfigTab({ labels }: { labels: ConfigLabels }) {
         setConfigs(listData.configs)
         setDialogOpen(false)
         resetForm()
-        toast.success(editing ? labels.updated : labels.created)
+        larasToast.success(editing ? labels.updated : labels.created)
         router.refresh()
       } catch {
-        toast.error(labels.error)
+        larasToast.error(labels.error)
       }
     })
   }
@@ -604,10 +604,10 @@ function ConfigTab({ labels }: { labels: ConfigLabels }) {
         })
         if (!res.ok) throw new Error("failed")
         setConfigs((prev) => prev.filter((c) => c.key !== key))
-        toast.success(labels.deleted)
+        larasToast.success(labels.deleted)
         router.refresh()
       } catch {
-        toast.error(labels.error)
+        larasToast.error(labels.error)
       }
     })
   }
@@ -632,10 +632,10 @@ function ConfigTab({ labels }: { labels: ConfigLabels }) {
         const listData = await listRes.json()
         setConfigs(listData.configs)
         setInlineEdit(null)
-        toast.success(labels.updated)
+        larasToast.success(labels.updated)
         router.refresh()
       } catch {
-        toast.error(labels.error)
+        larasToast.error(labels.error)
       }
     })
   }

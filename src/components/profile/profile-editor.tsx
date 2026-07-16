@@ -3,7 +3,7 @@
 import { useReducer, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Plus, Trash2, Save, Download, Trash, AlertTriangle } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { apiClient } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -142,10 +142,10 @@ export function ProfileEditor({
       const data = await res.json()
       if (!res.ok) throw new Error()
       setCompletion(data.profileCompletion ?? completion)
-      toast.success(t.profile.saved)
+      larasToast.success(t.profile.saved)
       router.refresh()
     } catch {
-      toast.error(t.auth.errGeneric)
+      larasToast.error(t.auth.errGeneric)
     } finally { setSaving(false) }
   }
 
@@ -154,11 +154,11 @@ export function ProfileEditor({
     try {
       const res = await apiClient("/api/auth/delete", { method: "POST" })
       if (!res.ok) throw new Error()
-      toast.success(t.profile.delete)
+      larasToast.success(t.profile.delete)
       router.push("/")
       router.refresh()
     } catch {
-      toast.error(t.auth.errGeneric)
+      larasToast.error(t.auth.errGeneric)
     } finally { setDeleting(false) }
   }
 

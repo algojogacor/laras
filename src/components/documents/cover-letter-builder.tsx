@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Loader2, Sparkles, Download, RefreshCw, ArrowLeft, AlertTriangle, Mail, Copy, Check } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,12 +58,12 @@ export function CoverLetterBuilder({ initialProfile }: { initialProfile: Seriali
         }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(t.documents.generateError); return }
+      if (!res.ok) { larasToast.error(t.documents.generateError); return }
       setCl(data.cl); setCheck(data.check); setDocumentId(data.documentId)
       setActiveTab("preview")
-      toast.success(t.documents.preview)
+      larasToast.success(t.documents.preview)
     } catch {
-      toast.error(t.documents.generateError)
+      larasToast.error(t.documents.generateError)
     } finally {
       setLoading(false); setRegenerating(false)
     }
@@ -77,7 +77,7 @@ export function CoverLetterBuilder({ initialProfile }: { initialProfile: Seriali
     if (!cl) return
     const text = [cl.recipientGreeting, "", ...cl.paragraphs, "", cl.closing, "", edits.fullName].join("\n")
     navigator.clipboard.writeText(text).then(() => {
-      setCopied(true); toast.success(t.documents.copied); setTimeout(() => setCopied(false), 2000)
+      setCopied(true); larasToast.success(t.documents.copied); setTimeout(() => setCopied(false), 2000)
     })
   }
 

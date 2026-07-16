@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { useTransition, useState, useCallback } from "react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import type { InboxEntry, InboxEntryType } from "@/lib/inbox"
 import { apiClient } from "@/lib/api-client"
 
@@ -81,7 +81,7 @@ export function InboxClient({ initialEntries, unreadTotal, dict }: InboxClientPr
           router.refresh()
         }
       } catch {
-        toast.error("Failed to mark all as read")
+        larasToast.error("Failed to mark all as read")
       }
     })
   }, [router])

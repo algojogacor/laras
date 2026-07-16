@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Printer, Eye } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -29,7 +29,7 @@ export function CVVisualBuilder({ initialProfile }: { initialProfile: Serialized
   const editedProfile = { ...initialProfile, ...edits }
 
   function printPDF() {
-    toast.success(t.documents.downloadPdf || "Print")
+    larasToast.success(t.documents.downloadPdf || "Print")
     setTimeout(() => window.print(), 300)
   }
 

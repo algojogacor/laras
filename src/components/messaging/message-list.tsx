@@ -28,7 +28,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { cn } from "@/lib/utils"
 
 // ---------------------------------------------------------------------------
@@ -119,17 +119,17 @@ export function MessageList({
       if (res.ok) {
         const data = await res.json()
         if (action === "accept" && data.conversationId) {
-          toast.success("Permintaan pesan diterima.")
+          larasToast.success("Permintaan pesan diterima.")
           router.push(`/messages/${data.conversationId}`)
         } else {
-          toast.success("Permintaan pesan ditolak.")
+          larasToast.success("Permintaan pesan ditolak.")
         }
         router.refresh()
       } else {
-        toast.error("Gagal memproses permintaan.")
+        larasToast.error("Gagal memproses permintaan.")
       }
     } catch {
-      toast.error("Gagal memproses permintaan.")
+      larasToast.error("Gagal memproses permintaan.")
     }
   }
 

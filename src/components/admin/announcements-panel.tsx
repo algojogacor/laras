@@ -35,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { cn } from "@/lib/utils"
 import { apiClient } from "@/lib/api-client"
 
@@ -159,16 +159,16 @@ export function AnnouncementsPanel({ labels }: { labels: AnnouncementLabels }) {
         const d = await res.json()
         if (isEdit) {
           setAnnouncements((prev) => prev.map((a) => (a.id === editId ? d.announcement : a)))
-          toast.success(labels.updated)
+          larasToast.success(labels.updated)
         } else {
           setAnnouncements((prev) => [d.announcement, ...prev])
-          toast.success(labels.created)
+          larasToast.success(labels.created)
         }
         setDialogOpen(false)
         setEditId(null)
         router.refresh()
       } catch {
-        toast.error(labels.error)
+        larasToast.error(labels.error)
       }
     })
   }
@@ -180,10 +180,10 @@ export function AnnouncementsPanel({ labels }: { labels: AnnouncementLabels }) {
           const res = await apiClient(`/api/admin/announcements?id=${id}`, { method: "DELETE" })
           if (!res.ok) throw new Error("failed")
           setAnnouncements((prev) => prev.filter((a) => a.id !== id))
-          toast.success(labels.deleted)
+          larasToast.success(labels.deleted)
           router.refresh()
         } catch {
-          toast.error(labels.error)
+          larasToast.error(labels.error)
         }
       })
       return
@@ -198,10 +198,10 @@ export function AnnouncementsPanel({ labels }: { labels: AnnouncementLabels }) {
         if (!res.ok) throw new Error("failed")
         const d = await res.json()
         setAnnouncements((prev) => prev.map((a) => (a.id === id ? d.announcement : a)))
-        toast.success(labels.updated)
+        larasToast.success(labels.updated)
         router.refresh()
       } catch {
-        toast.error(labels.error)
+        larasToast.error(labels.error)
       }
     })
   }

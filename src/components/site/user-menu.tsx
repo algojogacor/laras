@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useState, useTransition } from "react"
 import { LogOut, User, Loader2, Settings } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { apiClient } from "@/lib/api-client"
 import {
   DropdownMenu,
@@ -38,11 +38,11 @@ export function UserMenu({
     startTransition(async () => {
       try {
         await apiClient("/api/auth/logout", { method: "POST" })
-        toast.success(locale.logout)
+        larasToast.success(locale.logout)
         router.push("/login")
         router.refresh()
       } catch {
-        toast.error("Logout failed")
+        larasToast.error("Logout failed")
       }
     })
   }

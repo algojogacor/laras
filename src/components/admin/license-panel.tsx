@@ -33,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { cn } from "@/lib/utils"
 import { apiClient } from "@/lib/api-client"
 
@@ -179,19 +179,19 @@ export function LicensePanel({ labels }: { labels: LicenseLabels }) {
           setLicenses((prev) =>
             prev.map((l) => (l.id === editTarget!.id ? { ...l, ...d.license } : l))
           )
-          toast.success(labels.licenseUpdated)
+          larasToast.success(labels.licenseUpdated)
         } else {
           // Refetch to get the joined user info
           const r2 = await apiClient("/api/admin/licenses")
           const d2 = await r2.json()
           setLicenses(d2.licenses)
-          toast.success(labels.licenseGranted)
+          larasToast.success(labels.licenseGranted)
         }
         setGrantOpen(false)
         setEditTarget(null)
         router.refresh()
       } catch {
-        toast.error(labels.licenseError)
+        larasToast.error(labels.licenseError)
       }
     })
   }
@@ -206,10 +206,10 @@ export function LicensePanel({ labels }: { labels: LicenseLabels }) {
         if (!res.ok) throw new Error("failed")
         const d = await res.json()
         setLicenses((prev) => prev.map((l) => (l.id === license.id ? { ...l, ...d.license } : l)))
-        toast.success(labels.licenseUpdated)
+        larasToast.success(labels.licenseUpdated)
         router.refresh()
       } catch {
-        toast.error(labels.licenseError)
+        larasToast.error(labels.licenseError)
       }
     })
   }

@@ -5,7 +5,7 @@ import {
   Plus, Trash2, Loader2, Sparkles, X, ExternalLink, Calendar, MapPin,
   ChevronLeft, ChevronRight, Briefcase, GraduationCap, HandHeart, Users, AlertTriangle, FileText, Link2, Unlink,
 } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { useT } from "@/components/providers/locale-provider"
 import { apiClient } from "@/lib/api-client"
 import type { Locale } from "@/lib/i18n/dictionary"
@@ -83,7 +83,7 @@ export function ApplicationsBoard({ initialApplications, documents, locale }: { 
         body: JSON.stringify({ status: next }),
       })
     } catch {
-      toast.error(t.auth.errGeneric)
+      larasToast.error(t.auth.errGeneric)
       setApps((prev) => prev.map((a) => (a.id === id ? { ...a, status: app.status } : a)))
     }
   }
@@ -92,9 +92,9 @@ export function ApplicationsBoard({ initialApplications, documents, locale }: { 
     setApps((prev) => prev.filter((a) => a.id !== id))
     try {
       await apiClient(`/api/applications/${id}`, { method: "DELETE" })
-      toast.success(t.applications.saved)
+      larasToast.success(t.applications.saved)
     } catch {
-      toast.error(t.auth.errGeneric)
+      larasToast.error(t.auth.errGeneric)
     }
   }
 
@@ -285,7 +285,7 @@ function ApplicationDialog({
   }, [open, editing])
 
   async function summarize() {
-    if (form.jobDescription.length < 20) { toast.error(t.applications.jobDescriptionHint); return }
+    if (form.jobDescription.length < 20) { larasToast.error(t.applications.jobDescriptionHint); return }
     setSummarizing(true)
     try {
       const res = await apiClient("/api/applications/summarize", {
@@ -294,15 +294,15 @@ function ApplicationDialog({
         body: JSON.stringify({ jobDescription: form.jobDescription, locale }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(t.auth.errGeneric); return }
+      if (!res.ok) { larasToast.error(t.auth.errGeneric); return }
       setSummary(data.summary)
-      toast.success(t.applications.summary)
-    } catch { toast.error(t.auth.errGeneric) }
+      larasToast.success(t.applications.summary)
+    } catch { larasToast.error(t.auth.errGeneric) }
     finally { setSummarizing(false) }
   }
 
   async function save() {
-    if (!form.position.trim()) { toast.error(t.auth.errGeneric); return }
+    if (!form.position.trim()) { larasToast.error(t.auth.errGeneric); return }
     setSaving(true)
     try {
       const payload = {
@@ -314,10 +314,10 @@ function ApplicationDialog({
         ? await apiClient(`/api/applications/${editing.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
         : await apiClient("/api/applications", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
       const data = await res.json()
-      if (!res.ok) { toast.error(t.auth.errGeneric); return }
-      toast.success(t.applications.saved)
+      if (!res.ok) { larasToast.error(t.auth.errGeneric); return }
+      larasToast.success(t.applications.saved)
       onSaved({ ...editing, ...data.application, id: data.application.id } as Application)
-    } catch { toast.error(t.auth.errGeneric) }
+    } catch { larasToast.error(t.auth.errGeneric) }
     finally { setSaving(false) }
   }
 
@@ -433,8 +433,8 @@ function ApplicationDialog({
                               })
                               onLinkChange(editing.id, doc.id, true)
                             }
-                            toast.success(t.applications.saved)
-                          } catch { toast.error(t.auth.errGeneric) }
+                            larasToast.success(t.applications.saved)
+                          } catch { larasToast.error(t.auth.errGeneric) }
                         }}
                         className={cn("ml-1.5 shrink-0 rounded p-0.5 transition-colors", linked ? "text-primary hover:bg-destructive/10 hover:text-destructive" : "text-muted-foreground hover:text-primary")}
                         aria-label={linked ? "Unlink" : "Link"}

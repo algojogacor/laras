@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { cn } from "@/lib/utils"
 
 type ConnectionStatus = "pending" | "accepted" | "declined" | "blocked" | "none"
@@ -138,13 +138,13 @@ export function ConnectionsPanel({
           const d = await res.json()
           throw new Error(d.error ?? "failed")
         }
-        toast.success(labels.connectSent)
+        larasToast.success(labels.connectSent)
         setResults((prev) =>
           prev.map((r) => (r.id === targetId ? { ...r, connectionStatus: "pending" } : r))
         )
         router.refresh()
       } catch {
-        toast.error(labels.connectError)
+        larasToast.error(labels.connectError)
       }
     })
   }
@@ -167,17 +167,17 @@ export function ConnectionsPanel({
               pendingOutgoing: prev.pendingOutgoing,
             }
           })
-          toast.success(labels.acceptSuccess)
+          larasToast.success(labels.acceptSuccess)
         } else {
           setData((prev) => ({
             ...prev,
             pendingIncoming: prev.pendingIncoming.filter((c) => c.id !== connectionId),
           }))
-          toast.success(labels.declineSuccess)
+          larasToast.success(labels.declineSuccess)
         }
         router.refresh()
       } catch {
-        toast.error(labels.actionError)
+        larasToast.error(labels.actionError)
       }
     })
   }

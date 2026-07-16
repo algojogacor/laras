@@ -4,7 +4,7 @@ import { useReducer, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import { Loader2, Plus, Trash2, ArrowLeft, ArrowRight, Check, Sparkles } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { apiClient } from "@/lib/api-client"
 import { useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
@@ -170,7 +170,7 @@ export function OnboardingWizard({ initialProfile }: { initialProfile: Serialize
       if (!res.ok) throw new Error()
       if (nextStep) setStep(nextStep)
     } catch {
-      toast.error(t.auth.errGeneric)
+      larasToast.error(t.auth.errGeneric)
     } finally {
       setSaving(false)
     }
@@ -195,11 +195,11 @@ export function OnboardingWizard({ initialProfile }: { initialProfile: Serialize
         method: "PATCH",
         body: JSON.stringify({ onboardingComplete: true }),
       })
-      toast.success(t.onboarding.complete)
+      larasToast.success(t.onboarding.complete)
       router.push("/dashboard")
       router.refresh()
     } catch {
-      toast.error(t.auth.errGeneric)
+      larasToast.error(t.auth.errGeneric)
     } finally {
       setFinishing(false)
     }

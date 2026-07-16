@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Loader2, Sparkles, Download, RefreshCw, ArrowLeft, AlertTriangle, Wand2 } from "lucide-react"
-import { toast } from "sonner"
+import { larasToast } from "@/lib/laras-toast"
 import { useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -66,16 +66,16 @@ export function CVATSBuilder({ initialProfile }: { initialProfile: SerializedPro
       })
       const data = await res.json()
       if (!res.ok) {
-        toast.error(t.documents.generateError)
+        larasToast.error(t.documents.generateError)
         return
       }
       setCv(data.cv)
       setCheck(data.check)
       setDocumentId(data.documentId)
       setActiveTab("preview")
-      toast.success(t.documents.preview)
+      larasToast.success(t.documents.preview)
     } catch {
-      toast.error(t.documents.generateError)
+      larasToast.error(t.documents.generateError)
     } finally {
       setLoading(false)
     }
