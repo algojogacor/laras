@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, Download, Monitor, Loader2 } from "lucide-react"
 import { larasToast } from "@/lib/laras-toast"
-import { useT } from "@/components/providers/locale-provider"
+import { useLocale } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,11 +13,22 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import type { SerializedProfile } from "@/lib/profile"
-import { THEMES } from "@/lib/deck-renderer"
+import { ARTIFACT_TEMPLATES } from "@/lib/artifacts/templates"
+import { apiClient } from "@/lib/api-client"
+
+const THEMES = ARTIFACT_TEMPLATES.map((template) => ({
+  id: template.id,
+  name: template.name,
+  bg: template.light.background,
+  accent: template.light.accent,
+  text: template.light.ink,
+  fontHead: template.fonts.heading,
+}))
 
 export function DeckBuilder({ initialProfile }: { initialProfile: SerializedProfile }) {
-  const t = useT()
-  const [theme, setTheme] = useState("forest")
+  const { t, locale } = useLocale()
+  const router = useRouter()
+  const [theme, setTheme] = useState("professional-minimal")
   const [downloading, setDownloading] = useState(false)
   const [edits, setEdits] = useState({
     fullName: initialProfile.fullName ?? "",
@@ -24,20 +36,21 @@ export function DeckBuilder({ initialProfile }: { initialProfile: SerializedProf
     summary: initialProfile.summary ?? "",
   })
 
-  const slides = [
-    { n: 1, title: "Cover", desc: t.profile.basics },
-    { n: 2, title: "About Me", desc: t.profile.summary },
-    { n: 3, title: "Timeline", desc: t.profile.experience },
-    { n: 4, title: "Skills", desc: t.profile.skills },
-    { n: 5, title: "Project Highlights", desc: t.profile.experience },
-    { n: 6, title: "Contact", desc: t.profile.basics },
+  const narrative = [
+    { title: t.documents.studio.narrativeCover, desc: t.profile.basics },
+    { title: t.documents.studio.narrativeSummary, desc: t.profile.summary },
+    { title: t.documents.studio.narrativeTimeline, desc: t.profile.experience },
+    { title: t.documents.studio.narrativeEvidence, desc: t.documents.studio.contentAware },
   ]
 
   async function download() {
     setDownloading(true)
     try {
-      window.location.href = `/api/documents/deck/export?theme=${theme}`
-      larasToast.success(t.documents.downloadDocx)
+      const response = await apiClient("/api/artifacts", { method: "POST", body: JSON.stringify({ themeFamily: theme, edits }) })
+      if (!response.ok) throw new Error("create-failed")
+      const body = await response.json()
+      larasToast.success(t.documents.studio.saved)
+      router.push(`/documents/${body.documentId}/studio`)
     } catch {
       larasToast.error(t.auth.errGeneric)
     } finally {
@@ -53,12 +66,12 @@ export function DeckBuilder({ initialProfile }: { initialProfile: SerializedProf
         </Link>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="font-serif text-3xl font-semibold tracking-tight">Personal Deck</h1>
-            <p className="mt-1.5 max-w-2xl text-muted-foreground text-pretty">6-slide presentation: Cover, About Me, Timeline, Skills, Project Highlights, Contact. Exports as a real .pptx.</p>
+            <h1 className="font-serif text-3xl font-semibold tracking-tight">{t.documents.studio.personalDeck}</h1>
+            <p className="mt-1.5 max-w-2xl text-muted-foreground text-pretty">{t.documents.studio.personalDeckDesc}</p>
           </div>
           <Button onClick={download} disabled={downloading} size="sm" className="shadow-soft">
             {downloading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}
-            {t.documents.downloadDocx}
+            {t.documents.studio.newDeck}
           </Button>
         </div>
       </div>
@@ -66,7 +79,7 @@ export function DeckBuilder({ initialProfile }: { initialProfile: SerializedProf
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Theme picker */}
         <div className="space-y-3">
-          <h2 className="font-serif text-sm font-medium text-muted-foreground">Theme</h2>
+          <h2 className="font-serif text-sm font-medium text-muted-foreground">{t.documents.studio.template}</h2>
           {THEMES.map((tp) => (
             <button
               key={tp.id}
@@ -78,7 +91,7 @@ export function DeckBuilder({ initialProfile }: { initialProfile: SerializedProf
                   <span className="h-2 w-2 rounded-full" style={{ background: `#${tp.accent}` }} />
                 </div>
                 <div>
-                  <p className="font-serif text-sm font-semibold" style={{ color: `#${tp.bg}` }}>{tp.name}</p>
+                  <p className="font-serif text-sm font-semibold" style={{ color: `#${tp.bg}` }}>{tp.name[locale]}</p>
                   <p className="text-[10px] text-muted-foreground">{tp.fontHead}</p>
                 </div>
               </div>
@@ -113,8 +126,8 @@ export function DeckBuilder({ initialProfile }: { initialProfile: SerializedProf
         {/* Slide outline preview */}
         <div className="lg:col-span-2">
           <div className="grid gap-3 sm:grid-cols-2">
-            {slides.map((s) => (
-              <Card key={s.n} className="overflow-hidden shadow-soft">
+            {narrative.map((section, index) => (
+              <Card key={section.title} className="overflow-hidden shadow-soft">
                 <CardContent className="p-0">
                   {/* mini slide preview */}
                   <div
@@ -123,12 +136,12 @@ export function DeckBuilder({ initialProfile }: { initialProfile: SerializedProf
                   >
                     <div className="absolute left-0 top-0 h-full w-1" style={{ background: `#${THEMES.find((tp) => tp.id === theme)?.accent}` }} />
                     <div>
-                      <p className="text-[10px] opacity-60">{t.documents.version} {s.n}</p>
-                      <p className="font-serif text-base font-bold" style={{ fontFamily: "Georgia, serif" }}>{s.title}</p>
+                      <p className="text-[10px] opacity-60">{t.documents.studio.narrativeSection} {index + 1}</p>
+                      <p className="font-serif text-base font-bold" style={{ fontFamily: "Georgia, serif" }}>{section.title}</p>
                     </div>
                   </div>
                   <div className="p-3">
-                    <p className="text-xs text-muted-foreground">{s.desc}</p>
+                    <p className="text-xs text-muted-foreground">{section.desc}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -136,7 +149,7 @@ export function DeckBuilder({ initialProfile }: { initialProfile: SerializedProf
           </div>
           <div className="mt-4 flex items-center gap-2 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
             <Monitor className="h-4 w-4 shrink-0" />
-            <span>Opens cleanly in PowerPoint &amp; LibreOffice Impress. Smart layout re-adjusts based on your profile data.</span>
+            <span>{t.documents.studio.compatibilityNote}</span>
           </div>
         </div>
       </div>

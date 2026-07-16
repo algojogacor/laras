@@ -95,6 +95,12 @@ export function BioViewer({
         </Card>
       </div>
 
+      <div className="print-area hidden space-y-6 bg-white text-neutral-900 print:block" style={{ fontFamily: "Arial, sans-serif" }}>
+        <h1 className="text-2xl font-bold">{bio.headline}</h1>
+        <p className="text-base leading-relaxed">{bio.about}</p>
+        {bio.personal.map((paragraph, index) => <p key={index} className="text-base leading-relaxed">{paragraph}</p>)}
+      </div>
+
       <Card className="shadow-soft">
         <CardHeader><CardTitle className="font-serif text-lg">{t.documents.warnings}</CardTitle></CardHeader>
         <CardContent>

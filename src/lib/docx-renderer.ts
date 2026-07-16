@@ -24,7 +24,7 @@ import type { SerializedProfile } from "@/lib/profile"
  *  Dates: MM/YYYY consistent.
  */
 
-const FONT = "Calibri"
+const FONT = "Arial"
 const SIZE_BODY = 22 // half-points → 11pt
 const SIZE_NAME = 40 // 20pt
 const SIZE_HEADING = 28 // 14pt
@@ -58,15 +58,17 @@ function sectionHeading(text: string): Paragraph {
   return new Paragraph({
     children: [new TextRun({ text: text.toUpperCase(), font: FONT, size: SIZE_HEADING, bold: true })],
     spacing: { before: 240, after: 120 },
+    keepNext: true,
     border: { bottom: { color: "999999", space: 2, style: BorderStyle.SINGLE, size: 6 } },
   })
 }
 
 function bullet(text: string): Paragraph {
   return new Paragraph({
-    children: [new TextRun({ text: `• ${text}`, font: FONT, size: SIZE_BODY })],
+    children: [new TextRun({ text, font: FONT, size: SIZE_BODY })],
     bullet: { level: 0 },
     spacing: { after: 40 },
+    keepLines: true,
   })
 }
 
@@ -229,6 +231,7 @@ export function buildCVATSDocx(
       {
         properties: {
           page: {
+            size: { width: 11906, height: 16838 },
             margin: {
               top: 1080, // 0.75"
               right: 1080,

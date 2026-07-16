@@ -1,155 +1,114 @@
 import PptxGenJS from "pptxgenjs"
 import type { SerializedProfile } from "@/lib/profile"
+import { buildPresentationArtifact, inspectPresentationQuality } from "@/lib/artifacts/presentation-engine"
+import { exportablePresentation, type ArtifactBlock, type PresentationArtifact } from "@/lib/artifacts/schema"
+import { ARTIFACT_TEMPLATES, getArtifactTemplate } from "@/lib/artifacts/templates"
 
-/**
- * Personal Deck renderer (Brief Section 6.4, 8) — generates a real .pptx
- * using PptxGenJS. 6 slides: Cover → About Me → Timeline → Skills →
- * Project Highlights → Contact.
- *
- * Themes are config-driven (Section 8.1) so adding a new theme doesn't
- * require rewriting the generator — just add a THEME entry.
- */
+export type DeckTheme = { id: string; name: string; bg: string; accent: string; text: string; muted: string; font: string; fontHead: string }
+export const THEMES: DeckTheme[] = ARTIFACT_TEMPLATES.map((template) => ({ id: template.id, name: template.name.en, bg: template.light.background, accent: template.light.accent, text: template.light.ink, muted: template.light.muted, font: template.fonts.body, fontHead: template.fonts.heading }))
 
-export type DeckTheme = {
-  id: string
-  name: string
-  bg: string
-  accent: string
-  text: string
-  muted: string
-  font: string
-  fontHead: string
+const W = 13.333
+const H = 7.5
+type Slide = ReturnType<PptxGenJS["addSlide"]>
+type ResolvedTemplate = ReturnType<typeof getArtifactTemplate>
+
+function addHeader(slide: Slide, title: string, subtitle: string | undefined, template: ResolvedTemplate, page: number) {
+  slide.addText(title, { x: template.grid.marginX, y: 0.48, w: 10.8, h: 0.5, fontFace: template.fonts.heading, fontSize: title.length > 56 ? 26 : 30, bold: true, color: template.colors.ink, margin: 0, breakLine: false, fit: "shrink" })
+  if (subtitle) slide.addText(subtitle, { x: template.grid.marginX, y: 1.02, w: 10.8, h: 0.32, fontFace: template.fonts.body, fontSize: 16, color: template.colors.muted, margin: 0, fit: "shrink" })
+  slide.addShape("line", { x: template.grid.marginX, y: 1.45, w: W - template.grid.marginX * 2, h: 0, line: { color: template.colors.line, width: 1 } })
+  slide.addText(String(page).padStart(2, "0"), { x: 11.9, y: 0.52, w: 0.65, h: 0.28, fontFace: template.fonts.body, fontSize: 11, color: template.colors.muted, align: "right", margin: 0 })
 }
 
-export const THEMES: DeckTheme[] = [
-  { id: "forest", name: "Forest", bg: "0E2A22", accent: "C2703D", text: "F5F0E8", muted: "9CAFA4", font: "Calibri", fontHead: "Georgia" },
-  { id: "slate", name: "Slate", bg: "1E293B", accent: "60A5FA", text: "F1F5F9", muted: "94A3B8", font: "Calibri", fontHead: "Georgia" },
-  { id: "warm", name: "Warm", bg: "3D2B1F", accent: "E0A458", text: "FBF4E6", muted: "B89B7A", font: "Calibri", fontHead: "Georgia" },
-  { id: "ink", name: "Ink", bg: "0F0F0F", accent: "D4AF37", text: "FAFAFA", muted: "888888", font: "Calibri", fontHead: "Georgia" },
-  { id: "minimal", name: "Minimal", bg: "FAFAFA", accent: "2D2D2D", text: "1A1A1A", muted: "999999", font: "Calibri", fontHead: "Georgia" },
-  { id: "corporate", name: "Corporate", bg: "1A2332", accent: "C0A062", text: "FFFFFF", muted: "A0AEC0", font: "Calibri", fontHead: "Georgia" },
-  { id: "academic", name: "Academic", bg: "F8F6F0", accent: "8B0000", text: "2D2D2D", muted: "888888", font: "Calibri", fontHead: "Georgia" },
-  { id: "creative", name: "Creative", bg: "1A0A2E", accent: "E94560", text: "F5F5F5", muted: "9D8FB5", font: "Calibri", fontHead: "Georgia" },
-]
-
-export async function buildDeck(
-  profile: SerializedProfile,
-  themeId: string
-): Promise<Buffer> {
-  const theme = THEMES.find((t) => t.id === themeId) || THEMES[0]
-  const pptx = new PptxGenJS()
-  pptx.defineLayout({ name: "WIDE", width: 13.333, height: 7.5 })
-  pptx.layout = "WIDE"
-  pptx.author = "Laras"
-  pptx.title = `${profile.fullName || "Personal Deck"}`
-
-  const BG = theme.bg
-  const ACCENT = theme.accent
-  const TEXT = theme.text
-  const MUTED = theme.muted
-  const FONT = theme.font
-  const FONT_HEAD = theme.fontHead
-
-  // ── 1. Cover ──
-  const s1 = pptx.addSlide()
-  s1.background = { color: BG }
-  s1.addShape("rect", { x: 0, y: 0, w: 0.15, h: 7.5, fill: { color: ACCENT } })
-  s1.addText(profile.fullName || "", { x: 0.8, y: 2.4, w: 11, h: 1.2, fontFace: FONT_HEAD, fontSize: 44, bold: true, color: TEXT })
-  s1.addText(profile.headline || "", { x: 0.85, y: 3.5, w: 10, h: 0.6, fontFace: FONT, fontSize: 20, color: MUTED })
-  s1.addText([profile.email, profile.phone, profile.location].filter(Boolean).join("  |  "), { x: 0.85, y: 6.4, w: 10, h: 0.4, fontFace: FONT, fontSize: 12, color: MUTED })
-
-  // ── 2. About Me ──
-  const s2 = pptx.addSlide()
-  s2.background = { color: BG }
-  addSectionHeader(s2, "About Me", theme)
-  s2.addText(profile.summary || profile.headline || "", { x: 0.8, y: 2.0, w: 11.5, h: 3.5, fontFace: FONT, fontSize: 16, color: TEXT, lineSpacingMultiple: 1.4, valign: "top" })
-
-  // ── 3. Timeline (career) ──
-  const s3 = pptx.addSlide()
-  s3.background = { color: BG }
-  addSectionHeader(s3, "Timeline", theme)
-  const exps = profile.experiences.slice(0, 5)
-  exps.forEach((e, i) => {
-    const y = 2.0 + i * 0.95
-    // dot
-    s3.addShape("ellipse", { x: 0.9, y: y + 0.1, w: 0.22, h: 0.22, fill: { color: ACCENT } })
-    // line
-    if (i < exps.length - 1) {
-      s3.addShape("line", { x: 1.01, y: y + 0.32, w: 0, h: 0.7, line: { color: MUTED, width: 1 } })
-    }
-    s3.addText(e.title, { x: 1.4, y: y - 0.05, w: 5, h: 0.35, fontFace: FONT, fontSize: 14, bold: true, color: TEXT })
-    s3.addText(e.organization, { x: 1.4, y: y + 0.25, w: 5, h: 0.3, fontFace: FONT, fontSize: 11, color: MUTED })
-    const dates = [e.startDate, e.current ? "Present" : e.endDate].filter(Boolean).join(" – ")
-    s3.addText(dates, { x: 6.6, y: y - 0.05, w: 5.5, h: 0.3, fontFace: FONT, fontSize: 11, color: MUTED, align: "right" })
-  })
-
-  // ── 4. Skills (visual chips) ──
-  const s4 = pptx.addSlide()
-  s4.background = { color: BG }
-  addSectionHeader(s4, "Skills", theme)
-  // group by category
-  const byCat: Record<string, string[]> = {}
-  profile.skills.forEach((s) => {
-    const c = s.category || "General"
-    if (!byCat[c]) byCat[c] = []
-    byCat[c].push(s.name)
-  })
-  const cats = Object.entries(byCat)
-  cats.forEach(([cat, items], idx) => {
-    const y = 2.0 + idx * 1.1
-    s4.addText(cat.toUpperCase(), { x: 0.8, y, w: 11, h: 0.3, fontFace: FONT, fontSize: 12, bold: true, color: ACCENT })
-    // chips
-    let x = 0.8
-    items.slice(0, 8).forEach((item) => {
-      const w = Math.max(1.2, item.length * 0.12 + 0.4)
-      s4.addShape("roundRect", { x, y: y + 0.35, w, h: 0.35, rectRadius: 0.15, fill: { color: BG }, line: { color: ACCENT, width: 1 } })
-      s4.addText(item, { x, y: y + 0.35, w, h: 0.35, fontFace: FONT, fontSize: 10, color: TEXT, align: "center", valign: "middle" })
-      x += w + 0.15
-    })
-  })
-
-  // ── 5. Project Highlights ──
-  const s5 = pptx.addSlide()
-  s5.background = { color: BG }
-  addSectionHeader(s5, "Project Highlights", theme)
-  const topExps = profile.experiences.slice(0, 3)
-  topExps.forEach((e, i) => {
-    const colW = 3.7
-    const x = 0.8 + i * (colW + 0.3)
-    // card bg
-    s5.addShape("roundRect", { x, y: 2.0, w: colW, h: 4.2, rectRadius: 0.1, fill: { color: BG }, line: { color: MUTED, width: 0.75 } })
-    s5.addText(e.title, { x: x + 0.25, y: 2.2, w: colW - 0.5, h: 0.5, fontFace: FONT_HEAD, fontSize: 16, bold: true, color: ACCENT })
-    s5.addText(e.organization, { x: x + 0.25, y: 2.65, w: colW - 0.5, h: 0.3, fontFace: FONT, fontSize: 11, color: MUTED })
-    const achievements = (e.achievements || []).slice(0, 3)
-    const bullets = achievements.length ? achievements.map((a) => ({ text: a, options: { bullet: { code: "2022" } } })) : []
-    if (bullets.length) {
-      s5.addText(bullets, { x: x + 0.25, y: 3.1, w: colW - 0.5, h: 2.8, fontFace: FONT, fontSize: 11, color: TEXT, lineSpacingMultiple: 1.2, valign: "top" })
-    } else if (e.contextNotes) {
-      s5.addText(e.contextNotes.slice(0, 200), { x: x + 0.25, y: 3.1, w: colW - 0.5, h: 2.8, fontFace: FONT, fontSize: 11, color: MUTED, valign: "top" })
-    }
-  })
-  if (topExps.length === 0) {
-    s5.addText("Add experiences in your profile to see project highlights.", { x: 0.8, y: 3.5, w: 11, h: 0.5, fontFace: FONT, fontSize: 14, color: MUTED, align: "center" })
+function addLead(slide: Slide, block: Extract<ArtifactBlock, { type: "text" }>, template: ResolvedTemplate, supporting?: Extract<ArtifactBlock, { type: "bullet-list" }>, y = 2.05) {
+  const size = block.text.length > 440 ? 18 : block.text.length > 220 ? 21 : 25
+  slide.addText(block.text, { x: template.grid.marginX, y, w: supporting ? 7.6 : 9.6, h: 3.4, fontFace: template.fonts.heading, fontSize: Math.max(18, size), color: template.colors.ink, margin: 0.04, breakLine: false, valign: "middle", fit: "shrink", lineSpacingMultiple: 1.08 })
+  if (supporting) {
+    slide.addShape("roundRect", { x: 9.05, y: y + 0.15, w: 3.35, h: 3.0, rectRadius: template.radius, fill: { color: template.colors.surface }, line: { color: template.colors.line, width: 1 } })
+    slide.addText(supporting.items.map((text) => ({ text, options: { bullet: { indent: 18 }, breakLine: true } })), { x: 9.35, y: y + 0.5, w: 2.75, h: 2.25, fontFace: template.fonts.body, fontSize: 17, color: template.colors.ink, margin: 0.04, fit: "shrink", paraSpaceAfter: 10 })
   }
-
-  // ── 6. Contact ──
-  const s6 = pptx.addSlide()
-  s6.background = { color: BG }
-  s6.addShape("rect", { x: 0, y: 0, w: 0.15, h: 7.5, fill: { color: ACCENT } })
-  s6.addText("Let's connect", { x: 0.8, y: 2.2, w: 11, h: 1, fontFace: FONT_HEAD, fontSize: 40, bold: true, color: TEXT })
-  const links = profile.links as any
-  const contactLines: string[] = []
-  if (profile.email) contactLines.push(`Email: ${profile.email}`)
-  if (profile.phone) contactLines.push(`Phone: ${profile.phone}`)
-  if (links?.linkedin) contactLines.push(`LinkedIn: ${links.linkedin}`)
-  if (links?.portfolio) contactLines.push(`Portfolio: ${links.portfolio}`)
-  s6.addText(contactLines.join("\n"), { x: 0.85, y: 3.4, w: 10, h: 2, fontFace: FONT, fontSize: 16, color: MUTED, lineSpacingMultiple: 1.6 })
-  s6.addText(profile.fullName || "", { x: 0.85, y: 6.4, w: 10, h: 0.4, fontFace: FONT_HEAD, fontSize: 14, color: ACCENT })
-
-  return (pptx.write({ outputType: "nodebuffer" }) as unknown as Buffer)
 }
 
-function addSectionHeader(slide: any, title: string, theme: DeckTheme) {
-  slide.addText(title, { x: 0.8, y: 0.5, w: 11, h: 0.7, fontFace: theme.fontHead, fontSize: 28, bold: true, color: theme.text })
-  slide.addShape("rect", { x: 0.85, y: 1.25, w: 0.6, h: 0.05, fill: { color: theme.accent } })
+function renderTimeline(slide: Slide, block: Extract<ArtifactBlock, { type: "timeline" }>, template: ResolvedTemplate) {
+  const items = block.items.slice(0, 6)
+  const startY = items.length <= 3 ? 2.35 : 1.82
+  const step = items.length <= 3 ? 1.2 : Math.min(0.84, 4.9 / Math.max(items.length, 1))
+  slide.addShape("line", { x: 1.05, y: startY + 0.2, w: 0, h: Math.max(0.2, step * (items.length - 1)), line: { color: template.colors.line, width: 2 } })
+  items.forEach((item, index) => {
+    const y = startY + index * step
+    slide.addShape("ellipse", { x: 0.92, y: y + 0.08, w: 0.26, h: 0.26, fill: { color: template.colors.accent }, line: { color: template.colors.background, width: 1.5 } })
+    slide.addText(item.period, { x: 1.38, y, w: 1.45, h: 0.3, fontFace: template.fonts.body, fontSize: 13, bold: true, color: template.colors.accent, margin: 0 })
+    slide.addText(item.title, { x: 2.9, y: y - 0.03, w: 3.8, h: 0.34, fontFace: template.fonts.heading, fontSize: 18, bold: true, color: template.colors.ink, margin: 0, fit: "shrink" })
+    slide.addText(item.subtitle, { x: 6.82, y: y - 0.01, w: 2.35, h: 0.3, fontFace: template.fonts.body, fontSize: 15, color: template.colors.muted, margin: 0, fit: "shrink" })
+    if (item.detail) slide.addText(item.detail, { x: 9.25, y: y - 0.02, w: 3.1, h: Math.max(0.45, step - 0.1), fontFace: template.fonts.body, fontSize: 15, color: template.colors.ink, margin: 0, fit: "shrink", valign: "top" })
+  })
+}
+
+function renderSkills(slide: Slide, block: Extract<ArtifactBlock, { type: "skills-matrix" }>, template: ResolvedTemplate) {
+  const groups = block.groups.slice(0, 6)
+  const cols = groups.length <= 3 ? 1 : 2
+  const rows = Math.ceil(groups.length / cols)
+  const cardW = cols === 1 ? 11.75 : 5.72
+  const cardH = Math.min(1.42, 4.85 / Math.max(rows, 1))
+  groups.forEach((group, index) => {
+    const col = index % cols, row = Math.floor(index / cols)
+    const x = template.grid.marginX + col * (cardW + template.grid.gutter), y = 1.82 + row * (cardH + 0.22)
+    slide.addShape("roundRect", { x, y, w: cardW, h: cardH, rectRadius: template.radius, fill: { color: template.colors.surface }, line: { color: template.colors.line, width: 1 } })
+    slide.addText(group.label, { x: x + 0.25, y: y + 0.18, w: 1.75, h: 0.32, fontFace: template.fonts.heading, fontSize: 17, bold: true, color: template.colors.accent, margin: 0, fit: "shrink" })
+    slide.addText(group.items.join("  •  "), { x: x + 2.05, y: y + 0.18, w: cardW - 2.3, h: cardH - 0.34, fontFace: template.fonts.body, fontSize: 16, color: template.colors.ink, margin: 0, fit: "shrink", valign: "middle" })
+  })
+}
+
+function renderCaseStudy(slide: Slide, block: Extract<ArtifactBlock, { type: "case-study" }>, template: ResolvedTemplate) {
+  slide.addShape("roundRect", { x: template.grid.marginX, y: 1.82, w: 4.0, h: 4.95, rectRadius: template.radius, fill: { color: template.colors.surface }, line: { color: template.colors.line, width: 1 } })
+  slide.addText("CONTEXT", { x: 1.02, y: 2.12, w: 1.1, h: 0.28, fontFace: template.fonts.body, fontSize: 12, bold: true, charSpacing: 1.2, color: template.colors.accent, margin: 0 })
+  slide.addText(block.context, { x: 1.02, y: 2.52, w: 3.45, h: 1.4, fontFace: template.fonts.body, fontSize: 17, color: template.colors.ink, margin: 0, fit: "shrink", valign: "top" })
+  slide.addText("ROLE", { x: 1.02, y: 4.28, w: 0.8, h: 0.28, fontFace: template.fonts.body, fontSize: 12, bold: true, charSpacing: 1.2, color: template.colors.accent, margin: 0 })
+  slide.addText(block.role, { x: 1.02, y: 4.67, w: 3.45, h: 0.9, fontFace: template.fonts.heading, fontSize: 18, bold: true, color: template.colors.ink, margin: 0, fit: "shrink" })
+  if (block.tools.length) slide.addText(block.tools.join("  •  "), { x: 1.02, y: 6.12, w: 3.45, h: 0.36, fontFace: template.fonts.body, fontSize: 13, color: template.colors.muted, margin: 0, fit: "shrink" })
+  slide.addText("CONTRIBUTION", { x: 5.25, y: 2.05, w: 2.0, h: 0.3, fontFace: template.fonts.body, fontSize: 12, bold: true, charSpacing: 1.2, color: template.colors.accent, margin: 0 })
+  const contributions = block.contribution.map((text) => ({ text, options: { bullet: { indent: 18 }, breakLine: true } }))
+  slide.addText(contributions, { x: 5.22, y: 2.52, w: 6.9, h: 2.2, fontFace: template.fonts.body, fontSize: 17, color: template.colors.ink, margin: 0.04, breakLine: false, fit: "shrink", paraSpaceAfter: 10 })
+  if (block.outcome.length) {
+    slide.addText("OUTCOME", { x: 5.25, y: 5.08, w: 1.4, h: 0.3, fontFace: template.fonts.body, fontSize: 12, bold: true, charSpacing: 1.2, color: template.colors.accent, margin: 0 })
+    slide.addText(block.outcome.map((text) => ({ text, options: { bullet: { indent: 18 }, breakLine: true } })), { x: 5.22, y: 5.48, w: 6.9, h: 1.1, fontFace: template.fonts.body, fontSize: 16, color: template.colors.ink, margin: 0.04, fit: "shrink" })
+  }
+}
+
+function renderBlocks(slide: Slide, blocks: ArtifactBlock[], template: ResolvedTemplate) {
+  const first = blocks[0]
+  if (first?.type === "text") return addLead(slide, first, template, blocks.find((block): block is Extract<ArtifactBlock, { type: "bullet-list" }> => block.type === "bullet-list"))
+  if (first?.type === "timeline") return renderTimeline(slide, first, template)
+  if (first?.type === "skills-matrix") return renderSkills(slide, first, template)
+  if (first?.type === "case-study") return renderCaseStudy(slide, first, template)
+  if (first?.type === "bullet-list") return slide.addText(first.items.map((text) => ({ text, options: { bullet: { indent: 20 }, breakLine: true } })), { x: template.grid.marginX, y: 1.95, w: 10.9, h: 4.8, fontFace: template.fonts.body, fontSize: 20, color: template.colors.ink, margin: 0.05, fit: "shrink", paraSpaceAfter: 14 })
+  const links = blocks.filter((block): block is Extract<ArtifactBlock, { type: "link" }> => block.type === "link")
+  if (links.length) links.forEach((link, index) => slide.addText([{ text: link.label, options: { hyperlink: { url: link.url }, color: template.colors.ink, underline: { color: template.colors.accent } } }], { x: template.grid.marginX, y: 2.1 + index * 0.72, w: 8.7, h: 0.38, fontFace: template.fonts.body, fontSize: 20, margin: 0 }))
+}
+
+export async function buildPresentationDeck(source: PresentationArtifact): Promise<Buffer> {
+  const artifact = exportablePresentation(source)
+  const report = inspectPresentationQuality(artifact)
+  if (report.errors.length) throw new Error(`Artifact quality failed: ${report.errors.join(", ")}`)
+  const template = getArtifactTemplate(artifact.theme)
+  const pptx = new PptxGenJS()
+  pptx.defineLayout({ name: "LARAS_WIDE", width: W, height: H }); pptx.layout = "LARAS_WIDE"
+  pptx.author = "Laras"; pptx.company = "Laras"; pptx.subject = artifact.objective; pptx.title = artifact.title; pptx.theme = { headFontFace: template.fonts.heading, bodyFontFace: template.fonts.body }
+  pptx.defineSlideMaster({ title: "LARAS_ARTIFACT", background: { color: template.colors.background }, objects: [{ line: { x: template.grid.marginX, y: 7.02, w: W - template.grid.marginX * 2, h: 0, line: { color: template.colors.line, width: 0.75 } } }, { text: { text: artifact.title, options: { x: template.grid.marginX, y: 7.08, w: 6.5, h: 0.2, fontFace: template.fonts.body, fontSize: 9, color: template.colors.muted, margin: 0 } } }], slideNumber: { x: 12.0, y: 7.06, w: 0.5, h: 0.2, fontFace: template.fonts.body, fontSize: 9, color: template.colors.muted, align: "right" } })
+  artifact.slides.forEach((content, index) => {
+    const slide = pptx.addSlide("LARAS_ARTIFACT"); slide.background = { color: template.colors.background }
+    if (content.type === "cover") {
+      slide.addShape("rect", { x: 0, y: 0, w: 0.22, h: H, fill: { color: template.colors.accent }, line: { transparency: 100 } })
+      slide.addText(content.title, { x: 0.9, y: 1.65, w: 10.8, h: 1.35, fontFace: template.fonts.heading, fontSize: content.title.length > 34 ? 36 : 42, bold: true, color: template.colors.ink, margin: 0, fit: "shrink", breakLine: false })
+      if (content.subtitle) slide.addText(content.subtitle, { x: 0.93, y: 3.15, w: 9.8, h: 0.72, fontFace: template.fonts.body, fontSize: 22, color: template.colors.muted, margin: 0, fit: "shrink" })
+      const lead = content.blocks.find((block): block is Extract<ArtifactBlock, { type: "text" }> => block.type === "text")
+      if (lead) slide.addText(lead.text, { x: 0.93, y: 5.25, w: 8.5, h: 0.7, fontFace: template.fonts.body, fontSize: 18, color: template.colors.accent, margin: 0, fit: "shrink" })
+    } else { addHeader(slide, content.title, content.subtitle, template, index + 1); renderBlocks(slide, content.blocks, template) }
+    if (content.notes) slide.addNotes(content.notes)
+  })
+  return await pptx.write({ outputType: "nodebuffer", compression: true }) as Buffer
+}
+
+export async function buildDeck(profile: SerializedProfile, themeId: string): Promise<Buffer> {
+  const family = ARTIFACT_TEMPLATES.some((template) => template.id === themeId) ? themeId as PresentationArtifact["theme"]["family"] : "professional-minimal"
+  return buildPresentationDeck(buildPresentationArtifact({ profile, themeFamily: family }))
 }

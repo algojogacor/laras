@@ -10,15 +10,6 @@ import { Badge } from "@/components/ui/badge"
 import { FileText, Plus, ArrowRight, FileStack, Mail, Quote, PenLine, Palette, Presentation } from "lucide-react"
 import { DocumentsTypePicker } from "@/components/documents/type-picker"
 
-const TYPE_HREF: Record<string, string> = {
-  "cv-ats": "/documents/cv-ats",
-  "cv-visual": "/documents/cv-visual",
-  "cover-letter": "/documents/cover-letter",
-  bio: "/documents/bio",
-  essay: "/documents/essay",
-  deck: "/documents/deck",
-}
-
 const TYPE_ICON: Record<string, typeof FileText> = {
   "cv-ats": FileText,
   "cv-visual": Palette,
@@ -74,7 +65,6 @@ export default async function DocumentsPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {documents.map((d) => {
             const config = d.config ? JSON.parse(d.config) : {}
-            const base = TYPE_HREF[d.type] || "/documents/cv-ats"
             const Icon = TYPE_ICON[d.type] || FileText
             return (
               <Card key={d.id} className="group shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-lift">
@@ -99,7 +89,7 @@ export default async function DocumentsPage() {
                     </p>
                   )}
                   <Button asChild variant="ghost" size="sm" className="mt-3 -ml-2 text-primary hover:bg-primary/5">
-                    <Link href={`${base}/${d.id}`}>
+                    <Link href={`/documents/${d.id}/studio`}>
                       {t.documents.preview}
                       <ArrowRight className="ml-1.5 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                     </Link>

@@ -7,7 +7,7 @@ import {
 } from "docx"
 import type { SerializedProfile } from "@/lib/profile"
 
-const FONT = "Calibri"
+const FONT = "Arial"
 const SIZE_BODY = 22 // 11pt
 
 /** Build a simple letter/bio DOCX from plain text paragraphs. */
@@ -34,6 +34,7 @@ export function buildTextDocx(
     children.push(new Paragraph({
       children: [new TextRun({ text: p, font: FONT, size: SIZE_BODY })],
       spacing: { after: 160 },
+      keepLines: true,
     }))
   }
 
@@ -52,7 +53,7 @@ export function buildTextDocx(
     title: opts.title,
     styles: { default: { document: { run: { font: FONT, size: SIZE_BODY } } } },
     sections: [{
-      properties: { page: { margin: { top: 1080, right: 1080, bottom: 1080, left: 1080 } } },
+      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, right: 1134, bottom: 1134, left: 1134 } } },
       children,
     }],
   })

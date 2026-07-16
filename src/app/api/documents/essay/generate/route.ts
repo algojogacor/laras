@@ -75,8 +75,12 @@ export async function POST(request: Request) {
   const title = `${body.essayType || "Essay"} — ${body.targetOrg || serialized.fullName || ""}`
   let doc
   try {
-    doc = await db.document.create({
-      data: { userProfileId: profile.id, type: "essay", title, content: JSON.stringify(essay), config: JSON.stringify({ locale, tone, essayType: body.essayType, targetOrg: body.targetOrg, concreteness: check.hasEvidence ? 100 : 0 }), version: 1 },
+    const content = JSON.stringify(essay)
+    const config = JSON.stringify({ locale, tone, essayType: body.essayType, targetOrg: body.targetOrg, concreteness: check.hasEvidence ? 100 : 0 })
+    doc = await db.$transaction(async (tx) => {
+      const created = await tx.document.create({ data: { userProfileId: profile.id, type: "essay", title, content, config, version: 1 } })
+      await tx.documentVersion.create({ data: { documentId: created.id, versionNumber: 1, content, configSnapshot: config, revisionInstruction: null } })
+      return created
     })
   } catch (e) {
     await refundQuota(quotaKey, profile.id)

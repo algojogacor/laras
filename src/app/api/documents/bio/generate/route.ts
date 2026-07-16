@@ -65,8 +65,12 @@ export async function POST(request: Request) {
 
   let doc
   try {
-    doc = await db.document.create({
-      data: { userProfileId: profile.id, type: "bio", title: `Bio — ${serialized.fullName || ""}`, content: JSON.stringify(bio), config: JSON.stringify({ locale, tone, concreteness: check.hasEvidence ? 100 : 0 }), version: 1 },
+    const content = JSON.stringify(bio)
+    const config = JSON.stringify({ locale, tone, concreteness: check.hasEvidence ? 100 : 0 })
+    doc = await db.$transaction(async (tx) => {
+      const created = await tx.document.create({ data: { userProfileId: profile.id, type: "bio", title: `Bio — ${serialized.fullName || ""}`, content, config, version: 1 } })
+      await tx.documentVersion.create({ data: { documentId: created.id, versionNumber: 1, content, configSnapshot: config, revisionInstruction: null } })
+      return created
     })
   } catch (e) {
     await refundQuota(quotaKey, profile.id)

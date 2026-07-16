@@ -27,6 +27,7 @@ export async function GET(
         revisionInstruction: true,
         parentVersionId: true,
         createdAt: true,
+        content: true,
       },
     })
 

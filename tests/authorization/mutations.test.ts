@@ -178,27 +178,26 @@ describe("Wave B Mutations Authorization Tests", () => {
   // 3. DOCUMENTS REVISE
   // ============================================================================
   describe("POST /api/documents/[id]/revise", () => {
-    test("User A can revise their own document (creates new version, revisions)", async () => {
+    test("legacy immediate revision is blocked and leaves document unchanged", async () => {
       testRuntime.cookieValue = await createSessionToken(IDS.accountA)
       const req = new Request("http://localhost/api/documents/" + IDS.documentA + "/revise", {
         method: "POST",
         body: JSON.stringify({ instruction: "make it sound more technical" }),
       })
       const res = await docRevisePost(req, { params: makeParams(IDS.documentA) })
-      expect(res.status).toBe(200)
+      expect(res.status).toBe(409)
 
       const body = await res.json()
-      expect(body.ok).toBe(true)
-      expect(body.versionNumber).toBe(2) // next version number is 2
+      expect(body.error).toBe("artifact-preview-required")
+      expect(body.studioUrl).toBe(`/documents/${IDS.documentA}/studio`)
 
       const doc = await db.document.findUnique({ where: { id: IDS.documentA } })
-      expect(doc?.version).toBe(2)
+      expect(doc?.version).toBe(1)
 
       const revision = await db.revisionRequest.findFirst({
         where: { documentId: IDS.documentA, instruction: "make it sound more technical" },
       })
-      expect(revision).not.toBeNull()
-      expect(revision?.status).toBe("completed")
+      expect(revision).toBeNull()
     })
 
     test("User A cannot revise User B's document (returns 404)", async () => {
@@ -211,88 +210,6 @@ describe("Wave B Mutations Authorization Tests", () => {
       expect(res.status).toBe(404)
     })
 
-    test("parallel revisions advance one logical version without partial rows", async () => {
-      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
-
-      let arrivals = 0
-      let releaseBarrier!: () => void
-      const barrier = new Promise<void>((resolve) => {
-        releaseBarrier = resolve
-      })
-      testRuntime.deepseekCompletionsHook = async () => {
-        arrivals += 1
-        if (arrivals === 2) releaseBarrier()
-        await barrier
-      }
-
-      const makeRevisionRequest = (instruction: string) =>
-        new Request(`http://localhost/api/documents/${IDS.documentA}/revise`, {
-          method: "POST",
-          body: JSON.stringify({ instruction }),
-        })
-
-      const results = await Promise.allSettled([
-        docRevisePost(makeRevisionRequest("parallel edit alpha"), {
-          params: makeParams(IDS.documentA),
-        }),
-        docRevisePost(makeRevisionRequest("parallel edit beta"), {
-          params: makeParams(IDS.documentA),
-        }),
-      ])
-
-      expect(arrivals).toBe(2)
-      expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled"])
-
-      const responses = results.map((result) => {
-        if (result.status !== "fulfilled") throw result.reason
-        return result.value as Response
-      })
-      expect(responses.map((response) => response.status).sort()).toEqual([200, 409])
-
-      const finalDocument = await db.document.findUnique({
-        where: { id: IDS.documentA },
-      })
-      const versions = await db.documentVersion.findMany({
-        where: { documentId: IDS.documentA },
-        orderBy: { versionNumber: "asc" },
-      })
-      const revisions = await db.revisionRequest.findMany({
-        where: { documentId: IDS.documentA },
-        orderBy: { createdAt: "asc" },
-      })
-
-      expect(finalDocument?.version).toBe(2)
-      expect(versions.map((version) => version.versionNumber)).toEqual([1, 2])
-      expect(new Set(versions.map((version) => version.versionNumber)).size).toBe(2)
-      expect(revisions).toHaveLength(1)
-      expect(revisions[0]?.status).toBe("completed")
-      expect(revisions[0]?.resultVersionId).toBe(versions[1]?.id)
-      expect(["parallel edit alpha", "parallel edit beta"]).toContain(
-        revisions[0]?.instruction,
-      )
-      expect(versions[1]?.revisionInstruction).toBe(revisions[0]?.instruction)
-      expect(finalDocument?.content).toBe(versions[1]?.content)
-    })
-
-    test("Concurrent edits return 409 conflict", async () => {
-      testRuntime.cookieValue = await createSessionToken(IDS.accountA)
-
-      // Set hook to update database version concurrently during LLM execution
-      testRuntime.deepseekCompletionsHook = async () => {
-        await db.document.update({
-          where: { id: IDS.documentA },
-          data: { version: 99 },
-        })
-      }
-
-      const req2 = new Request("http://localhost/api/documents/" + IDS.documentA + "/revise", {
-        method: "POST",
-        body: JSON.stringify({ instruction: "edit 2" }),
-      })
-      const res2 = await docRevisePost(req2, { params: makeParams(IDS.documentA) })
-      expect(res2.status).toBe(409)
-      expect(await res2.json()).toEqual({ error: "conflict" })
-    })
   })
 
   // ============================================================================

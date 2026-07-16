@@ -273,6 +273,7 @@ model Document {
   applications  ApplicationDocument[]
   versions      DocumentVersion[]
   revisions     RevisionRequest[]
+  exports       ArtifactExport[]
 
   @@index([userProfileId])
 }
@@ -290,6 +291,7 @@ model DocumentVersion {
   createdAt     DateTime @default(now())
 
   @@index([documentId])
+  @@unique([documentId, versionNumber])
 }
 
 // Revision requests — user instructions for follow-up changes (Brief Task 2)
@@ -300,9 +302,28 @@ model RevisionRequest {
   instruction   String   // e.g. "shorten", "more formal", "add experience X"
   status        String   @default("pending") // pending | completed | failed
   resultVersionId String? // resulting DocumentVersion id
+  proposedContent String? // JSON preview; never applied until explicitly accepted
+  diffJson      String?   // bounded before/after diff for the selected path
+  baseVersion   Int?      // optimistic concurrency boundary for proposal acceptance
+  action        String?   // named contextual AI action
+  acceptedAt    DateTime?
+  rejectedAt    DateTime?
   createdAt     DateTime @default(now())
 
   @@index([documentId])
+}
+
+model ArtifactExport {
+  id          String          @id @default(cuid())
+  documentId  String
+  document    Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  versionId   String?
+  format      String          // pptx | docx | pdf | html
+  checksum    String?
+  createdAt   DateTime        @default(now())
+
+  @@index([documentId])
+  @@index([versionId])
 }
 
 model ApplicationDocument {
