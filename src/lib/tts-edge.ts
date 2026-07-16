@@ -1,4 +1,4 @@
-import { exec } from "child_process"
+import { spawn } from "child_process"
 import { writeFileSync, readFileSync, unlinkSync, existsSync, mkdirSync } from "fs"
 import path from "path"
 import { getServerSupabase } from "@/lib/supabase"
@@ -49,25 +49,33 @@ export async function generateAudioEdgeTTS(
   ensureAudioDir()
 
   try {
-    // Call edge-tts via Python
-    const escaped = truncated.replace(/'/g, "\\'").replace(/"/g, '\\"')
+    // Call edge-tts via Python — use spawn with argument array to prevent
+    // shell injection. Text, voice, and filepath are passed as sys.argv
+    // arguments, never interpolated into a shell command string.
+    const pythonScript = [
+      'import asyncio, edge_tts, sys',
+      'async def gen():',
+      '    text = sys.argv[1]',
+      '    voice = sys.argv[2]',
+      '    filepath = sys.argv[3]',
+      '    c = edge_tts.Communicate(text, voice)',
+      '    await c.save(filepath)',
+      'asyncio.run(gen())',
+    ].join('\n')
     await new Promise<void>((resolve, reject) => {
-      exec(
-        `python3 -c "
-import asyncio, edge_tts
-async def gen():
-    c = edge_tts.Communicate('${escaped}', '${voice}')
-    await c.save('${filepath}')
-asyncio.run(gen())
-"`,
-      { timeout: 30000, maxBuffer: 1024 * 1024 },
-      (error, _stdout, stderr) => {
-        if (error) reject(error)
-        else if (stderr && !stderr.includes("INFO")) reject(new Error(stderr))
+      const proc = spawn('python3', ['-c', pythonScript, truncated, voice, filepath], {
+        timeout: 30000,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+      let stderr = ''
+      proc.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString() })
+      proc.on('error', reject)
+      proc.on('close', (code) => {
+        if (code !== 0) reject(new Error(stderr || `exit ${code}`))
+        else if (stderr && !stderr.includes('INFO')) reject(new Error(stderr))
         else resolve()
-      }
-    )
-  })
+      })
+    })
 
   if (!existsSync(filepath)) return null
 

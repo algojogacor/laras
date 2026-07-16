@@ -103,13 +103,19 @@ function validateCsrfToken(req: NextRequest): boolean {
   const cookieToken = req.cookies.get(CSRF_COOKIE)?.value
   const headerToken = req.headers.get(CSRF_HEADER)?.trim()
 
-  // If the client does NOT send the X-CSRF-Token header, skip the
-  // double-submit check. Protection is still provided by:
+  // If the client does NOT send the X-CSRF-Token header, fall back to
+  // cookie-presence check. Protection is still provided by:
   // 1. Origin validation (rejects cross-origin mutations)
   // 2. SameSite cookies (prevents browser from sending cookies on
   //    cross-origin requests)
-  // Clients that DO send the header get full double-submit validation.
-  if (!headerToken) return true
+  // 3. CSRF cookie existence (must be set by prior login/signup)
+  // Clients that DO send the header get full constant-time double-submit
+  // validation as defense-in-depth.
+  if (!headerToken) {
+    // Fallback: CSRF cookie must exist and be well-formed
+    if (!cookieToken || cookieToken.length !== 64) return false
+    return true
+  }
   if (!cookieToken) return false
   // Token is 32 bytes → 64 hex characters
   if (cookieToken.length !== 64 || headerToken.length !== 64) return false
