@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "goey-toast": {
+      "source": "anl331/goey-toast",
+      "sourceType": "github",
+      "skillPath": "skills/goey-toast/SKILL.md",
+      "computedHash": "ef55e1239a77ece0bf67b641d672593fcc43172aeefe2a20ee895c12552c8c33"
+    }
+  }
+}

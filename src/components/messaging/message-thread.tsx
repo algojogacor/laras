@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useTransition } from "react"
 import { useRouter } from "next/navigation"
+import { apiClient } from "@/lib/api-client"
 import {
   Send,
   MoreVertical,
@@ -128,9 +129,8 @@ export function MessageThread({
 
     setSending(true)
     try {
-      const res = await fetch(`/api/messages/${conversationId}`, {
+      const res = await apiClient(`/api/messages/${conversationId}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body: trimmed }),
       })
 
@@ -174,9 +174,8 @@ export function MessageThread({
     try {
       if (localBlockedByMe) {
         // Unblock
-        const res = await fetch("/api/blocks", {
+        const res = await apiClient("/api/blocks", {
           method: "DELETE",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ blockedId: otherParticipants[0]?.id }),
         })
         if (res.ok) {
@@ -188,9 +187,8 @@ export function MessageThread({
         }
       } else {
         // Block
-        const res = await fetch("/api/blocks", {
+        const res = await apiClient("/api/blocks", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ blockedId: otherParticipants[0]?.id }),
         })
         if (res.ok) {
@@ -211,9 +209,8 @@ export function MessageThread({
   // Report
   async function handleReport(reason: string) {
     try {
-      const res = await fetch("/api/reports", {
+      const res = await apiClient("/api/reports", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           targetType: "message",
           targetId: conversationId,

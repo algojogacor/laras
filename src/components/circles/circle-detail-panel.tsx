@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { apiClient } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -84,7 +85,7 @@ export function CircleDetailPanel({
     setLoading(true)
     setError("")
     try {
-      const res = await fetch(`/api/circles/${circle.id}/members`, {
+      const res = await apiClient(`/api/circles/${circle.id}/members`, {
         method: "POST",
       })
       if (res.ok) {
@@ -105,7 +106,7 @@ export function CircleDetailPanel({
     setLoading(true)
     setError("")
     try {
-      const res = await fetch(`/api/circles/${circle.id}/members`, {
+      const res = await apiClient(`/api/circles/${circle.id}/members`, {
         method: "DELETE",
       })
       if (res.ok) {
@@ -128,9 +129,8 @@ export function CircleDetailPanel({
     setLoading(true)
     setError("")
     try {
-      const res = await fetch(`/api/circles/${circle.id}/reviews`, {
+      const res = await apiClient(`/api/circles/${circle.id}/reviews`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: reviewPrompt.trim() }),
       })
       if (res.ok) {
@@ -156,9 +156,8 @@ export function CircleDetailPanel({
     setLoading(true)
     setError("")
     try {
-      const res = await fetch(`/api/circles/${circle.id}/reviews`, {
+      const res = await apiClient(`/api/circles/${circle.id}/reviews`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reviewId,
           feedback: feedback.trim(),
@@ -186,9 +185,8 @@ export function CircleDetailPanel({
 
   async function handlePromote(targetProfileId: string, role: string) {
     try {
-      await fetch(`/api/circles/${circle.id}`, {
+      await apiClient(`/api/circles/${circle.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "promote", targetProfileId, role }),
       })
       router.refresh()
@@ -199,9 +197,8 @@ export function CircleDetailPanel({
 
   async function handleDemote(targetProfileId: string) {
     try {
-      await fetch(`/api/circles/${circle.id}`, {
+      await apiClient(`/api/circles/${circle.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "demote", targetProfileId }),
       })
       router.refresh()
@@ -213,9 +210,8 @@ export function CircleDetailPanel({
   async function handleDelete() {
     if (!confirm("Are you sure you want to delete this circle?")) return
     try {
-      const res = await fetch(`/api/circles/${circle.id}`, {
+      const res = await apiClient(`/api/circles/${circle.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "delete" }),
       })
       if (res.ok) {

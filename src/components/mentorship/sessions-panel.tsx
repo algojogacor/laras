@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { apiClient } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -68,9 +69,8 @@ export function SessionsPanel({
     const menteeId = partner?.menteeId ?? profileId
 
     try {
-      const res = await fetch("/api/mentorship/sessions", {
+      const res = await apiClient("/api/mentorship/sessions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mentorId: mentorId === profileId ? profileId : mentorId,
           menteeId: menteeId === profileId ? profileId : menteeId,
@@ -99,9 +99,8 @@ export function SessionsPanel({
   async function handleComplete(sessionId: string) {
     // Simplified: just complete without feedback dialog for now
     try {
-      const res = await fetch(`/api/mentorship/sessions/${sessionId}`, {
+      const res = await apiClient(`/api/mentorship/sessions/${sessionId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "complete" }),
       })
       if (res.ok) {

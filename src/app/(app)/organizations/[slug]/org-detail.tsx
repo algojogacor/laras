@@ -27,6 +27,7 @@ import {
   MoreHorizontal,
   Edit,
 } from "lucide-react"
+import { apiClient } from "@/lib/api-client"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -114,9 +115,8 @@ export function OrganizationDetail({ organization, currentUserRole, currentUserI
     setError(null)
     setSaving(true)
     try {
-      const res = await fetch(`/api/organizations/${organization.slug}`, {
+      const res = await apiClient(`/api/organizations/${organization.slug}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: editName.trim(),
           description: editDescription.trim() || null,
@@ -142,9 +142,8 @@ export function OrganizationDetail({ organization, currentUserRole, currentUserI
     setError(null)
     setAddingMember(true)
     try {
-      const res = await fetch(`/api/organizations/${organization.slug}/members`, {
+      const res = await apiClient(`/api/organizations/${organization.slug}/members`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userProfileId: addUserId, role: addRole }),
       })
       if (!res.ok) {
@@ -166,7 +165,7 @@ export function OrganizationDetail({ organization, currentUserRole, currentUserI
     if (!confirm("Remove this member from the organization?")) return
     setError(null)
     try {
-      const res = await fetch(`/api/organizations/${organization.slug}/members?userId=${encodeURIComponent(userProfileId)}`, {
+      const res = await apiClient(`/api/organizations/${organization.slug}/members?userId=${encodeURIComponent(userProfileId)}`, {
         method: "DELETE",
       })
       if (!res.ok) {
@@ -183,9 +182,8 @@ export function OrganizationDetail({ organization, currentUserRole, currentUserI
   async function handleRoleChange(userProfileId: string, newRole: string) {
     setError(null)
     try {
-      const res = await fetch(`/api/organizations/${organization.slug}/members/${userProfileId}`, {
+      const res = await apiClient(`/api/organizations/${organization.slug}/members/${userProfileId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: newRole }),
       })
       if (!res.ok) {
@@ -204,9 +202,8 @@ export function OrganizationDetail({ organization, currentUserRole, currentUserI
     try {
       // Verification is requested via PATCH on the org endpoint (handled by service if needed)
       // For now use a simple fetch; the actual endpoint logic is in the org detail route
-      const res = await fetch(`/api/organizations/${organization.slug}`, {
+      const res = await apiClient(`/api/organizations/${organization.slug}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       })
       if (!res.ok) {

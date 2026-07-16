@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import type { SerializedProfile } from "@/lib/profile"
 import type { GeneratedEssay, EssayProbingQuestion } from "@/lib/content-engine"
+import { apiClient } from "@/lib/api-client"
 
 type Check = { hasEvidence: boolean; buzzwords: string[] }
 
@@ -61,9 +62,8 @@ export function EssayBuilder({ initialProfile }: { initialProfile: SerializedPro
   async function generateProbing() {
     setProbingLoading(true)
     try {
-      const res = await fetch("/api/documents/essay/probe", {
+      const res = await apiClient("/api/documents/essay/probe", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale, essayType, prompt, targetOrg }),
       })
       const data = await res.json()
@@ -82,9 +82,8 @@ export function EssayBuilder({ initialProfile }: { initialProfile: SerializedPro
     setGenLoading(true); setEssay(null)
     try {
       const probingQA = probing.map((q) => ({ id: q.id, question: q.question, answer: answers[q.id] || "" }))
-      const res = await fetch("/api/documents/essay/generate", {
+      const res = await apiClient("/api/documents/essay/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale, tone, essayType, prompt, targetOrg, wordLimit, probingQA, edits }),
       })
       const data = await res.json()

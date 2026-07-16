@@ -7,6 +7,7 @@ import { Plus, MessageSquareText, Loader2, Trash2, ArrowRight, Briefcase, Clock 
 import { toast } from "sonner"
 import { useT } from "@/components/providers/locale-provider"
 import type { Locale } from "@/lib/i18n/dictionary"
+import { apiClient } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -33,9 +34,8 @@ export function InterviewList({ initialSets, locale }: { initialSets: Set[]; loc
     if (!form.role.trim()) { toast.error(t.auth.errGeneric); return }
     setCreating(true)
     try {
-      const res = await fetch("/api/interview-sets", {
+      const res = await apiClient("/api/interview-sets", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, locale }),
       })
       const data = await res.json()
@@ -51,7 +51,7 @@ export function InterviewList({ initialSets, locale }: { initialSets: Set[]; loc
 
   async function deleteSet(id: string) {
     setSets((prev) => prev.filter((s) => s.id !== id))
-    try { await fetch(`/api/interview-sets/${id}`, { method: "DELETE" }); toast.success(t.common.delete) } catch {}
+    try { await apiClient(`/api/interview-sets/${id}`, { method: "DELETE" }); toast.success(t.common.delete) } catch {}
   }
 
   return (

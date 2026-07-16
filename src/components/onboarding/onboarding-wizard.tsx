@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import { Loader2, Plus, Trash2, ArrowLeft, ArrowRight, Check, Sparkles } from "lucide-react"
 import { toast } from "sonner"
+import { apiClient } from "@/lib/api-client"
 import { useT } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -162,9 +163,8 @@ export function OnboardingWizard({ initialProfile }: { initialProfile: Serialize
   async function saveProgress(nextStep?: number) {
     setSaving(true)
     try {
-      const res = await fetch("/api/profile", {
+      const res = await apiClient("/api/profile", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildPayload(state)),
       })
       if (!res.ok) throw new Error()
@@ -186,15 +186,13 @@ export function OnboardingWizard({ initialProfile }: { initialProfile: Serialize
   async function finish() {
     setFinishing(true)
     try {
-      const res = await fetch("/api/profile", {
+      const res = await apiClient("/api/profile", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildPayload(state)),
       })
       if (!res.ok) throw new Error()
-      await fetch("/api/profile", {
+      await apiClient("/api/profile", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ onboardingComplete: true }),
       })
       toast.success(t.onboarding.complete)

@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { apiClient } from "@/lib/api-client"
 
 type Visibility = "public" | "connections" | "private"
 type ConsentField =
@@ -114,9 +115,8 @@ export function PrivacyPanel({
     setEntries((prev) => prev.map((e) => (e.field === field ? { ...e, visibility } : e)))
     startSave(async () => {
       try {
-        const res = await fetch("/api/profile/privacy", {
+        const res = await apiClient("/api/profile/privacy", {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ field, visibility }),
         })
         if (!res.ok) throw new Error("failed")

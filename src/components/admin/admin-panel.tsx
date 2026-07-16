@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/select"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { apiClient } from "@/lib/api-client"
 
 type BadgeType = "email" | "phone" | "identity" | "education" | "employment" | "skill"
 type BadgeStatus = "verified" | "pending" | "rejected" | "expired"
@@ -143,7 +144,7 @@ export function AdminPanel({ labels, currentUserRole }: { labels: AdminLabels; c
 
   // Load users once
   if (!loaded) {
-    fetch("/api/admin/users")
+    apiClient("/api/admin/users")
       .then((r) => {
         if (!r.ok) throw new Error(String(r.status))
         return r.json()
@@ -207,9 +208,8 @@ export function AdminPanel({ labels, currentUserRole }: { labels: AdminLabels; c
   const handleRoleChange = (targetId: string, newRole: string) => {
     startRoleSave(async () => {
       try {
-        const res = await fetch("/api/admin/users", {
+        const res = await apiClient("/api/admin/users", {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ targetId, role: newRole }),
         })
         if (!res.ok) throw new Error("failed")
@@ -230,9 +230,8 @@ export function AdminPanel({ labels, currentUserRole }: { labels: AdminLabels; c
     const targetUser = managingUser
     startSave(async () => {
       try {
-        const res = await fetch("/api/admin/verification", {
+        const res = await apiClient("/api/admin/verification", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             profileId: targetUser.profileId,
             type: badgeType,

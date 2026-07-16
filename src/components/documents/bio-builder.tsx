@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import type { SerializedProfile } from "@/lib/profile"
 import type { GeneratedBio } from "@/lib/content-engine"
+import { apiClient } from "@/lib/api-client"
 
 export function BioBuilder({ initialProfile }: { initialProfile: SerializedProfile }) {
   const t = useT()
@@ -38,9 +39,8 @@ export function BioBuilder({ initialProfile }: { initialProfile: SerializedProfi
   async function generate() {
     setLoading(true); setBio(null)
     try {
-      const res = await fetch("/api/documents/bio/generate", {
+      const res = await apiClient("/api/documents/bio/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale, tone, edits: { ...edits } }),
       })
       const data = await res.json()

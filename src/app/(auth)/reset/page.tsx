@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { getDictionary, type Locale } from "@/lib/i18n/dictionary"
+import { apiClient } from "@/lib/api-client"
 
 export default function ResetRequestPage() {
   const [email, setEmail] = useState("")
@@ -17,9 +18,8 @@ export default function ResetRequestPage() {
     if (!email.trim()) return
     setLoading(true)
     try {
-      const res = await fetch("/api/auth/reset/request", {
+      const res = await apiClient("/api/auth/reset/request", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
       })
       // Always show success regardless of response

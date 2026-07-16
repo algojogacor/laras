@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { getDictionary } from "@/lib/i18n/dictionary"
+import { apiClient } from "@/lib/api-client"
 
 export default function ResetConfirmPage() {
   const params = useParams()
@@ -33,9 +34,8 @@ export default function ResetConfirmPage() {
 
     setLoading(true)
     try {
-      const res = await fetch("/api/auth/reset/confirm", {
+      const res = await apiClient("/api/auth/reset/confirm", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password }),
       })
       const data = await res.json()

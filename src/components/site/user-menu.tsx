@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useState, useTransition } from "react"
 import { LogOut, User, Loader2, Settings } from "lucide-react"
 import { toast } from "sonner"
+import { apiClient } from "@/lib/api-client"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +37,7 @@ export function UserMenu({
   async function logout() {
     startTransition(async () => {
       try {
-        await fetch("/api/auth/logout", { method: "POST" })
+        await apiClient("/api/auth/logout", { method: "POST" })
         toast.success(locale.logout)
         router.push("/login")
         router.refresh()

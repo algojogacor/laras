@@ -7,6 +7,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { useT } from "@/components/providers/locale-provider"
+import { apiClient } from "@/lib/api-client"
 import type { Locale } from "@/lib/i18n/dictionary"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,7 +59,7 @@ export function ApplicationsBoard({ initialApplications, documents, locale }: { 
 
   // refresh from server on mount (in case of stale props)
   useEffect(() => {
-    fetch("/api/applications").then((r) => r.json()).then((d) => {
+    apiClient("/api/applications").then((r) => r.json()).then((d) => {
       if (d.applications) setApps(d.applications.map((a: any) => ({ ...a, linkedDocIds: a.linkedDocIds || [] })))
     }).catch(() => {})
   }, [])
@@ -76,7 +77,7 @@ export function ApplicationsBoard({ initialApplications, documents, locale }: { 
     // optimistic
     setApps((prev) => prev.map((a) => (a.id === id ? { ...a, status: next } : a)))
     try {
-      await fetch(`/api/applications/${id}`, {
+      await apiClient(`/api/applications/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: next }),
@@ -90,7 +91,7 @@ export function ApplicationsBoard({ initialApplications, documents, locale }: { 
   async function deleteApp(id: string) {
     setApps((prev) => prev.filter((a) => a.id !== id))
     try {
-      await fetch(`/api/applications/${id}`, { method: "DELETE" })
+      await apiClient(`/api/applications/${id}`, { method: "DELETE" })
       toast.success(t.applications.saved)
     } catch {
       toast.error(t.auth.errGeneric)
@@ -287,7 +288,7 @@ function ApplicationDialog({
     if (form.jobDescription.length < 20) { toast.error(t.applications.jobDescriptionHint); return }
     setSummarizing(true)
     try {
-      const res = await fetch("/api/applications/summarize", {
+      const res = await apiClient("/api/applications/summarize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobDescription: form.jobDescription, locale }),
@@ -310,8 +311,8 @@ function ApplicationDialog({
         summary: summary ? JSON.stringify(summary) : null,
       }
       const res = editing
-        ? await fetch(`/api/applications/${editing.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
-        : await fetch("/api/applications", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+        ? await apiClient(`/api/applications/${editing.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+        : await apiClient("/api/applications", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
       const data = await res.json()
       if (!res.ok) { toast.error(t.auth.errGeneric); return }
       toast.success(t.applications.saved)
@@ -422,10 +423,10 @@ function ApplicationDialog({
                         onClick={async () => {
                           try {
                             if (linked) {
-                              await fetch(`/api/applications/${editing.id}/documents?documentId=${doc.id}`, { method: "DELETE" })
+                              await apiClient(`/api/applications/${editing.id}/documents?documentId=${doc.id}`, { method: "DELETE" })
                               onLinkChange(editing.id, doc.id, false)
                             } else {
-                              await fetch(`/api/applications/${editing.id}/documents`, {
+                              await apiClient(`/api/applications/${editing.id}/documents`, {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({ documentId: doc.id }),
@@ -455,7 +456,7 @@ function ApplicationDialog({
 
         <DialogFooter className="gap-2">
           {editing && (
-            <Button variant="outline" size="sm" className="mr-auto border-destructive/40 text-destructive hover:bg-destructive/10" onClick={async () => { await fetch(`/api/applications/${editing.id}`, { method: "DELETE" }); onOpenChange(false); window.location.reload() }}>
+            <Button variant="outline" size="sm" className="mr-auto border-destructive/40 text-destructive hover:bg-destructive/10" onClick={async () => { await apiClient(`/api/applications/${editing.id}`, { method: "DELETE" }); onOpenChange(false); window.location.reload() }}>
               <Trash2 className="mr-1.5 h-3.5 w-3.5" />{t.common.delete}
             </Button>
           )}

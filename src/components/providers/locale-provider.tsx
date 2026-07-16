@@ -9,6 +9,7 @@ import {
   type Locale,
   type Dictionary,
 } from "@/lib/i18n/dictionary"
+import { apiClient } from "@/lib/api-client"
 
 type LocaleContextValue = {
   locale: Locale
@@ -33,9 +34,8 @@ export function LocaleProvider({
     (l: Locale) => {
       setLocaleState(l)
       // persist to cookie, then refresh so server components re-render in the new locale
-      fetch("/api/locale", {
+      apiClient("/api/locale", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale: l }),
       })
         .then(() => router.refresh())

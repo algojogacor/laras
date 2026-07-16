@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { apiClient } from "@/lib/api-client"
 
 export type ReportTargetType = "user" | "connection" | "message" | "circle" | "mentorship" | "content"
 export type ReportReason = "harassment" | "spam" | "impersonation" | "inappropriate" | "other"
@@ -44,9 +45,8 @@ export function ReportDialog({
     setError("")
 
     try {
-      const res = await fetch("/api/reports", {
+      const res = await apiClient("/api/reports", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           targetType,
           targetId,

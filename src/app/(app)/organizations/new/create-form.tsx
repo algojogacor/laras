@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Building2, Loader2, AlertCircle } from "lucide-react"
+import { apiClient } from "@/lib/api-client"
 
 const TYPES = [
   { value: "institution", label: "Institution" },
@@ -57,9 +58,8 @@ export function CreateOrganizationForm() {
     setLoading(true)
 
     try {
-      const res = await fetch("/api/organizations", {
+      const res = await apiClient("/api/organizations", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
           slug: slug.trim(),

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { apiClient } from "@/lib/api-client"
 import {
   MessageCircle,
   Search,
@@ -111,9 +112,8 @@ export function MessageList({
     action: "accept" | "decline"
   ) {
     try {
-      const res = await fetch(`/api/messages/requests/${requestId}`, {
+      const res = await apiClient(`/api/messages/requests/${requestId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
       })
       if (res.ok) {

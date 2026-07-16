@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2, ArrowRight } from "lucide-react"
 import { toast } from "sonner"
 import { useT } from "@/components/providers/locale-provider"
+import { apiClient } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -31,7 +32,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       const payload = isSignup
         ? { name, email, password }
         : { email, password }
-      const res = await fetch(endpoint, {
+      const res = await apiClient(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

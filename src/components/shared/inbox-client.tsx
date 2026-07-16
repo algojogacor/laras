@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation"
 import { useTransition, useState, useCallback } from "react"
 import { toast } from "sonner"
 import type { InboxEntry, InboxEntryType } from "@/lib/inbox"
+import { apiClient } from "@/lib/api-client"
 
 interface InboxClientProps {
   initialEntries: InboxEntry[]
@@ -69,9 +70,8 @@ export function InboxClient({ initialEntries, unreadTotal, dict }: InboxClientPr
   const handleMarkAllRead = useCallback(() => {
     startTransition(async () => {
       try {
-        const res = await fetch("/api/notifications", {
+        const res = await apiClient("/api/notifications", {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ markAll: true }),
         })
         if (res.ok) {

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
+import { apiClient } from "@/lib/api-client"
 import {
   Search,
   Loader2,
@@ -111,7 +112,7 @@ export function ConnectionsPanel({
     if (!q) return
     setSearching(true)
     setSearched(false)
-    fetch(`/api/connections?q=${encodeURIComponent(q)}`)
+    apiClient(`/api/connections?q=${encodeURIComponent(q)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((d) => {
         setResults(d.results)
@@ -129,9 +130,8 @@ export function ConnectionsPanel({
     const msg = message[targetId] ?? ""
     startTransition(async () => {
       try {
-        const res = await fetch("/api/connections", {
+        const res = await apiClient("/api/connections", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ addresseeId: targetId, message: msg || undefined }),
         })
         if (!res.ok) {
@@ -152,9 +152,8 @@ export function ConnectionsPanel({
   const handleAction = (connectionId: string, action: "accept" | "decline") => {
     startTransition(async () => {
       try {
-        const res = await fetch(`/api/connections/${connectionId}`, {
+        const res = await apiClient(`/api/connections/${connectionId}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action }),
         })
         if (!res.ok) throw new Error("failed")

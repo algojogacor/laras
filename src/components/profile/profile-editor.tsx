@@ -4,6 +4,7 @@ import { useReducer, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Plus, Trash2, Save, Download, Trash, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
+import { apiClient } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -137,7 +138,7 @@ export function ProfileEditor({
   async function save() {
     setSaving(true)
     try {
-      const res = await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(buildPayload(state)) })
+      const res = await apiClient("/api/profile", { method: "PUT", body: JSON.stringify(buildPayload(state)) })
       const data = await res.json()
       if (!res.ok) throw new Error()
       setCompletion(data.profileCompletion ?? completion)
@@ -151,7 +152,7 @@ export function ProfileEditor({
   async function deleteAccount() {
     setDeleting(true)
     try {
-      const res = await fetch("/api/auth/delete", { method: "POST" })
+      const res = await apiClient("/api/auth/delete", { method: "POST" })
       if (!res.ok) throw new Error()
       toast.success(t.profile.delete)
       router.push("/")

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Trash2, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { useT } from "@/components/providers/locale-provider"
+import { apiClient } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose,
@@ -18,7 +19,7 @@ export function DeleteDocButton({ documentId }: { documentId: string }) {
   async function del() {
     setDeleting(true)
     try {
-      const res = await fetch(`/api/documents/${documentId}`, { method: "DELETE" })
+      const res = await apiClient(`/api/documents/${documentId}`, { method: "DELETE" })
       if (!res.ok) throw new Error()
       toast.success(t.documents.deleteDoc)
       router.push("/documents")

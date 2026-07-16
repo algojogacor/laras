@@ -45,6 +45,7 @@ import {
   Languages,
 } from "lucide-react"
 import type { OpportunityWithMatch } from "./page"
+import { apiClient } from "@/lib/api-client"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -204,9 +205,8 @@ export function OpportunityDetailClient({ opportunity, matchDetail: initialMatch
     if (newStatus === status) return
     setStatusUpdating(true)
     try {
-      const res = await fetch("/api/opportunities", {
+      const res = await apiClient("/api/opportunities", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: opportunity.id, status: newStatus }),
       })
       if (!res.ok) throw new Error("Failed to update")
@@ -224,7 +224,7 @@ export function OpportunityDetailClient({ opportunity, matchDetail: initialMatch
     setAnalyzing(true)
     setMatchError(null)
     try {
-      const res = await fetch(`/api/opportunities/${opportunity.id}/match`, {
+      const res = await apiClient(`/api/opportunities/${opportunity.id}/match`, {
         method: "POST",
       })
       if (!res.ok) {
@@ -245,7 +245,7 @@ export function OpportunityDetailClient({ opportunity, matchDetail: initialMatch
   const handleDelete = useCallback(async () => {
     setDeleting(true)
     try {
-      const res = await fetch(`/api/opportunities?id=${encodeURIComponent(opportunity.id)}`, {
+      const res = await apiClient(`/api/opportunities?id=${encodeURIComponent(opportunity.id)}`, {
         method: "DELETE",
       })
       if (!res.ok) throw new Error("Delete failed")

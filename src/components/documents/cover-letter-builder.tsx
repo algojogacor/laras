@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import type { SerializedProfile } from "@/lib/profile"
 import type { GeneratedCoverLetter } from "@/lib/content-engine"
+import { apiClient } from "@/lib/api-client"
 
 type Check = { hasEvidence: boolean; buzzwords: string[] }
 
@@ -48,9 +49,8 @@ export function CoverLetterBuilder({ initialProfile }: { initialProfile: Seriali
     if (isRegen) setRegenerating(true); else setLoading(true)
     setCl(null)
     try {
-      const res = await fetch("/api/documents/cover-letter/generate", {
+      const res = await apiClient("/api/documents/cover-letter/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           locale, tone, region: initialProfile.targetRegion || "domestic",
           position, organization,

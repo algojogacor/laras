@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { apiClient } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -73,9 +74,8 @@ export function MentorshipPanel({
     setLoading(true)
     setError("")
     try {
-      const res = await fetch("/api/mentorship/profile", {
+      const res = await apiClient("/api/mentorship/profile", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           isMentor,
           isMentee,
@@ -105,9 +105,8 @@ export function MentorshipPanel({
     setLoading(true)
     setError("")
     try {
-      const res = await fetch("/api/mentorship/requests", {
+      const res = await apiClient("/api/mentorship/requests", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mentorId, message: message.trim() }),
       })
       if (res.ok) {
@@ -126,9 +125,8 @@ export function MentorshipPanel({
 
   async function handleAccept(requestId: string) {
     try {
-      const res = await fetch(`/api/mentorship/requests/${requestId}`, {
+      const res = await apiClient(`/api/mentorship/requests/${requestId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "accept" }),
       })
       if (res.ok) {
@@ -141,9 +139,8 @@ export function MentorshipPanel({
 
   async function handleDecline(requestId: string) {
     try {
-      const res = await fetch(`/api/mentorship/requests/${requestId}`, {
+      const res = await apiClient(`/api/mentorship/requests/${requestId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "decline" }),
       })
       if (res.ok) {

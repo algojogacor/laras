@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { apiClient } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -67,9 +68,8 @@ export function CirclesPanel({
     setLoading(true)
     setError("")
     try {
-      const res = await fetch("/api/circles", {
+      const res = await apiClient("/api/circles", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim(), description: description.trim() || undefined, type: circleType }),
       })
       if (res.ok) {
@@ -90,7 +90,7 @@ export function CirclesPanel({
 
   async function handleJoin(circleId: string) {
     try {
-      const res = await fetch(`/api/circles/${circleId}/members`, {
+      const res = await apiClient(`/api/circles/${circleId}/members`, {
         method: "POST",
       })
       if (res.ok) {
@@ -114,7 +114,7 @@ export function CirclesPanel({
 
   async function handleLeave(circleId: string) {
     try {
-      const res = await fetch(`/api/circles/${circleId}/members`, {
+      const res = await apiClient(`/api/circles/${circleId}/members`, {
         method: "DELETE",
       })
       if (res.ok) {
@@ -135,7 +135,7 @@ export function CirclesPanel({
     if (search.trim()) params.set("search", search.trim())
     if (typeFilter) params.set("type", typeFilter)
     try {
-      const res = await fetch(`/api/circles?${params.toString()}`)
+      const res = await apiClient(`/api/circles?${params.toString()}`)
       if (res.ok) {
         const data = await res.json()
         setCircles(data.circles || [])

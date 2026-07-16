@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { apiClient } from "@/lib/api-client"
 
 interface FeatureFlag {
   id: string
@@ -153,7 +154,7 @@ function FeaturesTab({ labels }: { labels: ConfigLabels }) {
   const [percentage, setPercentage] = useState("100")
 
   if (!loaded) {
-    fetch("/api/admin/features")
+    apiClient("/api/admin/features")
       .then((r) => {
         if (!r.ok) throw new Error(String(r.status))
         return r.json()
@@ -230,15 +231,14 @@ function FeaturesTab({ labels }: { labels: ConfigLabels }) {
           body.rules = rules
         }
 
-        const res = await fetch("/api/admin/features", {
+        const res = await apiClient("/api/admin/features", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         })
         if (!res.ok) throw new Error("failed")
 
         // Reload
-        const listRes = await fetch("/api/admin/features")
+        const listRes = await apiClient("/api/admin/features")
         const listData = await listRes.json()
         setFlags(listData.flags)
         setDialogOpen(false)
@@ -254,9 +254,8 @@ function FeaturesTab({ labels }: { labels: ConfigLabels }) {
   const handleDelete = (key: string) => {
     startSave(async () => {
       try {
-        const res = await fetch("/api/admin/features", {
+        const res = await apiClient("/api/admin/features", {
           method: "DELETE",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ key }),
         })
         if (!res.ok) throw new Error("failed")
@@ -272,9 +271,8 @@ function FeaturesTab({ labels }: { labels: ConfigLabels }) {
   const handleToggle = (f: FeatureFlag) => {
     startSave(async () => {
       try {
-        const res = await fetch("/api/admin/features", {
+        const res = await apiClient("/api/admin/features", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ key: f.key, enabled: !f.enabled }),
         })
         if (!res.ok) throw new Error("failed")
@@ -525,7 +523,7 @@ function ConfigTab({ labels }: { labels: ConfigLabels }) {
   const [inlineValue, setInlineValue] = useState("")
 
   if (!loaded) {
-    fetch("/api/admin/config")
+    apiClient("/api/admin/config")
       .then((r) => {
         if (!r.ok) throw new Error(String(r.status))
         return r.json()
@@ -577,15 +575,14 @@ function ConfigTab({ labels }: { labels: ConfigLabels }) {
           description: description.trim() || undefined,
         }
 
-        const res = await fetch("/api/admin/config", {
+        const res = await apiClient("/api/admin/config", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         })
         if (!res.ok) throw new Error("failed")
 
         // Reload
-        const listRes = await fetch("/api/admin/config")
+        const listRes = await apiClient("/api/admin/config")
         const listData = await listRes.json()
         setConfigs(listData.configs)
         setDialogOpen(false)
@@ -601,9 +598,8 @@ function ConfigTab({ labels }: { labels: ConfigLabels }) {
   const handleDelete = (key: string) => {
     startSave(async () => {
       try {
-        const res = await fetch("/api/admin/config", {
+        const res = await apiClient("/api/admin/config", {
           method: "DELETE",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ key }),
         })
         if (!res.ok) throw new Error("failed")
@@ -626,14 +622,13 @@ function ConfigTab({ labels }: { labels: ConfigLabels }) {
           // Use raw string
         }
 
-        const res = await fetch("/api/admin/config", {
+        const res = await apiClient("/api/admin/config", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ key: entryKey, value: parsedValue }),
         })
         if (!res.ok) throw new Error("failed")
 
-        const listRes = await fetch("/api/admin/config")
+        const listRes = await apiClient("/api/admin/config")
         const listData = await listRes.json()
         setConfigs(listData.configs)
         setInlineEdit(null)

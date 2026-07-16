@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { apiClient } from "@/lib/api-client"
 import {
   Loader2,
   Pencil,
@@ -169,9 +170,8 @@ export function ProfileView({ profile, initialCompletion }: Props) {
   const save = useCallback(async () => {
     setSaving(true)
     try {
-      const res = await fetch("/api/profile", {
+      const res = await apiClient("/api/profile", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildProfilePayload(editingRef.current)),
       })
       if (!res.ok) throw new Error("save failed")
@@ -208,7 +208,7 @@ export function ProfileView({ profile, initialCompletion }: Props) {
   const deleteAccount = useCallback(async () => {
     setDeleting(true)
     try {
-      const res = await fetch("/api/auth/delete", { method: "POST" })
+      const res = await apiClient("/api/auth/delete", { method: "POST" })
       if (!res.ok) throw new Error("delete failed")
       toast.success(t.profile.delete)
       router.push("/")

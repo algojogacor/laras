@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Ticket, Loader2, CheckCircle, XCircle } from "lucide-react"
+import { apiClient } from "@/lib/api-client"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 
@@ -47,9 +48,8 @@ export function RedeemCode({ labels }: RedeemCodeProps) {
     setMessage("")
 
     try {
-      const res = await fetch("/api/licenses/redeem", {
+      const res = await apiClient("/api/licenses/redeem", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: code.trim().toUpperCase() }),
       })
       const data = await res.json()

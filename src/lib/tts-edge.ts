@@ -26,6 +26,13 @@ import { getServerSupabase } from "@/lib/supabase"
 
 const AUDIO_DIR = path.join(process.cwd(), "public", "audio", "listening")
 
+const ALLOWED_VOICES = new Set([
+  "en-GB-SoniaNeural",   // British female
+  "en-US-AriaNeural",    // American female
+  "en-GB-RyanNeural",    // British male
+  "en-US-GuyNeural",     // American male
+])
+
 function ensureAudioDir() {
   if (!existsSync(AUDIO_DIR)) {
     mkdirSync(AUDIO_DIR, { recursive: true })
@@ -41,6 +48,11 @@ export async function generateAudioEdgeTTS(
   text: string,
   voice: string = "en-GB-SoniaNeural"
 ): Promise<string | null> {
+  if (!ALLOWED_VOICES.has(voice)) {
+    console.error("[edge-tts] rejected voice:", voice)
+    return null
+  }
+
   // edge-tts has a 1024-char limit per request (same as the ZAI SDK)
   const truncated = text.slice(0, 1000)
   const filename = `tts-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.mp3`
@@ -62,20 +74,28 @@ export async function generateAudioEdgeTTS(
       '    await c.save(filepath)',
       'asyncio.run(gen())',
     ].join('\n')
-    await new Promise<void>((resolve, reject) => {
-      const proc = spawn('python3', ['-c', pythonScript, truncated, voice, filepath], {
-        timeout: 30000,
-        stdio: ['ignore', 'pipe', 'pipe'],
+    // Try python3 (Linux/macOS), fall back to python (Windows) on ENOENT
+    const spawnTts = (pyCmd: string): Promise<void> =>
+      new Promise<void>((resolve, reject) => {
+        const proc = spawn(pyCmd, ['-c', pythonScript, truncated, voice, filepath], {
+          timeout: 30000,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        })
+        let stderr = ''
+        proc.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString() })
+        proc.on('error', reject)
+        proc.on('close', (code) => {
+          if (code !== 0) reject(new Error(stderr || `exit ${code}`))
+          else if (stderr && !stderr.includes('INFO')) reject(new Error(stderr))
+          else resolve()
+        })
       })
-      let stderr = ''
-      proc.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString() })
-      proc.on('error', reject)
-      proc.on('close', (code) => {
-        if (code !== 0) reject(new Error(stderr || `exit ${code}`))
-        else if (stderr && !stderr.includes('INFO')) reject(new Error(stderr))
-        else resolve()
-      })
-    })
+    try {
+      await spawnTts('python3')
+    } catch (e: any) {
+      if (e?.code === 'ENOENT') await spawnTts('python')
+      else throw e
+    }
 
   if (!existsSync(filepath)) return null
 

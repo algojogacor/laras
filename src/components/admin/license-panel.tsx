@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { apiClient } from "@/lib/api-client"
 
 type Plan = "free" | "plus" | "pro" | "max"
 type LicenseStatus = "active" | "expired" | "suspended" | "cancelled"
@@ -115,7 +116,7 @@ export function LicensePanel({ labels }: { labels: LicenseLabels }) {
   const router = useRouter()
 
   if (!loaded) {
-    fetch("/api/admin/licenses")
+    apiClient("/api/admin/licenses")
       .then((r) => {
         if (!r.ok) throw new Error(String(r.status))
         return r.json()
@@ -168,9 +169,8 @@ export function LicensePanel({ labels }: { labels: LicenseLabels }) {
               expiresAt: form.expiresAt || null,
               note: form.note || undefined,
             }
-        const res = await fetch("/api/admin/licenses", {
+        const res = await apiClient("/api/admin/licenses", {
           method: isEdit ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         })
         if (!res.ok) throw new Error("failed")
@@ -182,7 +182,7 @@ export function LicensePanel({ labels }: { labels: LicenseLabels }) {
           toast.success(labels.licenseUpdated)
         } else {
           // Refetch to get the joined user info
-          const r2 = await fetch("/api/admin/licenses")
+          const r2 = await apiClient("/api/admin/licenses")
           const d2 = await r2.json()
           setLicenses(d2.licenses)
           toast.success(labels.licenseGranted)
@@ -199,9 +199,8 @@ export function LicensePanel({ labels }: { labels: LicenseLabels }) {
   const handleQuickStatus = (license: License, status: LicenseStatus) => {
     startSave(async () => {
       try {
-        const res = await fetch("/api/admin/licenses", {
+        const res = await apiClient("/api/admin/licenses", {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ licenseId: license.id, status }),
         })
         if (!res.ok) throw new Error("failed")

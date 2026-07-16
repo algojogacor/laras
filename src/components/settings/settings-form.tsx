@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Loader2, Globe2, PenLine, UserCog, Check } from "lucide-react"
 import { toast } from "sonner"
+import { apiClient } from "@/lib/api-client"
 import { useT, useLocale } from "@/components/providers/locale-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -29,9 +30,8 @@ export function SettingsForm({ initialProfile }: { initialProfile: SerializedPro
   async function save() {
     setSaving(true)
     try {
-      const res = await fetch("/api/profile", {
+      const res = await apiClient("/api/profile", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName: initialProfile.fullName,
           headline: initialProfile.headline,

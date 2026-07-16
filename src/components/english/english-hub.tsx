@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { apiClient } from "@/lib/api-client"
 import { ArrowLeft, BookOpen, Braces, Headphones, Loader2, Check, X, RefreshCw, Trophy, Sparkles, ArrowRight, Award, Lock } from "lucide-react"
 import { toast } from "sonner"
 import { useT } from "@/components/providers/locale-provider"
@@ -38,9 +39,8 @@ export function EnglishHub({ locale, history, canAccessHard = true }: { locale: 
     setModule(m); setPhase("practice"); setLoading(true)
     setReading(null); setStructure(null); setListening(null); setAnswers({}); setResults(null)
     try {
-      const res = await fetch("/api/english/generate", {
+      const res = await apiClient("/api/english/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ module: m, difficulty, locale }),
       })
       const data = await res.json()
@@ -57,9 +57,8 @@ export function EnglishHub({ locale, history, canAccessHard = true }: { locale: 
     if (!sessionId) return
     setSubmitting(true)
     try {
-      const res = await fetch("/api/english/submit", {
+      const res = await apiClient("/api/english/submit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, answers }),
       })
       const data = await res.json()
@@ -439,8 +438,8 @@ export function EnglishHub({ locale, history, canAccessHard = true }: { locale: 
           <Button onClick={async () => {
             if (!sessionId) return
             try {
-              const res = await fetch("/api/english/certificates", {
-                method: "POST", headers: { "Content-Type": "application/json" },
+              const res = await apiClient("/api/english/certificates", {
+                method: "POST",
                 body: JSON.stringify({ sessionId }),
               })
               const data = await res.json()

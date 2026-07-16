@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { useTransition } from "react"
 import { toast } from "sonner"
+import { apiClient } from "@/lib/api-client"
 
 interface NotificationItem {
   id: string
@@ -33,9 +34,8 @@ export function NotificationList({ items }: { items: NotificationItem[] }) {
   const handleMarkRead = (id: string) => {
     startTransition(async () => {
       try {
-        const res = await fetch("/api/notifications", {
+        const res = await apiClient("/api/notifications", {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id }),
         })
         if (res.ok) router.refresh()
@@ -48,9 +48,8 @@ export function NotificationList({ items }: { items: NotificationItem[] }) {
   const handleMarkAll = () => {
     startTransition(async () => {
       try {
-        const res = await fetch("/api/notifications", {
+        const res = await apiClient("/api/notifications", {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ markAll: true }),
         })
         if (res.ok) router.refresh()

@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/select"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { apiClient } from "@/lib/api-client"
 
 interface Campaign {
   id: string
@@ -109,7 +110,7 @@ export function CampaignsPanel({ labels }: { labels: CampaignsLabels }) {
   const [expiresAt, setExpiresAt] = useState("")
 
   if (!loaded) {
-    fetch("/api/admin/campaigns")
+    apiClient("/api/admin/campaigns")
       .then((r) => {
         if (!r.ok) throw new Error(String(r.status))
         return r.json()
@@ -167,15 +168,14 @@ export function CampaignsPanel({ labels }: { labels: CampaignsLabels }) {
         }
 
         const method = editing ? "PATCH" : "POST"
-        const res = await fetch("/api/admin/campaigns", {
+        const res = await apiClient("/api/admin/campaigns", {
           method,
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         })
         if (!res.ok) throw new Error("failed")
 
         // Reload campaigns
-        const listRes = await fetch("/api/admin/campaigns")
+        const listRes = await apiClient("/api/admin/campaigns")
         const listData = await listRes.json()
         setCampaigns(listData.campaigns)
         setDialogOpen(false)
@@ -191,9 +191,8 @@ export function CampaignsPanel({ labels }: { labels: CampaignsLabels }) {
   const handleToggle = (c: Campaign) => {
     startSave(async () => {
       try {
-        const res = await fetch("/api/admin/campaigns", {
+        const res = await apiClient("/api/admin/campaigns", {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ campaignId: c.id, isActive: !c.isActive }),
         })
         if (!res.ok) throw new Error("failed")

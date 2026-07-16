@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/select"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { apiClient } from "@/lib/api-client"
 
 type Audience = "all" | "free" | "pro" | "admin"
 type Priority = "low" | "normal" | "high" | "urgent"
@@ -120,7 +121,7 @@ export function AnnouncementsPanel({ labels }: { labels: AnnouncementLabels }) {
   const router = useRouter()
 
   if (!loaded) {
-    fetch("/api/admin/announcements")
+    apiClient("/api/admin/announcements")
       .then((r) => {
         if (!r.ok) throw new Error(String(r.status))
         return r.json()
@@ -150,9 +151,8 @@ export function AnnouncementsPanel({ labels }: { labels: AnnouncementLabels }) {
     const isEdit = !!editId
     startSave(async () => {
       try {
-        const res = await fetch("/api/admin/announcements", {
+        const res = await apiClient("/api/admin/announcements", {
           method: isEdit ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(isEdit ? { id: editId, ...form } : form),
         })
         if (!res.ok) throw new Error("failed")
@@ -177,7 +177,7 @@ export function AnnouncementsPanel({ labels }: { labels: AnnouncementLabels }) {
     if (action === "delete") {
       startSave(async () => {
         try {
-          const res = await fetch(`/api/admin/announcements?id=${id}`, { method: "DELETE" })
+          const res = await apiClient(`/api/admin/announcements?id=${id}`, { method: "DELETE" })
           if (!res.ok) throw new Error("failed")
           setAnnouncements((prev) => prev.filter((a) => a.id !== id))
           toast.success(labels.deleted)
@@ -191,9 +191,8 @@ export function AnnouncementsPanel({ labels }: { labels: AnnouncementLabels }) {
     const newStatus: Status = action === "publish" ? "published" : action === "unpublish" ? "draft" : "archived"
     startSave(async () => {
       try {
-        const res = await fetch("/api/admin/announcements", {
+        const res = await apiClient("/api/admin/announcements", {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id, status: newStatus }),
         })
         if (!res.ok) throw new Error("failed")

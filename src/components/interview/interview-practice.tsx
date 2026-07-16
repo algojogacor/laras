@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { apiClient } from "@/lib/api-client"
 import { ArrowLeft, Loader2, Sparkles, Trash2, ChevronDown, ChevronUp, MessageSquareText } from "lucide-react"
 import { toast } from "sonner"
 import { useT } from "@/components/providers/locale-provider"
@@ -45,9 +46,8 @@ export function InterviewPractice({
     if (!answer.trim()) { toast.error(t.interview.yourAnswerHint); return }
     setLoading((p) => ({ ...p, [qId]: true }))
     try {
-      const res = await fetch(`/api/interview-sets/${setId}/feedback`, {
+      const res = await apiClient(`/api/interview-sets/${setId}/feedback`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ questionId: qId, answer, locale }),
       })
       const data = await res.json()
@@ -61,7 +61,7 @@ export function InterviewPractice({
 
   async function deleteSet() {
     try {
-      await fetch(`/api/interview-sets/${setId}`, { method: "DELETE" })
+      await apiClient(`/api/interview-sets/${setId}`, { method: "DELETE" })
       router.push("/interview"); router.refresh()
     } catch { toast.error(t.auth.errGeneric) }
   }

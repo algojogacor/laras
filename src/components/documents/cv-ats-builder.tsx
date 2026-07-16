@@ -18,6 +18,7 @@ import type { SerializedProfile } from "@/lib/profile"
 import type { GeneratedCVATS } from "@/lib/content-engine"
 import { CVATSPreview } from "@/components/documents/cv-ats-preview"
 import { ConcretenessPanel } from "@/components/documents/concreteness-panel"
+import { apiClient } from "@/lib/api-client"
 
 type Check = {
   score: number; totalBullets: number; withEvidence: number; buzzwordNoEvidence: number
@@ -53,9 +54,8 @@ export function CVATSBuilder({ initialProfile }: { initialProfile: SerializedPro
     setLoading(true)
     setCv(null)
     try {
-      const res = await fetch("/api/documents/cv-ats/generate", {
+      const res = await apiClient("/api/documents/cv-ats/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           locale, tone, region,
           edits: {

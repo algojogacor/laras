@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { apiClient } from "@/lib/api-client"
 
 type Version = {
   id: string
@@ -42,7 +43,7 @@ export function FollowUpRevisionPanel({
 
   // Fetch version history from API
   useEffect(() => {
-    fetch(`/api/documents/${documentId}/versions`)
+    apiClient(`/api/documents/${documentId}/versions`)
       .then((r) => r.json())
       .then((data) => {
         if (data.versions) setVersions(data.versions)
@@ -55,9 +56,8 @@ export function FollowUpRevisionPanel({
     if (!confirm(`Restore version ${versionNumber}? This will create a new version with the old content.`)) return
     setLoading(true)
     try {
-      const res = await fetch(`/api/documents/${documentId}/revise`, {
+      const res = await apiClient(`/api/documents/${documentId}/revise`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           instruction: `Restore to version ${versionNumber}`,
           documentType,
@@ -90,9 +90,8 @@ export function FollowUpRevisionPanel({
     }
     setLoading(true)
     try {
-      const res = await fetch(`/api/documents/${documentId}/revise`, {
+      const res = await apiClient(`/api/documents/${documentId}/revise`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ instruction: finalInstruction, documentType }),
       })
       const data = await res.json()
