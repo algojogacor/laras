@@ -6,6 +6,7 @@ import { verifyPassword, createSessionToken, setSessionCookie, createRefreshToke
 import { applyRateLimit, getClientIP } from "@/lib/rate-limit"
 import { createCsrfToken } from "@/lib/csrf"
 import { checkMFA } from "@/lib/mfa"
+import { isBetaConfigSafe, isBetaEmailAllowed } from "@/lib/private-beta"
 
 const schema = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -42,6 +43,12 @@ export async function POST(request: Request) {
 
   const ok = await verifyPassword(password, account.passwordHash)
   if (!ok) {
+    return NextResponse.json({ error: "errInvalid" }, { status: 401 })
+  }
+
+  // Keep the response indistinguishable from invalid credentials so the beta
+  // allowlist cannot be used to enumerate invited accounts.
+  if (!isBetaConfigSafe() || !isBetaEmailAllowed(account.email)) {
     return NextResponse.json({ error: "errInvalid" }, { status: 401 })
   }
 

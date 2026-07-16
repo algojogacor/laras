@@ -242,9 +242,9 @@ export async function listConnections(
     return {
       id: otherProfile.id,
       fullName: pDto.profile.fullName ?? null,
-      headline: otherProfile.headline,
+      headline: pDto.profile.headline ?? null,
       email: pDto.profile.email ?? null,
-      photoUrl: otherProfile.photoUrl,
+      photoUrl: pDto.profile.photoUrl ?? null,
     }
   }
 

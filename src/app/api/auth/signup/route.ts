@@ -5,6 +5,7 @@ import { db } from "@/lib/db"
 import { hashPassword, createSessionToken, setSessionCookie, createRefreshToken, setRefreshCookie } from "@/lib/auth"
 import { applyRateLimit, getClientIP } from "@/lib/rate-limit"
 import { createCsrfToken } from "@/lib/csrf"
+import { isBetaConfigSafe, isBetaEmailAllowed } from "@/lib/private-beta"
 
 const schema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -39,6 +40,10 @@ export async function POST(request: Request) {
   }
 
   const { name, email, password, locale } = parsed.data
+
+  if (!isBetaConfigSafe() || !isBetaEmailAllowed(email)) {
+    return NextResponse.json({ error: "errInvalid" }, { status: 401 })
+  }
 
   const existing = await db.account.findUnique({ where: { email } })
   if (existing) {

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Menu, X, ShieldCheck, Users, Bell, MessageCircle, UserRound, GraduationCap, Building2, InboxIcon } from "lucide-react"
+import { Menu, X, ShieldCheck, MessageCircle, UserRound, GraduationCap, Building2, InboxIcon, BriefcaseBusiness } from "lucide-react"
 import { Logo } from "@/components/site/logo"
 import { LocaleToggle } from "@/components/site/locale-toggle"
 import { ThemeToggle } from "@/components/site/theme-toggle"
@@ -16,12 +16,14 @@ export function AppHeader({
   isAdmin = false,
   pendingConnections = 0,
   unreadNotifications = 0,
+  privateBeta = false,
 }: {
   user: { id: string; email: string; name: string | null; fullName: string | null }
   locale: Locale
   isAdmin?: boolean
   pendingConnections?: number
   unreadNotifications?: number
+  privateBeta?: boolean
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
@@ -32,13 +34,14 @@ export function AppHeader({
       : { profile: "Profile", settings: "Settings", logout: "Log out" }
   const navLabels =
     locale === "id"
-      ? { dashboard: "Dasbor", documents: "Dokumen", applications: "Lamaran", interview: "Wawancara", english: "Bahasa Inggris", profile: "Profil", connections: "Koneksi", messages: "Pesan", circles: "Lingkar", mentorship: "Mentor", orgs: "Organisasi", inbox: "Kotak Masuk", notifications: "Notifikasi", admin: "Admin" }
-      : { dashboard: "Dashboard", documents: "Documents", applications: "Applications", interview: "Interview", english: "English", profile: "Profile", connections: "Connections", messages: "Messages", circles: "Circles", mentorship: "Mentorship", orgs: "Organizations", inbox: "Inbox", notifications: "Notifications", admin: "Admin" }
+      ? { dashboard: "Dasbor", documents: "Dokumen", applications: "Lamaran", opportunities: "Kesempatan", interview: "Wawancara", english: "Bahasa Inggris", profile: "Profil", connections: "Koneksi", messages: "Pesan", circles: "Lingkar", mentorship: "Mentor", orgs: "Organisasi", inbox: "Kotak Masuk", notifications: "Notifikasi", admin: "Admin" }
+      : { dashboard: "Dashboard", documents: "Documents", applications: "Applications", opportunities: "Opportunities", interview: "Interview", english: "English", profile: "Profile", connections: "Connections", messages: "Messages", circles: "Circles", mentorship: "Mentorship", orgs: "Organizations", inbox: "Inbox", notifications: "Notifications", admin: "Admin" }
 
   const navItems: Array<{ href: string; label: string; icon?: React.ReactNode; isAdmin?: boolean; badge?: number }> = [
     { href: "/dashboard", label: navLabels.dashboard },
     { href: "/documents", label: navLabels.documents },
     { href: "/applications", label: navLabels.applications },
+    { href: "/opportunities", label: navLabels.opportunities, icon: <BriefcaseBusiness className="h-3.5 w-3.5" /> },
     { href: "/interview", label: navLabels.interview },
     { href: "/english", label: navLabels.english },
     { href: "/profile", label: navLabels.profile },
@@ -53,19 +56,19 @@ export function AppHeader({
   ]
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <div className="flex items-center gap-8">
-          <Link href="/dashboard" className="transition-opacity hover:opacity-80">
-            <Logo />
-          </Link>
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Main navigation">
+    <header className="sticky top-0 z-40 w-full overflow-x-clip border-b border-border/60 bg-background/85 backdrop-blur-md">
+      <div className="mx-auto flex min-h-16 w-full max-w-[1800px] items-center gap-3 px-4 sm:px-6 2xl:px-8">
+        <Link href="/dashboard" className="shrink-0 transition-opacity hover:opacity-80">
+          <Logo />
+        </Link>
+        {privateBeta && <span className="hidden rounded-full border border-accent/40 bg-accent/10 px-2 py-1 text-[10px] font-medium text-accent sm:inline-flex">Private beta</span>}
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 2xl:flex" aria-label="Main navigation">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 aria-current={pathname === item.href ? "page" : undefined}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors hover:bg-secondary hover:text-foreground ${
+                className={`inline-flex min-w-0 items-center gap-1 whitespace-nowrap rounded-lg px-2 py-2 text-[13px] font-medium transition-colors hover:bg-secondary hover:text-foreground ${
                   pathname === item.href
                     ? "bg-secondary text-foreground"
                     : item.isAdmin
@@ -82,9 +85,8 @@ export function AppHeader({
                 ) : null}
               </Link>
             ))}
-          </nav>
-        </div>
-        <div className="flex items-center gap-2">
+        </nav>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           <LocaleToggle />
           <ThemeToggle />
           <UserMenu
@@ -95,7 +97,7 @@ export function AppHeader({
           {/* Mobile hamburger menu button */}
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground lg:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground 2xl:hidden"
             onClick={() => setMobileOpen((v) => !v)}
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
@@ -110,10 +112,10 @@ export function AppHeader({
       {mobileOpen && (
         <nav
           id="mobile-nav"
-          className="border-t border-border/60 bg-background lg:hidden"
+            className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-border/60 bg-background 2xl:hidden"
           aria-label="Mobile navigation"
         >
-          <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3 sm:px-6">
+          <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-1 px-4 py-3 sm:px-6 2xl:px-8">
             {navItems.map((item) => (
               <Link
                 key={item.href}

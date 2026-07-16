@@ -201,7 +201,7 @@ async function searchProfiles(
 
     // Check if fullName is visible
     const nameVisible =
-      !consent.fullName || consent.fullName === "public" || consent.fullName === "connections"
+      !consent.fullName || consent.fullName === "public" || (consent.fullName === "connections" && isConn)
     if (!nameVisible && !isOwner) continue
 
     // Calculate best match score
@@ -220,13 +220,15 @@ async function searchProfiles(
     if (bestScore === 0) continue
 
     // Build visible result
-    const visibleSkills = p.skills.map((s) => s.name)
+    const visibleSkills = (!consent.skills || consent.skills === "public" || (consent.skills === "connections" && isConn))
+      ? p.skills.map((s) => s.name)
+      : []
     // Only include public or connections-level fields
     const result: SearchProfileResult = {
       id: p.id,
       fullName: isOwner || isConn || consent.fullName !== "private" ? p.fullName : null,
       headline: isOwner || isConn || consent.headline !== "private" ? p.headline : null,
-      photoUrl: p.photoUrl,
+      photoUrl: (!consent.photoUrl || consent.photoUrl === "public" || (consent.photoUrl === "connections" && isConn)) ? p.photoUrl : null,
       skills: visibleSkills,
       matchField,
     }

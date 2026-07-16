@@ -21,7 +21,7 @@ function createPrismaClient(): PrismaClient {
 
   // Fallback: local SQLite (file: protocol)
   return new PrismaClient({
-    log: process.env.NODE_ENV !== 'production' ? ['query'] : [],
+    log: process.env.NODE_ENV !== 'production' && process.env.PRISMA_QUERY_LOG !== 'false' ? ['query'] : [],
   })
 }
 

@@ -1,30 +1,10 @@
 import type { Metadata } from "next"
-import { Geist, Geist_Mono, Fraunces } from "next/font/google"
 import "./globals.css"
 import "goey-toast/styles.css"
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import { LocaleProvider } from "@/components/providers/locale-provider"
 import { LarasToaster } from "@/components/feedback/laras-toaster"
 import { getLocale } from "@/lib/i18n"
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-  display: "swap",
-})
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  display: "swap",
-})
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  display: "swap",
-  axes: ["opsz", "SOFT", "WONK"],
-})
 
 export const metadata: Metadata = {
   title: "Laras — Career & Opportunity Readiness Ecosystem",
@@ -62,7 +42,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} antialiased bg-background text-foreground relative`}
+        className="antialiased bg-background text-foreground relative"
       >
         <a href="#main-content" className="skip-to-content">
           {locale === "id" ? "Lewati ke konten utama" : "Skip to main content"}

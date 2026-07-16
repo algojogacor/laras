@@ -204,18 +204,16 @@ export async function createCompletion(
   if (request.temperature !== undefined) body.temperature = request.temperature
   if (request.max_tokens !== undefined) body.max_tokens = request.max_tokens
 
-  const timeout = request.signal ? DEFAULT_TIMEOUT_MS : DEFAULT_TIMEOUT_MS
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeout)
-
-  // If caller provided a signal, forward aborts
-  if (request.signal) {
-    request.signal.addEventListener("abort", () => controller.abort(), { once: true })
-  }
-
   let lastError: unknown
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    // Each retry gets a fresh controller and timeout. Reusing an aborted
+    // controller (or clearing one shared timer) would leave later attempts
+    // without a bounded timeout.
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS)
+    const onCallerAbort = () => controller.abort()
+    request.signal?.addEventListener("abort", onCallerAbort, { once: true })
     try {
       const response = await fetch(url, {
         method: "POST",
@@ -226,8 +224,6 @@ export async function createCompletion(
         body: JSON.stringify(body),
         signal: controller.signal,
       })
-
-      clearTimeout(timeoutId)
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => "(no body)")
@@ -287,6 +283,7 @@ export async function createCompletion(
       return data
     } catch (error) {
       clearTimeout(timeoutId)
+      request.signal?.removeEventListener("abort", onCallerAbort)
 
       // Don't retry auth errors, model errors, or aborts
       if (!isRetryableError(error) || attempt >= MAX_RETRIES) {
@@ -315,6 +312,9 @@ export async function createCompletion(
         `[deepseek] retrying after error: ${(error as Error).message.slice(0, 100)}, attempt ${attempt + 1}/${MAX_RETRIES}`
       )
       await sleep(RETRY_DELAY_MS * (attempt + 1))
+    } finally {
+      clearTimeout(timeoutId)
+      request.signal?.removeEventListener("abort", onCallerAbort)
     }
   }
 

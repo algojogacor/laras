@@ -52,6 +52,9 @@
 
 :root {
   --radius: 0.75rem;
+  --font-geist-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-geist-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --font-fraunces: Georgia, "Times New Roman", serif;
 
   /* Warm paper surfaces */
   --background: oklch(0.985 0.012 85);
@@ -242,9 +245,9 @@
   left: 0;
   z-index: 100;
   padding: 0.75rem 1.25rem;
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
-  border: 1px solid hsl(var(--border));
+  background: var(--background);
+  color: var(--foreground);
+  border: 1px solid var(--border);
   border-radius: 0 0 0.5rem 0;
   font-size: 0.875rem;
   font-weight: 500;
@@ -253,7 +256,7 @@
 }
 .skip-to-content:focus {
   top: 0;
-  outline: 2px solid hsl(var(--ring));
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
@@ -278,7 +281,7 @@
 
 /* ── Accessibility: visible focus indicator for keyboard users ── */
 :focus-visible {
-  outline: 2px solid hsl(var(--ring));
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
   border-radius: 0.25rem;
 }
